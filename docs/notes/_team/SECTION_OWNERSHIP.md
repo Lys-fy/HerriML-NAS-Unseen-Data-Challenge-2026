@@ -32,7 +32,7 @@ When you mention a concept owned by another section, **wikilink it**, don't rest
 ## Full note inventory (by section)
 
 ### 01 - Competition (4 notes)
-- `Overview.md`
+- `Competition Overview.md`
 - `Phases and Timeline.md`
 - `Scoring.md`
 - `Rules.md`
@@ -45,7 +45,7 @@ When you mention a concept owned by another section, **wikilink it**, don't rest
 - `Mock Harness.md`
 
 ### 03 - Datasets (15 notes)
-- `Overview.md`
+- `Datasets Overview.md`
 - `AddNIST.md`
 - `Language.md`
 - `MultNIST.md`
@@ -62,7 +62,7 @@ When you mention a concept owned by another section, **wikilink it**, don't rest
 - `Windspeed.md`
 
 ### 04 - Approaches (7 notes)
-- `Overview.md`
+- `Approaches Overview.md`
 - `EGNAS.md`
 - `Predictor-Guided Evolutionary.md`
 - `DARTS Family.md`

@@ -1,7 +1,7 @@
 # Map of Content
 
-> **Status:** stub | **Topic:** Central index for the HerriML NAS competition notebase.
-> **Related:** [[Overview]] (start here)
+> **Status:** current | **Topic:** Central index for the HerriML NAS competition notebase.
+> **Related:** [[Competition Overview]] (start here)
 
 Open `docs/notes/` as the Obsidian vault root. Wikilinks resolve across subfolders.
 
@@ -9,7 +9,7 @@ Open `docs/notes/` as the Obsidian vault root. Wikilinks resolve across subfolde
 
 ### 01 - Competition
 
-- [[Overview]] — What the NAS Unseen Data Challenge is and why it exists.
+- [[Competition Overview]] — What the NAS Unseen Data Challenge is and why it exists.
 - [[Phases and Timeline]] — Phase 1, 2, 3 — what happens in each, key dates.
 - [[Scoring]] — Per-dataset scoring formula, the +10 / -10 caps, slope by benchmark.
 - [[Rules]] — Submission limits, prohibited actions, contact, mailing list.
@@ -17,14 +17,14 @@ Open `docs/notes/` as the Obsidian vault root. Wikilinks resolve across subfolde
 ### 02 - Framework
 
 - [[Submission Contract]] — Fixed file names, class signatures, asserted constraints.
-- [[Pipeline Flow]] — DataProcessor -> NAS -> Trainer.train -> Trainer.predict.
+- [[Pipeline Flow]] — DataProcessor → NAS → Trainer.train → Trainer.predict.
 - [[Clock and Time Budget]] — How clock.check() works, per-dataset budgets, grace window.
 - [[Failure Modes]] — What causes a -10 (timeout, OOM, crash, wrong shape).
 - [[Mock Harness]] — What dev/mock_harness.py does and how to use it.
 
 ### 03 - Datasets
 
-- [[Overview]] — All 13/14 known datasets in one table; era split (CVPR vs AutoML).
+- [[Datasets Overview]] — All 13/14 known datasets in one table; era split (CVPR vs AutoML).
 - [[AddNIST]] — Three MNIST images summed minus one, 20 classes.
 - [[Language]] — Encoded multi-language word strings as 24x24 images, 10 classes.
 - [[MultNIST]] — Three MNIST images multiplied mod 10, 10 classes.
@@ -42,7 +42,7 @@ Open `docs/notes/` as the Obsidian vault root. Wikilinks resolve across subfolde
 
 ### 04 - Approaches
 
-- [[Overview]] — Decision tree: which method to use under which constraint.
+- [[Approaches Overview]] — Decision tree: which method to use under which constraint.
 - [[EGNAS]] — Efficient Global NAS — sequential macro-micro hill-climbing search.
 - [[Predictor-Guided Evolutionary]] — Surrogate accuracy predictor + evolutionary search; Sun's group approach.
 - [[DARTS Family]] — DARTS, PC-DARTS, DrNAS — gradient-based weight-sharing search.

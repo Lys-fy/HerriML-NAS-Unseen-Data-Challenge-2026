@@ -14,12 +14,12 @@ This was the third CVPR-NAS Unseen Data Track (2021, 2022, 2023). The series mov
 From the [Towers-D/NAS-Unseen-Datasets readme](https://github.com/Towers-D/NAS-Unseen-Datasets):
 
 | Rank | GeoClassing | Isabella | Chesseract |
-|-----:|------------:|---------:|-----------:|
-| 1 | 92.37% | 59.97% | 58.20% |
-| 2 | 89.62% | 60.14% | 58.10% |
-| 3 | 93.34% | 46.87% | 59.31% |
-| 4 | 90.69% | 44.93% | 58.74% |
-| 5 | 87.81% | 43.92% | 63.05% |
+| ---: | ----------: | -------: | ---------: |
+|    1 |      92.37% |   59.97% |     58.20% |
+|    2 |      89.62% |   60.14% |     58.10% |
+|    3 |      93.34% |   46.87% |     59.31% |
+|    4 |      90.69% |   44.93% |     58.74% |
+|    5 |      87.81% |   43.92% |     63.05% |
 
 The published table omits team names. Aojun Lu's entry on the [Sun group page](https://yn-sun.github.io/) credits him with **1st place at the CVPR 2023 NAS competition** — the most likely identification for Rank 1.
 

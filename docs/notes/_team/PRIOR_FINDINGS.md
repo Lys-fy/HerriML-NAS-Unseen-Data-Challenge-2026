@@ -169,10 +169,10 @@ Off-the-shelf CNNs (averaged across 7 architectures: ResNet-18, AlexNet, VGG16, 
 | Dataset | ResNet-18 | Best CNN | PC-DARTS (NAS) |
 |---------|-----------|----------|----------------|
 | AddNIST | 92.1% | 94.9% | 97.9% |
-| Language | 97.0% | 97.0% | 90.1% |
+| Language | 87.0% (Geada Tab. 1; metadata reports 85.2%) | 87.0% | 90.1% |
 | MultNIST | 91.6% | 94.0% | 98.1% |
 | CIFARTile | 45.6% | 51.3% | 92.3% |
-| Gutenberg | 50.0% | 50.0% | 49.1% |
+| Gutenberg | 40.98% (Geada Tab. 1; Towers-D readme misreported 50%) | 50.0% | 49.1% |
 | Isabella | 62.0% | 63.3% | 65.8% |
 | GeoClassing | 80.3% | 94.2% | 96.0% |
 | Chesseract | 57.8% | 59.6% | 60.8% |

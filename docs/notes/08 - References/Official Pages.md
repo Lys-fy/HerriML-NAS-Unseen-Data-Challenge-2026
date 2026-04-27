@@ -1,7 +1,7 @@
 # Official Pages
 
 > **Status:** current | **Topic:** Competition site, rules, contact, mailing list, and conference pages.
-> **Related:** [[Rules]], [[Phases and Timeline]], [[Overview]], [[Researchers and Groups]], [[Repositories]]
+> **Related:** [[Rules]], [[Phases and Timeline]], [[Competition Overview]], [[Researchers and Groups]], [[Repositories]]
 
 ## Competition
 

@@ -1,5 +1,5 @@
 > **Status:** drafting | **Topic:** Phase 1, 2, 3 — what happens in each, key dates.
-> **Related:** [[Overview]], [[Submission Contract]], [[Phase 2 Submission Strategy]]
+> **Related:** [[Competition Overview]], [[Submission Contract]], [[Phase 2 Submission Strategy]]
 
 Three phases. Phase 1 is local development. Phase 2 is timed runs on the organisers' servers against hidden datasets. Phase 3 is **not a separate submission** — it re-runs the last working Phase-2 entry with a (longer, unspecified) wall-clock budget.
 
@@ -7,7 +7,7 @@ Three phases. Phase 1 is local development. Phase 2 is timed runs on the organis
 
 | Phase | When | Where | Datasets | Submission cap | Wall-clock per dataset |
 |-------|------|-------|----------|----------------|-----------------------|
-| Phase 1 | Open now (April 2026) | Your machines | 13 public (see [[Overview]] in section 03) | Unlimited | Whatever you set locally — use [[Mock Harness]] |
+| Phase 1 | Open now (April 2026) | Your machines | 13 public (see [[Datasets Overview]]) | Unlimited | Whatever you set locally — use [[Mock Harness]] |
 | Phase 2 | **July 1 – July 31** | Organisers' servers | Hidden | **≤7** | ~1 hour |
 | Phase 3 | **August 1+** | Organisers' servers | Same hidden datasets as Phase 2 | 0 (auto-promoted) | Unspecified (longer than Phase 2) |
 

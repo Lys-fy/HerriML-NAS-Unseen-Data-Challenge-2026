@@ -34,12 +34,12 @@ Combined gap to [[2025 - EVAI]]: ~1.3 to ~1.8 points, almost entirely on [[Crypt
 
 No write-up of the 2025 submissions exists publicly. The approach is inferred from the group's published work in 2025–2026:
 
-| Paper | Venue | Topic |
-|-------|-------|-------|
+| Paper                                                                      | Venue                        | Topic                              |
+| -------------------------------------------------------------------------- | ---------------------------- | ---------------------------------- |
 | DAP: Domain Adaptive Performance Predictor for Efficient NAS — Song et al. | IEEE Trans. Computers (2026) | Cross-dataset predictor adaptation |
-| Online Performance Predictor for Evolutionary NAS — Song et al. | IEEE TSMC (2025) | Surrogate trained during search |
-| Listwise Ranking Predictor for Evolutionary NAS — Li et al. | Swarm and Evol. Comp. (2025) | Rank-based surrogate loss |
-| Accurate and Robust NAS via a Flexible Supernet — Feng et al. | IEEE TNNLS (2025) | One-shot supernet variant |
+| Online Performance Predictor for Evolutionary NAS — Song et al.            | IEEE TSMC (2025)             | Surrogate trained during search    |
+| Listwise Ranking Predictor for Evolutionary NAS — Li et al.                | Swarm and Evol. Comp. (2025) | Rank-based surrogate loss          |
+| Accurate and Robust NAS via a Flexible Supernet — Feng et al.              | IEEE TNNLS (2025)            | One-shot supernet variant          |
 
 **Predictor-guided evolutionary NAS** trains a surrogate accuracy predictor on cheap architecture encodings, runs the evolutionary search using the predictor, then fully trains only the top-k. See [[Predictor-Guided Evolutionary]] for the method note.
 

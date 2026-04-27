@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "05 - Past Winners/2025 - Sichuan teams.md",
+                "file": "04 - Approaches/EGNAS.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "2025 - Sichuan teams"
+              "title": "EGNAS"
             }
           }
         ]
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "05 - Past Winners/2025 - Sichuan teams.md",
+                "file": "04 - Approaches/EGNAS.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for 2025 - Sichuan teams"
+              "title": "Backlinks for EGNAS"
             }
           },
           {
@@ -113,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "05 - Past Winners/2025 - Sichuan teams.md",
+                "file": "04 - Approaches/EGNAS.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from 2025 - Sichuan teams"
+              "title": "Outgoing links from EGNAS"
             }
           },
           {
@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "05 - Past Winners/2025 - Sichuan teams.md",
+                "file": "04 - Approaches/EGNAS.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of 2025 - Sichuan teams"
+              "title": "Outline of EGNAS"
             }
           }
         ]
@@ -185,13 +185,38 @@
   },
   "active": "3647756083510b21",
   "lastOpenFiles": [
-    "05 - Past Winners/2025 - EVAI.md",
+    "_team/PRIOR_FINDINGS.md.tmp.23169.1777309373362",
+    "_team/PRIOR_FINDINGS.md.tmp.23169.1777309366383",
+    "_team/SECTION_OWNERSHIP.md.tmp.23169.1777309352387",
+    "_team/SECTION_OWNERSHIP.md.tmp.23169.1777309344319",
+    "08 - References/Official Pages.md.tmp.23169.1777309283190",
+    "01 - Competition/Phases and Timeline.md.tmp.23169.1777309268176",
+    "01 - Competition/Phases and Timeline.md.tmp.23169.1777309260972",
+    "README.md.tmp.23169.1777309242003",
+    "04 - Approaches/Zero-Cost Proxies.md",
+    "04 - Approaches/EGNAS.md",
     "05 - Past Winners/2023 Finalists.md",
-    "04 - Approaches/Weight-Sharing One-Shot.md",
-    "04 - Approaches/DARTS Family.md",
+    "05 - Past Winners/2025 - EVAI.md",
+    "05 - Past Winners/2025 - Sichuan teams.md",
+    "04 - Approaches/Predictor-Guided Evolutionary.md",
+    "06 - Strategy/Reliability vs Peak.md",
+    "06 - Strategy/Budget Allocation.md",
+    "01 - Competition/Rules.md",
+    "01 - Competition/Competition Overview.md",
+    "08 - References/Papers.md",
+    "08 - References/Repositories.md",
+    "README.md",
+    "08 - References/Researchers and Groups.md",
+    "02 - Framework/Submission Contract.md",
     "02 - Framework/Pipeline Flow.md",
+    "02 - Framework/Clock and Time Budget.md",
+    "02 - Framework/Mock Harness.md",
     "02 - Framework/Failure Modes.md",
-    "01 - Competition/Phases and Timeline.md",
-    "01 - Competition/Competition Overview.md"
+    "03 - Datasets/Sudoku.md",
+    "03 - Datasets/Language.md",
+    "03 - Datasets/MultNIST.md",
+    "03 - Datasets/Isabella.md",
+    "03 - Datasets/Gutenberg.md",
+    "03 - Datasets/AddNIST.md"
   ]
 }
