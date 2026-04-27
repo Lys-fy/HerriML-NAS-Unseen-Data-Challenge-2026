@@ -56,15 +56,6 @@ A `clock` object is passed to every stage; `clock.check()` returns seconds remai
 
 `mock_harness.py` deliberately replicates the grader's failure modes (clock exits, test-loader assertions, blanket exception → −10). Passing here is the best signal we have that Phase 2 will pass.
 
-## Hardware split
-
-| Machine | Role |
-|---------|------|
-| **DGX Spark** (Grace ARM64, 128 GB unified) | Primary dev and training. Modern PyTorch + CUDA 12.8+. |
-| **M75q** (x86 + AMD iGPU) | Cross-verification before submission. The eval server is presumed x86. |
-
-Final submissions must run cleanly on both. Details in `docs/environment.md`.
-
 ## References
 
 - `Usefull_docs/` — past-winner papers, 2025 leaderboard analysis, dataset notes.
