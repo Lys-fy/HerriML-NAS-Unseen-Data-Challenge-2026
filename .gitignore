@@ -1,0 +1,53 @@
+# --- Datasets / artifacts (must never be committed) ---
+datasets/
+**/saved_models/
+**/checkpoints/
+*.npy
+*.pt
+*.pth
+*.pth.tar
+submission.zip
+package/
+scoring/
+predictions/
+
+# --- EGNAS-style timestamped run dirs ---
+Search-*/
+Train-*/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+*.egg-info/
+.coverage
+htmlcov/
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+Thumbs.db
+
+# --- Local-only env / secrets ---
+.env
+.env.local
+*.local
+
+# --- Logs ---
+*.log
+logs/
