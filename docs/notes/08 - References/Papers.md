@@ -55,3 +55,8 @@ These are not local but are the reference implementations behind [[DARTS Family]
 - When citing EGNAS in our own writeup, prefer the SN Computer Science DOI; fall back to arXiv if a free reference is needed.
 - When citing the competition methodology / dataset definitions, the Geada CVPR 2024 paper is the canonical reference.
 - For the Sichuan group's approach, no single paper covers their 2025 submission. Cite the predictor-line collectively or ask the group directly for a 2026 writeup ([[Researchers and Groups]] has the contact route).
+
+### Comprehensive Reviews
+
+- [[Insights from 1000 Papers]] — White, C., et al. (2023). A massive survey covering search spaces, algorithms, and acceleration techniques, highlighting the shift towards one-shot methods and the necessity of standardized benchmarking.
+
