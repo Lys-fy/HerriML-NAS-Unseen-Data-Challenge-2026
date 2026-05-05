@@ -63,6 +63,7 @@ Open `docs/notes/` as the Obsidian vault root. Wikilinks resolve across subfolde
 - [[Score-Efficient Targeting]] — Where points actually live. Slope formula by benchmark.
 - [[Search vs Train Split]] — Per-dataset adjustment based on benchmark and headroom.
 - [[Threats to Validity]] — Dev/eval drift, overfit-to-public-13, randomness, transfer assumptions.
+- [[Research Questions]] — Open methodological questions (encoding speed, Random Search utility).
 
 ### 07 - Workflow
 

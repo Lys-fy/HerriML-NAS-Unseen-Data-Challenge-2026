@@ -36,6 +36,13 @@ Replace softmax over α with a Dirichlet distribution. α parameterises Dirichle
 
 Reported: CIFAR-10 2.46% err; ImageNet (mobile) 23.7%; SOTA on NAS-Bench-201 (see [[Approaches Overview]] for the benchmark context).
 
+## Variations for Better Generalization
+
+- **SDARTS / Smooth DARTS** (Chen & Hsieh 2020): Applies perturbation to architecture parameters to smooth the loss landscape, directly addressing the generalization gap and high-curvature issues.
+- **Beta-DARTS** (Ye et al. 2022, [arXiv:2203.01665](https://arxiv.org/abs/2203.01665)): Introduces Beta-decay regularization to architecture parameters to prevent the "skip-connection dominance" and improve stability.
+- **RobustDARTS** (Zela et al. 2020): Proposes early stopping based on the Hessian's largest eigenvalue to avoid sharp minima that generalize poorly.
+
+
 ## How it works (cell encoding)
 
 DARTS searches a *cell* (typically two: normal + reduction), then a hand-set macro stacks 8–20 cells. Op set: 3×3 / 5×5 sep-conv, 3×3 / 5×5 dilated sep-conv, 3×3 max-pool, 3×3 avg-pool, identity, zero. Fixed channel-doubling at predefined reduction cells. **The macro shape is not searched** — this is the family's load-bearing limitation for [[CIFARTile]]-style problems where macro shape matters.
