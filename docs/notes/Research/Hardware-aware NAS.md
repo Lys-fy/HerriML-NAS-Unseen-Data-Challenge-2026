@@ -8,6 +8,8 @@
     - [[Benmeziane_Hardware_Aware_NAS_Survey|Survey Summary]]
     - Taxonomy: Search Space, Search Strategy, Hardware Cost Estimation, and Acceleration.
 
+- [[Elsken_2019_LEMONADE|LEMONADE]] (Multi-objective evolutionary NAS with Lamarckian inheritance)
+
 ## Core Concepts
 ### Constrained NAS
 - Searching for architectures that satisfy strict hard constraints (e.g., Latency < 50ms).
@@ -18,6 +20,8 @@
 - Result: A set of Pareto-optimal architectures for different deployment scenarios.
 
 ## Hardware Cost Estimation
+- [[White_2021_Performance_Predictors|Performance Predictors in NAS]] (Benchmarking 31 techniques, OMNI ensemble)
+
 - **Lookup Tables (LUT)**: Fast but ignores layer interaction.
 - **Surrogate Predictors**: ML models trained to predict hardware metrics (e.g., BRP-NAS).
 - **On-device Measurement**: Most accurate, high overhead.

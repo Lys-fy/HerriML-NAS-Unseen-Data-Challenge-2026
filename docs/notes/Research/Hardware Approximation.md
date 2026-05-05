@@ -23,5 +23,7 @@
 - [[Laube_2022_Hardware_Metric_Predictors|What to Expect of Hardware Metric Predictors in NAS]] (Laube et al., 2022)
 - [[Dudziak_2020_BRP_NAS|BRP-NAS: Prediction-based NAS using GCNs]] (Dudziak et al., 2020)
 
+- [[White_2021_Performance_Predictors|Performance Predictors in NAS]] (Systematic study of 31 techniques)
+
 ## Data Sources
 - **LatBench**: Comprehensive latency dataset for various devices.
