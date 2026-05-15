@@ -36,7 +36,7 @@ MAX_EPOCHS = 200
 WARMUP_EPOCHS = 20
 PATIENCE = 30
 LR_WARMUP_EPOCHS = 5  # for the LR schedule (not to be confused with patience-warmup)
-SEED = 42
+SEED = int(os.environ.get("BASELINE_SEED", "42"))
 
 LABEL_SMOOTHING = 0.1
 EMA_DECAY = 0.999

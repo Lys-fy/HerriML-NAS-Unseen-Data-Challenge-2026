@@ -150,7 +150,7 @@ class NAS:
         print(f"  search budget: {search_budget:.0f}s "
               f"(~{per_candidate_budget:.0f}s/candidate, K={K_CANDIDATES})")
 
-        rng = random.Random(42)  # reproducible across runs
+        rng = random.Random(int(os.environ.get("BASELINE_SEED", "42")))  # seed-swept
 
         # Bootstrap with the default all-Conv3 arch as candidate 0 — guarantees
         # we always have at least one trained, working candidate even if every

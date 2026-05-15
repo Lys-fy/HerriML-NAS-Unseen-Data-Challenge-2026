@@ -63,16 +63,58 @@ All three are the same lesson: **the unseen dataset will tell you how to configu
 
 ## The probe taxonomy
 
-Four probes, run at the start of `NAS.search()`, each ≈ 1–2 epochs on a tiny model (total cost target ≤ 3–5 % of the per-dataset clock):
+Probes run at the start of `NAS.search()`. They share **one tiny model trained twice in lockstep** (aug-on arm / aug-off arm), with a **dynamic racing stop** (not fixed epochs — see below). Total cost target ≤ 5 % of the per-dataset clock.
 
-| Probe | Question | Mechanism | Configures |
+| Probe | Question | Signal read | Configures |
 |---|---|---|---|
-| **P1 — Aug safety** | Does augmentation help or break this task? | train 2 tiny models (aug-on / aug-off) ~2 ep, compare val_acc | augmentation policy (the proven one) |
-| **P2 — Invariance** | Which symmetries hold? (h-flip, channel-perm, small translation) | apply transform to a held-out batch on a briefly-trained model; does prediction survive? | which augmentations are safe + architecture hint (translation-invariant → conv-friendly; position-critical → position-aware) |
-| **P3 — Task structure** | Memorization-friendly (deterministic) or noisy/hard? | train-loss trajectory of a tiny model over ~3 ep — collapses instantly vs never | regularization strength (dial DropPath/smoothing down for memorization tasks → fixes GameOfLife) |
-| **P4 — Macro sensitivity** | Does the task reward bigger architecture? | 2-ep val_acc of {small, +depth, +width} candidates | search budget allocation + whether to invoke EGNAS macro-search at all |
+| **P1 — Aug safety** | Is augmentation *breaking* the task (not just slowing it)? | shape of aug-arm val_acc trajectory vs no-aug arm | augmentation on/off (the proven one) |
+| **P2 — Invariance** | Which symmetries hold? (h-flip, channel-perm, small translation) | does prediction survive the transform on the probe model? | which augmentations are safe + architecture hint (translation-invariant → conv-friendly; position-critical → position-aware) |
+| **P3 — Task structure** | Memorization-friendly (deterministic) or noisy/hard? | slope of no-aug-arm train-loss collapse | regularization strength (dial DropPath/smoothing down for memorization tasks → fixes GameOfLife) |
+| **P4 — Macro sensitivity** | Does the task reward bigger architecture? | val_acc delta of {small, +depth, +width} on the probe budget | search budget allocation + whether to invoke EGNAS macro-search |
 
-P1 is **Probe v1** — already justified by hard ablation data, lowest risk, ships first. P2–P4 extend the framework.
+P1 + P3-lite are **Probe v1** — ship first. P2, P4 extend the framework.
+
+### Why not fixed epochs — and the trap it hides
+
+Fixed "~2 epochs" is wrong twice over:
+
+1. **Wall-cost varies ~30×**: 2 epochs ≈ 2 s on Sudoku, ≈ 60 s on Myofibre. Fixed epochs blows the ≤ 5 % budget on slow datasets, wastes it on fast ones.
+2. **The deeper trap — short probes are structurally biased *against* augmentation.** Augmentation *always* lags early: it removes the memorization shortcut, so the aug arm has *lower* val_acc at any short horizon even when aug is worth +11.86 long-term (directly visible in the Tier 1 curves — aug models climb for 100+ epochs). A naive "pick the higher short-horizon val_acc" probe — fixed-epoch *or* fixed-time — would flip **AddNIST to aug-off → −10**. Dynamic stopping alone does **not** fix this; it just reaches the wrong answer faster.
+
+### P1's actual mechanism — race on trajectory *shape*, asymmetric, fail-safe
+
+The decision is **not** "which arm is ahead?" It is **"is augmentation breaking the task or merely slowing it?"**
+
+- **Language (aug breaks it):** aug arm flat / near-chance / capped far below — *not improving*. Encoding destroyed.
+- **AddNIST (aug just lags):** aug arm rising, behind in absolute terms but clearly climbing and tracking the no-aug shape.
+
+Both arms train in lockstep on a train subset; val-subset accuracy logged every K steps. After a short warmup, each check applies an **asymmetric** rule:
+
+```
+switch AUG OFF  only if  aug-arm slope ≈ 0 (not improving)  AND  far below no-aug arm
+keep   AUG ON   if       aug-arm is rising (even if behind)        ← the default
+ambiguous / probe deadline reached  →  keep AUG ON  (Tier 1 known-good)
+```
+
+Killing aug requires **positive evidence it is broken** (collapsed trajectory), never merely "it's behind." This makes AddNIST safe (rising → keep) and catches Language (flat near-chance → off). The dynamic racing stop is the *cost* layer on top of this *signal*: huge-gap datasets resolve in a fraction of an epoch; ambiguous ones run to the hard wall-time cap, then fail safe to keep-aug.
+
+P3-lite uses the same probe model: classify memorization-friendliness from the **slope of the no-aug train-loss collapse**, not a fixed-epoch loss value — and apply the same asymmetric fail-safe (only reduce regularization on a *strong* memorization signal, because wrongly dropping reg on AddNIST re-floors it).
+
+### Other probes worth testing (exploration menu)
+
+Beyond P1–P4, the unseen-data setting opens more cheap runtime measurements. Ranked by (impact × cheapness × fit to our measured failures):
+
+| Candidate probe | What it measures | Why it could matter | Cost |
+|---|---|---|---|
+| **LR-range probe** | short LR sweep, find divergence point (Smith range-test) | we *hardcode* lr=0.025; optimal LR is dataset-dependent and unknown on unseen data — likely the single biggest untested assumption | very low (~tens of steps) |
+| **Resolution-tolerance probe** | full-res vs half-res tiny train, compare | if a dataset tolerates ½ res → 4× faster epochs → far more training in budget. Huge lever on slow datasets (Myofibre 98 % budget-bound) | low |
+| **Budget-allocation probe** | extrapolate epochs-to-converge from probe learning-curve slope | a *measured* replacement for the *guessed* [[Search vs Train Split]] benchmark-regime classifier — decide NAS-vs-Trainer split from data, not from `metadata['benchmark']` | ~free (reuses probe curve) |
+| **Class-imbalance probe** | label histogram of `train_y` | detect skew → weighted/focal loss; cheap insurance, no training at all | free |
+| **Channel-semantics probe** | 2D-conv-on-N-channels vs 3D-conv quick train | directly attacks the [[Voxel]] 20-channel-as-spatial pathology; the hidden set may have more 3D-ish data | medium |
+| **Aug-strength probe** | if aug helps, sweep light/medium/heavy | granular, not just binary on/off; squeezes more from datasets where aug helps | medium |
+| **Architecture-family probe** | conv vs MLP-ish on a quick train | boldest — for truly encoded data (Language/Gutenberg) convs may be the wrong inductive bias entirely; could structurally fix the encoded-data failures | high, research-y |
+
+**Free wins to fold in early:** class-imbalance (no training), LR-range (tiny), budget-allocation (reuses the P1 probe curve). The last one is conceptually important — it replaces a *guessed* heuristic from the strategy notes with a *measured* one, which is the whole thesis applied to budget allocation.
 
 ## How prior methods become components
 
@@ -121,6 +163,53 @@ The shipping path is unchanged in *risk ordering* (cheap proven things first), b
 - **Probe cost is real budget.** Target ≤ 5 % of the clock. On a 1 h Phase-2 dataset that's ≤ 3 min for all probes combined — tight but feasible with tiny models at low resolution.
 - **Reliability still dominates** ([[Reliability vs Peak]]). The probe must *fail safe*: if a probe is inconclusive or errors, default to the conservative known-good config (no aug, medium reg, no macro search). The probe adds upside; it must never add a failure mode.
 - **Grade vs competition.** For the grade, this thesis + our ablation rigor is a strong submission regardless of placement. For the competition, EVAI won 2025 on reliability + clean engineering with *no* novelty — so novelty is not required to place, but it is the only way to *beat* rather than match. The thesis happens to also be the highest-EV reliability play, so the two goals do not conflict.
+
+## Extension experiments (beyond probing — to run when bandwidth allows)
+
+These are not probes; they are independent experiments/components that emerged from the variance + budget + ceiling analysis. Each is high-EV and on the exploration backlog.
+
+### E1 — Budget-filling diverse-restart ensemble
+
+**Motivation:** datasets early-stop using a fraction of the 2 h budget (Phase 3's budget is larger and *unspecified*); and runs are non-reproducible even at fixed seed (`cudnn.benchmark=True`), so single runs are luck-exposed. **Mechanism:** while `clock.check()` has budget, keep training additional *diverse* members (vary seed / arch / aug / LR), then **ensemble all of them** at predict (average softmax). Crucially **ensemble, do not select-best-by-val** — we have no test labels, so max-over-K by validation is winner's-curse selection bias; the test gain is far below the val spread and can backfire. Diversity is the lever: the search *already trains K=8 candidate archs and discards 7* — ensembling the top-k of those is nearly free and more decorrelated than seed-only. Clock-adaptive (reads the budget, fills it, always reserves predict + K-forward-pass time — the −10 timeout cliff is unforgiving). This is the convergence point of three threads: it fills the unused **clock**, spends the unused **VRAM** (K model copies — the concrete answer to "isn't the memory wasted"), and averages out the **variance/luck**. It is the structural form of [[Tier 3 - EGNAS + Reliability|Neural Ensemble Search]] and should be elevated from a Tier-3 nice-to-have to a core mechanism. Caveat: reduces variance + lifts mean (~1–3 %); does **not** fix architectural ceilings (5 ensembled models that all can't do multi-instance reasoning still can't — CIFARTile still needs E2 / Tier 2).
+
+### E2 — Non-convolutional primitive in the search space
+
+**Motivation:** our entire ceiling is "best CNN findable" — conv inductive bias is *actively wrong* on relational (CIFARTile: compare 4 tiles) and positional/encoded (Language, Gutenberg) datasets, which is exactly where we're stuck. **Mechanism:** add a lightweight **self-attention block** as an op in the search vocabulary (hybrid conv-early / attention-late, à la CoAtNet/BoTNet — *not* a pure from-scratch ViT, which loses on small data with no pretraining and a tight clock). Folds into the architecture-family probe: conv vs MLP vs attention, decided per-dataset by measurement. This is the strongest single candidate to break the **CIFARTile** ceiling that "more conv" (even EGNAS macro-search) likely won't, because attention is built for relating distant elements. Exploration *branch*, not Tier 2 core: it enlarges the search space and attention is unstable on tiny data, so it must be probe-gated and fail-safe to conv.
+
+### E3 — Architecture × dataset "gold" grid (the thesis validation harness)
+
+Run a grid of **{plain-CNN, conv+Deep-Sets/relational head, conditional Conv3d, conv→attention hybrid, MLP-Mixer}** × the 11 public datasets, multi-seed, at the 2 h budget → the **oracle**: the best architecture per dataset. Then characterise which *cheap signals* (input shape, channel count, benchmark, learning-curve shape, detected symmetry, overfit speed) predict the oracle's choice, validated **leave-one-out** (derive the rule on 10 datasets, test on the held-out 1, rotate).
+
+Critical framing: the deliverable is **not** a shippable "features → architecture" predictor — that *is* the meta-learning approach that cost the Sun group Cryptic ([[Predictor-Guided Evolutionary]]). The grid's job is to be the **oracle the runtime probe is validated against**: "does the probe's cheap measured signal track the oracle's choice?" The probe stays prior-free (measures the actual dataset); the grid only tells us whether the probe's signal is *sufficient*. This experiment is effectively the **validation harness for the entire thesis** — it proves or kills the probe approach before Phase 2, and should be prioritised accordingly.
+
+### Architecture-primitive menu (search-space / head options the arch-family probe selects from)
+
+No rulebook restriction exists ([[Rules]]: no size/FLOPs/family cap — any `nn.Module` from `NAS.search()` is legal). Ranked by fit-to-measured-failures × cheapness × small-data safety:
+
+| Primitive | Targets | Why | Catch |
+|---|---|---|---|
+| **Deep-Sets / permutation-invariant head** | **CIFARTile** (the ceiling), AddNIST/MultNIST | CIFARTile is *literally* a symmetric set-function (count distinct over unordered tiles) — the *correct* bias, not just different. Cheap (a head). **The standout.** | needs input segmentable into "elements" |
+| **conv backbone + relational head (hybrid)** | CIFARTile, Chesseract | practical synthesis: conv (small-data-safe) + small permutation-inv/attention head for the relational step | best single concrete bet |
+| **Conv3d (conditional)** | **Voxel** | exact structural match (Voxel is true 20³ volume, we fake it as 20-ch 2D) | only helps truly-3D → needs detection signal |
+| **DASH-style dilated/multi-scale search** | unknown Phase-2/3 generalist | minimal-bias, designed for "one pipeline, unknown modality"; survey-anchored | fixed method, not self-configuring → branch |
+| **MLP-Mixer / gMLP** | **Language, Gutenberg** | no locality bias → right for encoded-positional data where conv bias is *actively wrong* | data-hungry; small-data instability |
+| self-attention op (E2) | CIFARTile, encoded | relates distant elements; probe-gated, fail-safe to conv | search-space size, instability |
+| group-equivariant CNN | any dataset P2 finds symmetry on | principled form of "augment for invariance" | heavy/slow, exotic for budget |
+
+All probe-gated, all fail-safe to plain conv (the small-data-safe default). The point is *not* "transformers/GNNs are better" — by default they are not — it is "we can detect *when* conv is the wrong inductive bias, and a CNN-only field structurally cannot."
+
+## Questions we want answered (consolidated)
+
+The experiments above (multi-seed run, E1–E3, probes P1–P4) exist to answer these. Roughly in priority order:
+
+1. **Is the cheap probe signal sufficient?** Does a ≤5 %-budget probe make the aug-on/off (P1) and arch-family decisions the E3 *oracle* would — without false-flagging (AddNIST stays aug-on)? If no, the whole thesis fails and we fall back to EGNAS-copy.
+2. **How large is run-to-run variance (even at fixed seed, `cudnn.benchmark=True`)?** Which deltas are above the noise floor (aug ±11 — safe) and which are within it (search +5.89, EMA +3.23, tier-vs-tier ~1–2 adj — untrustworthy single-seed)? → the multi-seed run answers this.
+3. **What is the per-dataset gold architecture, and what cheap signal predicts it (leave-one-out)?** → E3.
+4. **Does budget-filling diverse-restart *ensembling* (not selection) convert unused clock+VRAM into robust gain?** How much, and does it saturate by ~3–5 members? → E1.
+5. **Can a non-conv primitive break the CIFARTile ceiling** where EGNAS macro-search (more conv) cannot? → E2/E3, Deep-Sets head first.
+6. **Does P3-lite recover GameOfLife without re-flooring AddNIST?** (the dangerous false-positive — over-reg-detection safety).
+7. **What is the optimal model size *per unit wall-clock* per dataset type?** (capacity–budget frontier, run at simulated VRAM caps so it also informs the tiny-GPU degradation ladder).
+8. **Is the search itself variance-amplifying?** It ranks 8 candidates on cuDNN-nondeterministic short-train val → can pick a different arch per run. Does averaging the candidate signal stabilise it?
 
 ## Open questions
 

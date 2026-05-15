@@ -36,7 +36,7 @@ PATIENCE = 30
 # Fixed seed for reproducible Tier-0 baseline runs. cudnn.benchmark stays True
 # so we trade strict bitwise determinism for ~5% throughput — that's the right
 # trade for a baseline run.
-SEED = 42
+SEED = int(os.environ.get("BASELINE_SEED", "42"))
 
 
 def _open_csv_logger(metadata) -> Tuple[Optional[object], Optional[csv.writer]]:
