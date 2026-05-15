@@ -85,7 +85,8 @@ Split into **plan** (what we intend to build) and **implementation** (what we bu
 
 **Plan** — staged build: shipping path (T0–T4) + experimental branches (B1–B4):
 
-- [[Implementation Plan Overview]] — Roadmap, axes (shipping vs experimental), recommended order, evaluation gates.
+- [[Probe-Driven Self-Configuration]] — **The central thesis.** Pipeline probes the unseen dataset at runtime and self-configures; prior methods become the menu it selects from. Read this first.
+- [[Implementation Plan Overview]] — Roadmap, axes (shipping vs experimental), recommended order, reframed around the thesis.
 - [[Tier 0 - Hardcoded CNN]] — Fixed CNN, no search. Validates harness.
 - [[Tier 1 - Augmentation + Op Search]] — Augmentation + regularization + a first random op-type search layer.
 - [[Tier 2 - EGNAS-Light]] — Sequential macro-micro hill-climb (the [[2025 - EVAI|2025-winning method]] scaled). Shipping candidate.

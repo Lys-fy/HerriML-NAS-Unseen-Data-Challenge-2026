@@ -103,6 +103,16 @@ final = avg_softmax(preds_a, preds_b).argmax(1)
 
 Heuristic at runtime: enable TTA iff `H == W` and `H >= 16` and `codename` not in a known-asymmetric blacklist. Conservative by default.
 
+### 5b. Neural Ensemble Search (robustness under dataset shift)
+
+From the [[Papers|White et al. 2023 survey]] (Sec. 6.3): Zaidi et al. (2021) show that *searching* for a **diverse ensemble** of architectures — rather than ensembling top-k of one search — improves both accuracy **and robustness under dataset shift / OOD**, which is exactly the Phase-2/3 regime. The multi-head variant (Narayanan 2021) makes it cheap via shared-trunk heads.
+
+Distinction from §4 (top-k ensemble): §4 averages the *k best* candidates of a single search (correlated, same inductive bias). NES deliberately selects for *diversity* (decorrelated errors), which is what actually buys robustness under shift and hedges the −10 clip.
+
+Cheapest viable form for our budget: **diverse-seed ensemble** of the chosen architecture (3 seeds, different inits/augmentation draws), or a multi-head trunk if budget allows. Gated like §4 — only on high-leverage datasets (`slope > 0.5`) where the extra forward passes are worth it. High-value, low-risk; the survey explicitly names ensembling as the one technique it ties to shift-robustness.
+
+> Note: §5 TTA still uses a `codename` blacklist — that's the metadata-vs-codename mistake we corrected in [[Tier 1 - Results]]. When Tier 3 is built, replace it with the metadata-only / probe-driven gate (see [[Probe-Driven Self-Configuration]]).
+
 ### 6. Deterministic seeding
 
 ```python

@@ -1,11 +1,15 @@
-# Tiers Overview
+# Implementation Plan Overview
 
-> **Status:** drafting | **Topic:** Staged build plan — shipping path (Tiers 0–4) plus experimental branches (B1–B4). Each tier evaluated before the next is started.
-> **Related:** [[Approaches Overview]], [[Reliability vs Peak]], [[Phase 2 Submission Strategy]], [[Budget Allocation]], [[Failure Modes]]
+> **Status:** current | **Topic:** Staged build plan — shipping path (Tiers 0–4) plus experimental branches (B1–B4). Reframed 2026-05-15 around the [[Probe-Driven Self-Configuration]] thesis after the [[Tier 1 - Results|Tier 1 ablation]].
+> **Related:** [[Probe-Driven Self-Configuration]], [[Approaches Overview]], [[Reliability vs Peak]], [[Phase 2 Submission Strategy]], [[Tier 1 - Results]], [[Failure Modes]]
 
-The team's plan for the [[Submission Contract|submission code]] is built in **tiers** rather than written all at once. Each tier introduces one well-defined slice of complexity on top of the previous, can be **mock-harness-evaluated independently**, and remains in the repo as a fallback / comparator after the next tier supersedes it.
+> **Read [[Probe-Driven Self-Configuration]] first.** It is the submission's central thesis: the pipeline does not commit to a prior winner's NAS method — it runs cheap runtime probes to characterize the unseen dataset, then configures itself. EGNAS / predictor-EA / DARTS become the *menu the probe selects from*, not the submission. Everything below is the staged build that gets us there.
+
+The [[Submission Contract|submission code]] is built in **tiers** rather than written all at once. Each tier introduces one well-defined slice of complexity on top of the previous, can be **mock-harness-evaluated independently**, and remains in the repo as a fallback / comparator after the next tier supersedes it.
 
 The whole structure is driven by the strategy notes' central claim: [[Reliability vs Peak|reliability dominates peak]]. Tiers exist so the *first* shippable version is a confirmed-working pipeline (Tier 0), and every later tier inherits its working harness. Going straight to EGNAS would mean debugging architecture search against an unverified harness — the failure modes overlap and become hard to bisect.
+
+**Status as of 2026-05-15:** Tier 0 (−0.355) and Tier 1 (+24.644) implemented and measured — see [[Tier 0 - Results]], [[Tier 1 - Results]]. Tier 1's single-feature ablation is the empirical motivation for the probe thesis. Tier 2+ is reframed below.
 
 ## Two axes
 
@@ -29,17 +33,20 @@ Experimental branches:
 
 | Tier | Goal | Status |
 |------|------|--------|
-| [[Tier 0 - Hardcoded CNN]] | Validate harness, clock, shape adaptation. No search. | ✓ implemented |
-| [[Tier 1 - Augmentation + Op Search]] | **Augmentation + label smoothing + Mixup + DropPath** to make the budget productive (Tier 0 uses only ~6 % of clock), *plus* a first random op-type search layer. Validates search-loop plumbing on a model that actually keeps learning past epoch 30. | planned |
-| [[Tier 2 - EGNAS-Light]] | Sequential macro-micro hill-climb (Siddiqui et al. 2025, scaled). Macro depth/width + per-layer op/kernel. *This is the version that ships to Phase 2 unless something better surfaces.* | planned |
-| [[Tier 3 - EGNAS + Reliability]] | T2 + per-regime budget classifier + OOM-safe batch sizing + in-search fallback + top-k ensemble + TTA. | planned |
-| [[Tier 4 - Phase-2 Polish]] | Iterate from Phase-2 leaderboard signal. Per-codename overrides, mixed precision (if env-safe), SAM/SWA on high-leverage datasets. | planned |
+| [[Tier 0 - Hardcoded CNN]] | Validate harness, clock, shape adaptation. No search. | ✓ done — −0.355, see [[Tier 0 - Results]] |
+| [[Tier 1 - Augmentation + Op Search]] | Regularization stack + residual blocks + random op-search. Made the budget productive; +24.644. Its ablation motivates the probe thesis. | ✓ done — +24.644, see [[Tier 1 - Results]] |
+| **Tier 2a — Probe v1** | P1 (aug-safety probe) + P3-lite (task-structure → regularization strength). Both proven-needed by the Tier 1 ablation. Cheap, low-risk, ships first. Target ≈ +30. See [[Probe-Driven Self-Configuration]]. | next |
+| [[Tier 2 - EGNAS-Light]] (→ Tier 2b) | EGNAS depth/width macro-search, **gated by P4** (macro-sensitivity probe). EGNAS becomes a *triggered component*, not the default method. | planned |
+| [[Tier 3 - EGNAS + Reliability]] | Full probe suite (add P2 invariance) + unified controller + OOM-safe / fallback + **Neural Ensemble Search** (Zaidi 2021 — robustness under dataset shift, hedges the −10 clip). The complete self-configuring pipeline. | planned |
+| [[Tier 4 - Phase-2 Polish]] | Iterate from Phase-2 leaderboard signal. Per-regime tuning of probe thresholds, mixed precision (if env-safe). | planned |
 
-## The experimental branches
+## The experimental branches — now the controller's menu
 
-| Branch | Goal | When it wins |
+Under the [[Probe-Driven Self-Configuration]] thesis these are no longer "alternatives to A/B against the shipping path." They are the **backends the probe-driven controller dispatches to** (plus honest baselines proving the controller beats any single fixed method).
+
+| Branch | Role under the thesis | When the probe selects it |
 |--------|------|--------------|
-| [[Branch B1 - Zero-Cost Proxies]] | Synflow + NASWOT + params 3-way vote, used as cheap pre-filter | T2/T3 search space grows to hundreds of candidates |
+| [[Branch B1 - Zero-Cost Proxies]] | candidate pre-filter inside a triggered search | P4 macro-sensitive + large candidate pool |
 | [[Branch B2 - Predictor-Guided EA]] | GBM/GNN surrogate + evolutionary search over op-type vectors | Dataset family has strong priors — [[Cryptic]]-like novel data is where this *loses* |
 | [[Branch B3 - DARTS Comparator]] | PC-DARTS / DrNAS implementation as literature anchor and organisers' reference | Standard image-classification datasets with conventional cells |
 | [[Branch B4 - Weight-Sharing Supernet]] | SPOS / OFA-lite trained offline on public 13, sample sub-nets per Phase-2 dataset | Hidden datasets share shape & class structure with the public 13 — *unlikely per [[Threats to Validity]]* |

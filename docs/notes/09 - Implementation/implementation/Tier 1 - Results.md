@@ -66,6 +66,8 @@ To attribute the +25 swing to specific components, each Tier 1 feature was disab
 
 **Augmentation: double-edged, the central finding.** +11.86 on AddNIST (it's *the* thing fixing it — aug-off ≈ Tier 0's 77.13 %), but −5.65 on Language (aug-off ≈ Tier 0's 83.84 %). Augmentation is simultaneously the highest-value and highest-risk component, and the risk is dataset-dependent in a way metadata can't predict.
 
+> **⚠ Single-seed caveat.** Every number in this note (full sweep and all three ablation configs) is from **one seed each**. The [[Papers|White et al. 2023 survey]] (Sec. 9.2) is emphatic that NAS has high variance and single-seed deltas are not trustworthy on their own. The *magnitude* of the headline effects (aug −5.65 vs +11.86; search +5.89; the −10 → +1.86 AddNIST swing) is far above plausible seed noise, so the **qualitative conclusions hold**. But the **precise per-feature deltas and the +4.9 oracle-aug projection must be re-run at ≥3 seeds** before they drive a frozen probe threshold or go into a write-up. Tracked as a prerequisite in [[Probe-Driven Self-Configuration]] §Honest caveats.
+
 ## What this tells us
 
 1. **No dead code in Tier 1** — search, EMA, and aug all earn their place; the only problem is aug's per-dataset double-edge.

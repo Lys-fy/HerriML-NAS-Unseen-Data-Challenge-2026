@@ -21,6 +21,18 @@ Geada, R., Towers, D., Forshaw, M., Atapour-Abarghouei, A., McGough, A. S. *Insi
 
 Authoritative reference on the **8 CVPR-era datasets**: [[AddNIST]], [[Language]], [[MultNIST]], [[CIFARTile]], [[Gutenberg]], [[Isabella]], [[GeoClassing]], [[Chesseract]]. Authored by the competition organisers ([[Researchers and Groups]]) — read it as their own perspective on what "good NAS" looks like on this problem. Contains the off-the-shelf CNN benchmark tables (ResNet-18, AlexNet, VGG16, ConvNext, MNASNet, DenseNet, ResNeXt) and PC-DARTS baselines used for adj_score formulation. Highlights [[CIFARTile]] as the canonical "search-rewarding" dataset (45% CNN → 92% PC-DARTS) and [[Gutenberg]] as effectively noise-bound (~50% ceiling). The 2024 paper is the closest thing we have to a published review of the competition family.
 
+### `White-2023_NAS-Insights-1000-Papers_arxiv-survey.pdf`
+
+White, C., Safari, M., Sukthanker, R., Ru, B., Elsken, T., Zela, A., Dey, D., Hutter, F. *Neural Architecture Search: Insights from 1000 Papers.* [arXiv:2301.08727v2](https://arxiv.org/abs/2301.08727), Jan 2023.
+
+Comprehensive NAS survey from the AutoML.org / Freiburg group (Hutter et al.) — the same community that runs the AutoML conference hosting this competition. Used as the literature anchor for the [[Probe-Driven Self-Configuration]] thesis. Key takeaways for us (per the targeted read):
+
+- **Novelty support**: no method in the survey matches prior-free *runtime* self-configuration / per-dataset method dispatch. The nearest concept, meta-learning for NAS (Lee et al. 2021; Shala et al. 2022), is the opposite — it *transfers* a meta-trained dataset-conditioned surrogate. We cite this as the thing our thesis explicitly contrasts against.
+- **Thesis ammunition**: Sec. 9.1 — "hyperparameters often do not transfer well across datasets and search spaces" (Mehta et al. 2022); one-shot rank correlation is dataset-dependent and unpredictable a priori; zero-cost proxies degrade/bias on new spaces (params/FLOPs are competitive with leading proxies — Ning et al. 2021).
+- **Scoping caveat**: cell *topology* does transfer CIFAR→ImageNet when distributions are similar (Sec. 2.4) — so our "transfer fails" claim must be scoped to distribution shift / unknown modality, not all transfer.
+- **Best-practice methodology** (Sec. 9): always include random-search/random-sampling baselines; report multiple seeds (NAS has high variance); plot anytime curves; tune the method's hyperparameters on one dataset then freeze for all others; fewer hyperparameters is better because they don't transfer.
+- **Actionable algorithms**: Neural Ensemble Search (Zaidi et al. 2021 — robustness under dataset shift); local search + network morphisms (Sec. 3.1, 5.4 — cheap, robust macro-search); DASH/XD (Sec. 2.3 — minimal-bias single pipeline for arbitrary image tasks); ASHA (Sec. 5.2 — async multi-fidelity).
+
 ## Key external papers (no local copy)
 
 ### Sun group — predictor papers
