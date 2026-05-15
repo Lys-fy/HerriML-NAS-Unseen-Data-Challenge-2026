@@ -5,8 +5,10 @@ Mimics how the organisers' grader invokes our submission, so that anything
 passing here has a high chance of passing on their servers.
 
 Differences from the real grader:
-  - Adds submission/ to sys.path before importing (so this script can live
-    outside the package).
+  - --submission-dir selects which 4-file package to run (defaults to
+    <repo>/submission, can point at baselines/* for A/B comparison). The
+    chosen dir is prepended to sys.path before importing so this script can
+    live outside the package.
   - Datasets read from $DATASETS_DIR (default <repo>/datasets/).
   - Predictions written to <repo>/dev/predictions/.
   - --score flag computes the per-dataset adjusted score against local
@@ -38,19 +40,25 @@ from pathlib import Path
 import numpy as np
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SUBMISSION_DIR = REPO_ROOT / "submission"
+DEFAULT_SUBMISSION_DIR = REPO_ROOT / "submission"
 DEFAULT_DATASETS_DIR = REPO_ROOT / "datasets"
 DEFAULT_PREDICTIONS_DIR = REPO_ROOT / "dev" / "predictions"
-
-# Submission imports must succeed exactly the way the grader's main.py imports.
-sys.path.insert(0, str(SUBMISSION_DIR))
 
 import torch  # noqa: E402
 from torch.utils.data import RandomSampler  # noqa: E402
 
-from nas import NAS  # noqa: E402
-from data_processor import DataProcessor  # noqa: E402
-from trainer import Trainer  # noqa: E402
+
+def _load_submission(submission_dir: Path):
+    """Import DataProcessor / NAS / Trainer from submission_dir.
+
+    Mirrors how the grader imports our submission — submission_dir is prepended
+    to sys.path so `from nas import NAS` etc. resolve to that folder.
+    """
+    sys.path.insert(0, str(submission_dir))
+    from nas import NAS  # noqa: E402
+    from data_processor import DataProcessor  # noqa: E402
+    from trainer import Trainer  # noqa: E402
+    return DataProcessor, NAS, Trainer
 
 
 # --- Clock and helpers (kept identical to evaluation/main.py) -----------------
@@ -115,7 +123,8 @@ def is_out_of_time(clock: Clock, metadata: dict, predictions_dir: Path, grace: b
 # --- The actual pipeline (mirrors run_submission in evaluation/main.py) -------
 
 
-def run_submission(runclock: Clock, dataset_path: Path, predictions_dir: Path) -> None:
+def run_submission(runclock: Clock, dataset_path: Path, predictions_dir: Path,
+                   DataProcessor, NAS, Trainer) -> None:
     immutable = copy.deepcopy(runclock)
     (train_x, train_y), (valid_x, valid_y), test_x, metadata = load_dataset(dataset_path)
     metadata["time_remaining"] = immutable.check()
@@ -213,6 +222,9 @@ def main() -> None:
     parser.add_argument("datasets", nargs="*", help="Dataset directory names (default: all under datasets/).")
     parser.add_argument("--datasets-dir", default=os.environ.get("DATASETS_DIR", str(DEFAULT_DATASETS_DIR)))
     parser.add_argument("--predictions-dir", default=str(DEFAULT_PREDICTIONS_DIR))
+    parser.add_argument("--submission-dir", default=str(DEFAULT_SUBMISSION_DIR),
+                        help="Directory containing data_processor.py / nas.py / trainer.py / helpers.py "
+                             "(default: <repo>/submission). Use this to run baselines/* through the same harness.")
     parser.add_argument("--time-limit", type=float, default=None,
                         help="Override per-dataset time limit in hours (default: from metadata, fallback 0.5).")
     parser.add_argument("--score", action="store_true",
@@ -221,7 +233,9 @@ def main() -> None:
 
     datasets_dir = Path(args.datasets_dir).resolve()
     predictions_dir = Path(args.predictions_dir).resolve()
+    submission_dir = Path(args.submission_dir).resolve()
     predictions_dir.mkdir(parents=True, exist_ok=True)
+    DataProcessor, NAS, Trainer = _load_submission(submission_dir)
 
     if args.datasets:
         targets = [datasets_dir / name for name in args.datasets]
@@ -239,17 +253,25 @@ def main() -> None:
     print("=" * 78)
     print("=" * 13 + "    Local mock harness — NAS Unseen Data Challenge      " + "=" * 13)
     print("=" * 78)
+    print(f"  submission_dir:  {submission_dir}")
     print(f"  datasets_dir:    {datasets_dir}")
     print(f"  predictions_dir: {predictions_dir}")
     print(f"  targets:         {[t.name for t in targets]}")
+    print(f"  torch:           {torch.__version__}")
+    print(f"  cuda toolkit:    {torch.version.cuda}")
     print(f"  cuda available:  {torch.cuda.is_available()}")
+    if torch.cuda.is_available():
+        print(f"  device:          {torch.cuda.get_device_name(0)}")
+    log_dir = os.environ.get("BASELINE_LOG_DIR")
+    if log_dir:
+        print(f"  BASELINE_LOG_DIR: {log_dir}")
 
     for ds_path in targets:
         metadata = json.loads((ds_path / "metadata").read_text())
         time_limit = args.time_limit if args.time_limit is not None else float(metadata.get("time_limit", 0.5))
         runclock = Clock(time_limit)
         try:
-            run_submission(runclock, ds_path, predictions_dir)
+            run_submission(runclock, ds_path, predictions_dir, DataProcessor, NAS, Trainer)
         except Exception as ex:
             print(f"Exception while running {ds_path.name}: {ex}", file=sys.stderr)
             print(traceback.format_exc(), file=sys.stderr)

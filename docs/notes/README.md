@@ -78,6 +78,30 @@ Open `docs/notes/` as the Obsidian vault root. Wikilinks resolve across subfolde
 - [[Official Pages]] — Rules, info, contact, archive, mailing list.
 - [[Researchers and Groups]] — Yanan Sun's group, U. Cyprus team, organisers (Towers, Geada, McGough).
 
+### 09 - Implementation
+
+Split into **plan** (what we intend to build) and **implementation** (what we built and measured, with embedded graphs). Folder layout:
+`09 - Implementation/plan/` and `09 - Implementation/implementation/`.
+
+**Plan** — staged build: shipping path (T0–T4) + experimental branches (B1–B4):
+
+- [[Implementation Plan Overview]] — Roadmap, axes (shipping vs experimental), recommended order, evaluation gates.
+- [[Tier 0 - Hardcoded CNN]] — Fixed CNN, no search. Validates harness.
+- [[Tier 1 - Augmentation + Op Search]] — Augmentation + regularization + a first random op-type search layer.
+- [[Tier 2 - EGNAS-Light]] — Sequential macro-micro hill-climb (the [[2025 - EVAI|2025-winning method]] scaled). Shipping candidate.
+- [[Tier 3 - EGNAS + Reliability]] — T2 + per-regime budget classifier + OOM-safe batch + in-search fallback + ensemble + TTA.
+- [[Tier 4 - Phase-2 Polish]] — Data-driven refinement once Phase-2 leaderboard data arrives.
+- [[Branch B1 - Zero-Cost Proxies]] — Synflow + NASWOT + params 3-way vote. Pre-filter for larger search spaces.
+- [[Branch B2 - Predictor-Guided EA]] — Sun group's approach. Comparator; expected to lose on novel data.
+- [[Branch B3 - DARTS Comparator]] — PC-DARTS / DrNAS. Organisers' published reference benchmark.
+- [[Branch B4 - Weight-Sharing Supernet]] — SPOS-lite offline pretrain. High risk, possibly only as warm-start.
+
+**Implementation** — measured results + findings + graphs:
+
+- [[Implementation Results Overview]] — Scoreboard, headline findings, graph index.
+- [[Tier 0 - Results]] — Hardcoded-CNN baseline: total adj −0.355. Established overfitting (not search) is the binding constraint.
+- [[Tier 1 - Results]] — Augmentation + reg + op-search: total adj +24.644. Includes the single-feature ablation quantifying search/EMA/aug.
+
 ## Conventions
 
 Each note opens with a frontmatter blockquote:
