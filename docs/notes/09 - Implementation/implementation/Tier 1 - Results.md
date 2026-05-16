@@ -1,7 +1,7 @@
 # Tier 1 — Results
 
-> **Status:** current | **Topic:** Measured results of the [[Tier 1 - Augmentation + Op Search|Tier 1 plan]] + the single-feature ablation that quantifies each component. Total adj **+24.644** (Tier 0 was −0.355 → **+25.0 swing**).
-> **Related:** [[Tier 1 - Augmentation + Op Search]], [[Tier 0 - Results]], [[Implementation Results Overview]], [[Tier 2 - EGNAS-Light]], [[Threats to Validity]], [[Reliability vs Peak]]
+> **Status:** current | **Topic:** Measured results of the [[Tier 1 - Augmentation + Op Search|Tier 1 plan]] + the single-feature ablation that quantifies each component. Total adj **+24.644** (Tier 0 was −0.355 → **+25.0 swing**). ⚠ **+24.644 is one seed and a favourable tail draw** — the trustworthy figure is ≈ **+11 ± 8 shipped / +8 ± 8 internal** ([[Multi-Seed - Results]], 3 seeds).
+> **Related:** [[Multi-Seed - Results]], [[Tier 1 - Augmentation + Op Search]], [[Tier 0 - Results]], [[Implementation Results Overview]], [[Tier 2 - EGNAS-Light]], [[Threats to Validity]], [[Reliability vs Peak]]
 
 Run 2026-05-14, DGX Spark (NVIDIA GB10, torch 2.11.0+cu128), `--time-limit 2.0`, all 11 public datasets. Code: `baselines/tier1_aug_op_search/`. Plan: [[Tier 1 - Augmentation + Op Search]].
 
@@ -66,7 +66,7 @@ To attribute the +25 swing to specific components, each Tier 1 feature was disab
 
 **Augmentation: double-edged, the central finding.** +11.86 on AddNIST (it's *the* thing fixing it — aug-off ≈ Tier 0's 77.13 %), but −5.65 on Language (aug-off ≈ Tier 0's 83.84 %). Augmentation is simultaneously the highest-value and highest-risk component, and the risk is dataset-dependent in a way metadata can't predict.
 
-> **⚠ Single-seed caveat.** Every number in this note (full sweep and all three ablation configs) is from **one seed each**. The [[Papers|White et al. 2023 survey]] (Sec. 9.2) is emphatic that NAS has high variance and single-seed deltas are not trustworthy on their own. The *magnitude* of the headline effects (aug −5.65 vs +11.86; search +5.89; the −10 → +1.86 AddNIST swing) is far above plausible seed noise, so the **qualitative conclusions hold**. But the **precise per-feature deltas and the +4.9 oracle-aug projection must be re-run at ≥3 seeds** before they drive a frozen probe threshold or go into a write-up. Tracked as a prerequisite in [[Probe-Driven Self-Configuration]] §Honest caveats.
+> **⚠ Single-seed caveat — now resolved by [[Multi-Seed - Results]] (3 seeds).** Every number in this note is **one seed each**. The 3-seed sweep confirms: (1) the **+24.644 total was a favourable tail draw** — honest Tier 1 ≈ +11 ± 8 shipped / +8 ± 8 internal (one seed of the *same recipe* scored +0.02); (2) AddNIST/MultNIST's positive adj here is **not seed-stable** (AddNIST −0.4 ± 5.4 — they were never "fixed", just lucky this run); (3) what **is** seed-stable is the aug double-edge *direction* (Language aug-cost −6.82 ± 1.88, negative every seed; aug-off a dead −10 floor on AddNIST/MultNIST) and the tight wins (GeoClassing +7.68 ± 0.29, Sudoku +5.94 ± 0.34). The qualitative Tier-0→Tier-1 story (escaping the −10 floors) holds; the precise per-feature deltas and the +4.9 oracle-aug / ~+30.3 projections below are single-seed and **superseded** — read them with the [[Multi-Seed - Results]] spread.
 
 ## What this tells us
 

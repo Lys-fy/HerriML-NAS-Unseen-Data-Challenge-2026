@@ -1,0 +1,1060 @@
+{
+  "seeds": [
+    42,
+    1337,
+    2024
+  ],
+  "configs": [
+    "full",
+    "augoff"
+  ],
+  "codename_to_dataset": {
+    "Adaline": "AddNIST",
+    "Caitie": "CIFARTile",
+    "Chester": "Chesseract",
+    "conway": "GameOfLife",
+    "Sadie": "GeoClassing",
+    "Gutenberg": "Gutenberg",
+    "LaMelo": "Language",
+    "Mateo": "MultNIST",
+    "Myopia": "Myofibre",
+    "Sokoto": "Sudoku",
+    "Volga": "Voxel"
+  },
+  "aug_codenames": [
+    "Adaline",
+    "Mateo",
+    "Caitie",
+    "Sadie",
+    "Gutenberg",
+    "LaMelo",
+    "Myopia"
+  ],
+  "totals": {
+    "full": {
+      "shipped": {
+        "mean": 11.2695,
+        "std": 8.2144,
+        "min": 3.1629,
+        "max": 19.5876,
+        "spread": 16.4247,
+        "n": 3,
+        "vals": [
+          19.5876,
+          11.0581,
+          3.1629
+        ]
+      },
+      "internal": {
+        "mean": 8.3892,
+        "std": 8.3662,
+        "min": 0.0196,
+        "max": 16.752,
+        "spread": 16.7324,
+        "n": 3,
+        "vals": [
+          16.752,
+          8.3959,
+          0.0196
+        ]
+      },
+      "internal_aug7": {
+        "mean": -0.3387,
+        "std": 8.7353,
+        "min": -9.2442,
+        "max": 8.2158,
+        "spread": 17.46,
+        "n": 3,
+        "vals": [
+          8.2158,
+          0.0124,
+          -9.2442
+        ]
+      },
+      "n_datasets": 11
+    },
+    "augoff": {
+      "shipped": {
+        "mean": -21.7957,
+        "std": 4.233,
+        "min": -26.1479,
+        "max": -17.6929,
+        "spread": 8.455,
+        "n": 3,
+        "vals": [
+          -21.5463,
+          -17.6929,
+          -26.1479
+        ]
+      },
+      "internal": {
+        "mean": -21.7957,
+        "std": 4.233,
+        "min": -26.1479,
+        "max": -17.6929,
+        "spread": 8.455,
+        "n": 3,
+        "vals": [
+          -21.5463,
+          -17.6929,
+          -26.1479
+        ]
+      },
+      "internal_aug7": {
+        "mean": -21.7957,
+        "std": 4.233,
+        "min": -26.1479,
+        "max": -17.6929,
+        "spread": 8.455,
+        "n": 3,
+        "vals": [
+          -21.5463,
+          -17.6929,
+          -26.1479
+        ]
+      },
+      "n_datasets": 7
+    }
+  },
+  "full_by_dataset": {
+    "Adaline": {
+      "adj": {
+        "mean": -0.3777,
+        "std": 5.4464,
+        "min": -6.4631,
+        "max": 4.0394,
+        "spread": 10.5025,
+        "n": 3,
+        "vals": [
+          4.0394,
+          1.2906,
+          -6.4631
+        ]
+      },
+      "raw": {
+        "mean": 89.4667,
+        "std": 5.5281,
+        "min": 83.29,
+        "max": 93.95,
+        "spread": 10.66,
+        "n": 3,
+        "vals": [
+          93.95,
+          91.16,
+          83.29
+        ]
+      }
+    },
+    "Caitie": {
+      "adj": {
+        "mean": -0.5148,
+        "std": 0.5214,
+        "min": -0.9639,
+        "max": 0.057,
+        "spread": 1.0209,
+        "n": 3,
+        "vals": [
+          -0.6375,
+          -0.9639,
+          0.057
+        ]
+      },
+      "raw": {
+        "mean": 44.28,
+        "std": 2.763,
+        "min": 41.9,
+        "max": 47.31,
+        "spread": 5.41,
+        "n": 3,
+        "vals": [
+          43.63,
+          41.9,
+          47.31
+        ]
+      }
+    },
+    "Chester": {
+      "adj": {
+        "mean": 0.4963,
+        "std": 0.1898,
+        "min": 0.2916,
+        "max": 0.6663,
+        "spread": 0.3747,
+        "n": 3,
+        "vals": [
+          0.2916,
+          0.5311,
+          0.6663
+        ]
+      },
+      "raw": {
+        "mean": 59.9193,
+        "std": 0.8001,
+        "min": 59.056,
+        "max": 60.636,
+        "spread": 1.58,
+        "n": 3,
+        "vals": [
+          59.056,
+          60.066,
+          60.636
+        ]
+      }
+    },
+    "conway": {
+      "adj": {
+        "mean": 0.9078,
+        "std": 0.5037,
+        "min": 0.5889,
+        "max": 1.4885,
+        "spread": 0.8996,
+        "n": 3,
+        "vals": [
+          0.6461,
+          0.5889,
+          1.4885
+        ]
+      },
+      "raw": {
+        "mean": 52.2933,
+        "std": 2.6428,
+        "min": 50.62,
+        "max": 55.34,
+        "spread": 4.72,
+        "n": 3,
+        "vals": [
+          50.92,
+          50.62,
+          55.34
+        ]
+      }
+    },
+    "Sadie": {
+      "adj": {
+        "mean": 7.678,
+        "std": 0.2942,
+        "min": 7.3391,
+        "max": 7.8678,
+        "spread": 0.5287,
+        "n": 3,
+        "vals": [
+          7.3391,
+          7.8678,
+          7.8271
+        ]
+      },
+      "raw": {
+        "mean": 95.4327,
+        "std": 0.5787,
+        "min": 94.766,
+        "max": 95.806,
+        "spread": 1.04,
+        "n": 3,
+        "vals": [
+          94.766,
+          95.806,
+          95.726
+        ]
+      }
+    },
+    "Gutenberg": {
+      "adj": {
+        "mean": 0.9173,
+        "std": 0.1315,
+        "min": 0.8251,
+        "max": 1.0679,
+        "spread": 0.2428,
+        "n": 3,
+        "vals": [
+          0.859,
+          0.8251,
+          1.0679
+        ]
+      },
+      "raw": {
+        "mean": 46.3943,
+        "std": 0.7761,
+        "min": 45.85,
+        "max": 47.283,
+        "spread": 1.433,
+        "n": 3,
+        "vals": [
+          46.05,
+          45.85,
+          47.283
+        ]
+      }
+    },
+    "LaMelo": {
+      "adj": {
+        "mean": -9.3784,
+        "std": 1.0767,
+        "min": -10.0,
+        "max": -8.1351,
+        "spread": 1.8649,
+        "n": 3,
+        "vals": [
+          -8.1351,
+          -10.0,
+          -10.0
+        ]
+      },
+      "raw": {
+        "mean": 70.1633,
+        "std": 2.6236,
+        "min": 68.28,
+        "max": 73.16,
+        "spread": 4.88,
+        "n": 3,
+        "vals": [
+          73.16,
+          68.28,
+          69.05
+        ]
+      }
+    },
+    "Mateo": {
+      "adj": {
+        "mean": -0.1059,
+        "std": 2.9966,
+        "min": -3.2092,
+        "max": 2.7711,
+        "spread": 5.9803,
+        "n": 3,
+        "vals": [
+          2.7711,
+          0.1205,
+          -3.2092
+        ]
+      },
+      "raw": {
+        "mean": 90.7733,
+        "std": 2.7359,
+        "min": 87.94,
+        "max": 93.4,
+        "spread": 5.46,
+        "n": 3,
+        "vals": [
+          93.4,
+          90.98,
+          87.94
+        ]
+      }
+    },
+    "Myopia": {
+      "adj": {
+        "mean": 1.4427,
+        "std": 0.5545,
+        "min": 0.8723,
+        "max": 1.9798,
+        "spread": 1.1075,
+        "n": 3,
+        "vals": [
+          1.9798,
+          0.8723,
+          1.4761
+        ]
+      },
+      "raw": {
+        "mean": 89.6697,
+        "std": 0.6694,
+        "min": 88.981,
+        "max": 90.318,
+        "spread": 1.337,
+        "n": 3,
+        "vals": [
+          90.318,
+          88.981,
+          89.71
+        ]
+      }
+    },
+    "Sokoto": {
+      "adj": {
+        "mean": 5.9403,
+        "std": 0.3434,
+        "min": 5.5697,
+        "max": 6.2478,
+        "spread": 0.6781,
+        "n": 3,
+        "vals": [
+          6.0034,
+          6.2478,
+          5.5697
+        ]
+      },
+      "raw": {
+        "mean": 88.2067,
+        "std": 0.9977,
+        "min": 87.13,
+        "max": 89.1,
+        "spread": 1.97,
+        "n": 3,
+        "vals": [
+          88.39,
+          89.1,
+          87.13
+        ]
+      }
+    },
+    "Volga": {
+      "adj": {
+        "mean": 1.3834,
+        "std": 0.3196,
+        "min": 1.0157,
+        "max": 1.5951,
+        "spread": 0.5794,
+        "n": 3,
+        "vals": [
+          1.5951,
+          1.0157,
+          1.5393
+        ]
+      },
+      "raw": {
+        "mean": 75.3133,
+        "std": 0.9157,
+        "min": 74.26,
+        "max": 75.92,
+        "spread": 1.66,
+        "n": 3,
+        "vals": [
+          75.92,
+          74.26,
+          75.76
+        ]
+      }
+    }
+  },
+  "aug_effect": {
+    "Adaline": {
+      "full": {
+        "mean": -0.3777,
+        "std": 5.4464,
+        "min": -6.4631,
+        "max": 4.0394,
+        "spread": 10.5025,
+        "n": 3,
+        "vals": [
+          4.0394,
+          1.2906,
+          -6.4631
+        ]
+      },
+      "augoff": {
+        "mean": -10.0,
+        "std": 0.0,
+        "min": -10.0,
+        "max": -10.0,
+        "spread": 0.0,
+        "n": 3,
+        "vals": [
+          -10.0,
+          -10.0,
+          -10.0
+        ]
+      },
+      "delta": {
+        "mean": 9.6223,
+        "std": 5.4464,
+        "min": 3.5369,
+        "max": 14.0394,
+        "spread": 10.5025,
+        "n": 3,
+        "vals": [
+          14.0394,
+          11.2906,
+          3.5369
+        ]
+      }
+    },
+    "Mateo": {
+      "full": {
+        "mean": -0.1059,
+        "std": 2.9966,
+        "min": -3.2092,
+        "max": 2.7711,
+        "spread": 5.9803,
+        "n": 3,
+        "vals": [
+          2.7711,
+          0.1205,
+          -3.2092
+        ]
+      },
+      "augoff": {
+        "mean": -10.0,
+        "std": 0.0,
+        "min": -10.0,
+        "max": -10.0,
+        "spread": 0.0,
+        "n": 3,
+        "vals": [
+          -10.0,
+          -10.0,
+          -10.0
+        ]
+      },
+      "delta": {
+        "mean": 9.8941,
+        "std": 2.9966,
+        "min": 6.7908,
+        "max": 12.7711,
+        "spread": 5.9803,
+        "n": 3,
+        "vals": [
+          12.7711,
+          10.1205,
+          6.7908
+        ]
+      }
+    },
+    "Caitie": {
+      "full": {
+        "mean": -0.5148,
+        "std": 0.5214,
+        "min": -0.9639,
+        "max": 0.057,
+        "spread": 1.0209,
+        "n": 3,
+        "vals": [
+          -0.6375,
+          -0.9639,
+          0.057
+        ]
+      },
+      "augoff": {
+        "mean": -1.2407,
+        "std": 0.2708,
+        "min": -1.5093,
+        "max": -0.9677,
+        "spread": 0.5416,
+        "n": 3,
+        "vals": [
+          -0.9677,
+          -1.2451,
+          -1.5093
+        ]
+      },
+      "delta": {
+        "mean": 0.7259,
+        "std": 0.7282,
+        "min": 0.2812,
+        "max": 1.5663,
+        "spread": 1.2851,
+        "n": 3,
+        "vals": [
+          0.3302,
+          0.2812,
+          1.5663
+        ]
+      }
+    },
+    "Sadie": {
+      "full": {
+        "mean": 7.678,
+        "std": 0.2942,
+        "min": 7.3391,
+        "max": 7.8678,
+        "spread": 0.5287,
+        "n": 3,
+        "vals": [
+          7.3391,
+          7.8678,
+          7.8271
+        ]
+      },
+      "augoff": {
+        "mean": 3.0963,
+        "std": 1.979,
+        "min": 1.152,
+        "max": 5.1083,
+        "spread": 3.9563,
+        "n": 3,
+        "vals": [
+          1.152,
+          5.1083,
+          3.0285
+        ]
+      },
+      "delta": {
+        "mean": 4.5817,
+        "std": 1.7241,
+        "min": 2.7595,
+        "max": 6.1871,
+        "spread": 3.4276,
+        "n": 3,
+        "vals": [
+          6.1871,
+          2.7595,
+          4.7986
+        ]
+      }
+    },
+    "Gutenberg": {
+      "full": {
+        "mean": 0.9173,
+        "std": 0.1315,
+        "min": 0.8251,
+        "max": 1.0679,
+        "spread": 0.2428,
+        "n": 3,
+        "vals": [
+          0.859,
+          0.8251,
+          1.0679
+        ]
+      },
+      "augoff": {
+        "mean": 0.7574,
+        "std": 0.1566,
+        "min": 0.6642,
+        "max": 0.9382,
+        "spread": 0.274,
+        "n": 3,
+        "vals": [
+          0.9382,
+          0.6698,
+          0.6642
+        ]
+      },
+      "delta": {
+        "mean": 0.1599,
+        "std": 0.2415,
+        "min": -0.0792,
+        "max": 0.4037,
+        "spread": 0.4829,
+        "n": 3,
+        "vals": [
+          -0.0792,
+          0.1553,
+          0.4037
+        ]
+      }
+    },
+    "LaMelo": {
+      "full": {
+        "mean": -9.3784,
+        "std": 1.0767,
+        "min": -10.0,
+        "max": -8.1351,
+        "spread": 1.8649,
+        "n": 3,
+        "vals": [
+          -8.1351,
+          -10.0,
+          -10.0
+        ]
+      },
+      "augoff": {
+        "mean": -2.5631,
+        "std": 2.0299,
+        "min": -4.8919,
+        "max": -1.1689,
+        "spread": 3.723,
+        "n": 3,
+        "vals": [
+          -1.6284,
+          -1.1689,
+          -4.8919
+        ]
+      },
+      "delta": {
+        "mean": -6.8153,
+        "std": 1.8806,
+        "min": -8.8311,
+        "max": -5.1081,
+        "spread": 3.723,
+        "n": 3,
+        "vals": [
+          -6.5067,
+          -8.8311,
+          -5.1081
+        ]
+      }
+    },
+    "Myopia": {
+      "full": {
+        "mean": 1.4427,
+        "std": 0.5545,
+        "min": 0.8723,
+        "max": 1.9798,
+        "spread": 1.1075,
+        "n": 3,
+        "vals": [
+          1.9798,
+          0.8723,
+          1.4761
+        ]
+      },
+      "augoff": {
+        "mean": -1.8456,
+        "std": 1.3803,
+        "min": -3.4394,
+        "max": -1.0404,
+        "spread": 2.399,
+        "n": 3,
+        "vals": [
+          -1.0404,
+          -1.057,
+          -3.4394
+        ]
+      },
+      "delta": {
+        "mean": 3.2883,
+        "std": 1.511,
+        "min": 1.9293,
+        "max": 4.9155,
+        "spread": 2.9862,
+        "n": 3,
+        "vals": [
+          3.0202,
+          1.9293,
+          4.9155
+        ]
+      }
+    }
+  },
+  "records": {
+    "full": {
+      "42": {
+        "Adaline": {
+          "raw": 93.95,
+          "benchmark": 89.85,
+          "adj_shipped": 4.0394,
+          "adj_internal": 4.0394
+        },
+        "Caitie": {
+          "raw": 43.63,
+          "benchmark": 47.008,
+          "adj_shipped": -0.6375,
+          "adj_internal": -0.6375
+        },
+        "Chester": {
+          "raw": 59.056,
+          "benchmark": 57.826,
+          "adj_shipped": 0.2916,
+          "adj_internal": 0.2916
+        },
+        "conway": {
+          "raw": 50.92,
+          "benchmark": 47.53,
+          "adj_shipped": 0.6461,
+          "adj_internal": 0.6461
+        },
+        "Sadie": {
+          "raw": 94.766,
+          "benchmark": 80.33,
+          "adj_shipped": 7.3391,
+          "adj_internal": 7.3391
+        },
+        "Gutenberg": {
+          "raw": 46.05,
+          "benchmark": 40.98,
+          "adj_shipped": 0.859,
+          "adj_internal": 0.859
+        },
+        "LaMelo": {
+          "raw": 73.16,
+          "benchmark": 85.2,
+          "adj_shipped": -8.1351,
+          "adj_internal": -8.1351
+        },
+        "Mateo": {
+          "raw": 93.4,
+          "benchmark": 90.87,
+          "adj_shipped": 2.7711,
+          "adj_internal": 2.7711
+        },
+        "Myopia": {
+          "raw": 90.318,
+          "benchmark": 87.928,
+          "adj_shipped": 1.9798,
+          "adj_internal": 1.9798
+        },
+        "Sokoto": {
+          "raw": 88.39,
+          "benchmark": 0.0,
+          "adj_shipped": 8.839,
+          "adj_internal": 6.0034
+        },
+        "Volga": {
+          "raw": 75.92,
+          "benchmark": 71.35,
+          "adj_shipped": 1.5951,
+          "adj_internal": 1.5951
+        }
+      },
+      "1337": {
+        "Adaline": {
+          "raw": 91.16,
+          "benchmark": 89.85,
+          "adj_shipped": 1.2906,
+          "adj_internal": 1.2906
+        },
+        "Caitie": {
+          "raw": 41.9,
+          "benchmark": 47.008,
+          "adj_shipped": -0.9639,
+          "adj_internal": -0.9639
+        },
+        "Chester": {
+          "raw": 60.066,
+          "benchmark": 57.826,
+          "adj_shipped": 0.5311,
+          "adj_internal": 0.5311
+        },
+        "conway": {
+          "raw": 50.62,
+          "benchmark": 47.53,
+          "adj_shipped": 0.5889,
+          "adj_internal": 0.5889
+        },
+        "Sadie": {
+          "raw": 95.806,
+          "benchmark": 80.33,
+          "adj_shipped": 7.8678,
+          "adj_internal": 7.8678
+        },
+        "Gutenberg": {
+          "raw": 45.85,
+          "benchmark": 40.98,
+          "adj_shipped": 0.8251,
+          "adj_internal": 0.8251
+        },
+        "LaMelo": {
+          "raw": 68.28,
+          "benchmark": 85.2,
+          "adj_shipped": -10.0,
+          "adj_internal": -10.0
+        },
+        "Mateo": {
+          "raw": 90.98,
+          "benchmark": 90.87,
+          "adj_shipped": 0.1205,
+          "adj_internal": 0.1205
+        },
+        "Myopia": {
+          "raw": 88.981,
+          "benchmark": 87.928,
+          "adj_shipped": 0.8723,
+          "adj_internal": 0.8723
+        },
+        "Sokoto": {
+          "raw": 89.1,
+          "benchmark": 0.0,
+          "adj_shipped": 8.91,
+          "adj_internal": 6.2478
+        },
+        "Volga": {
+          "raw": 74.26,
+          "benchmark": 71.35,
+          "adj_shipped": 1.0157,
+          "adj_internal": 1.0157
+        }
+      },
+      "2024": {
+        "Adaline": {
+          "raw": 83.29,
+          "benchmark": 89.85,
+          "adj_shipped": -6.4631,
+          "adj_internal": -6.4631
+        },
+        "Caitie": {
+          "raw": 47.31,
+          "benchmark": 47.008,
+          "adj_shipped": 0.057,
+          "adj_internal": 0.057
+        },
+        "Chester": {
+          "raw": 60.636,
+          "benchmark": 57.826,
+          "adj_shipped": 0.6663,
+          "adj_internal": 0.6663
+        },
+        "conway": {
+          "raw": 55.34,
+          "benchmark": 47.53,
+          "adj_shipped": 1.4885,
+          "adj_internal": 1.4885
+        },
+        "Sadie": {
+          "raw": 95.726,
+          "benchmark": 80.33,
+          "adj_shipped": 7.8271,
+          "adj_internal": 7.8271
+        },
+        "Gutenberg": {
+          "raw": 47.283,
+          "benchmark": 40.98,
+          "adj_shipped": 1.0679,
+          "adj_internal": 1.0679
+        },
+        "LaMelo": {
+          "raw": 69.05,
+          "benchmark": 85.2,
+          "adj_shipped": -10.0,
+          "adj_internal": -10.0
+        },
+        "Mateo": {
+          "raw": 87.94,
+          "benchmark": 90.87,
+          "adj_shipped": -3.2092,
+          "adj_internal": -3.2092
+        },
+        "Myopia": {
+          "raw": 89.71,
+          "benchmark": 87.928,
+          "adj_shipped": 1.4761,
+          "adj_internal": 1.4761
+        },
+        "Sokoto": {
+          "raw": 87.13,
+          "benchmark": 0.0,
+          "adj_shipped": 8.713,
+          "adj_internal": 5.5697
+        },
+        "Volga": {
+          "raw": 75.76,
+          "benchmark": 71.35,
+          "adj_shipped": 1.5393,
+          "adj_internal": 1.5393
+        }
+      }
+    },
+    "augoff": {
+      "42": {
+        "Adaline": {
+          "raw": 76.53,
+          "benchmark": 89.85,
+          "adj_shipped": -10.0,
+          "adj_internal": -10.0
+        },
+        "Caitie": {
+          "raw": 41.88,
+          "benchmark": 47.008,
+          "adj_shipped": -0.9677,
+          "adj_internal": -0.9677
+        },
+        "Sadie": {
+          "raw": 82.596,
+          "benchmark": 80.33,
+          "adj_shipped": 1.152,
+          "adj_internal": 1.152
+        },
+        "Gutenberg": {
+          "raw": 46.517,
+          "benchmark": 40.98,
+          "adj_shipped": 0.9382,
+          "adj_internal": 0.9382
+        },
+        "LaMelo": {
+          "raw": 82.79,
+          "benchmark": 85.2,
+          "adj_shipped": -1.6284,
+          "adj_internal": -1.6284
+        },
+        "Mateo": {
+          "raw": 70.62,
+          "benchmark": 90.87,
+          "adj_shipped": -10.0,
+          "adj_internal": -10.0
+        },
+        "Myopia": {
+          "raw": 86.672,
+          "benchmark": 87.928,
+          "adj_shipped": -1.0404,
+          "adj_internal": -1.0404
+        }
+      },
+      "1337": {
+        "Adaline": {
+          "raw": 67.16,
+          "benchmark": 89.85,
+          "adj_shipped": -10.0,
+          "adj_internal": -10.0
+        },
+        "Caitie": {
+          "raw": 40.41,
+          "benchmark": 47.008,
+          "adj_shipped": -1.2451,
+          "adj_internal": -1.2451
+        },
+        "Sadie": {
+          "raw": 90.378,
+          "benchmark": 80.33,
+          "adj_shipped": 5.1083,
+          "adj_internal": 5.1083
+        },
+        "Gutenberg": {
+          "raw": 44.933,
+          "benchmark": 40.98,
+          "adj_shipped": 0.6698,
+          "adj_internal": 0.6698
+        },
+        "LaMelo": {
+          "raw": 83.47,
+          "benchmark": 85.2,
+          "adj_shipped": -1.1689,
+          "adj_internal": -1.1689
+        },
+        "Mateo": {
+          "raw": 77.29,
+          "benchmark": 90.87,
+          "adj_shipped": -10.0,
+          "adj_internal": -10.0
+        },
+        "Myopia": {
+          "raw": 86.652,
+          "benchmark": 87.928,
+          "adj_shipped": -1.057,
+          "adj_internal": -1.057
+        }
+      },
+      "2024": {
+        "Adaline": {
+          "raw": 65.05,
+          "benchmark": 89.85,
+          "adj_shipped": -10.0,
+          "adj_internal": -10.0
+        },
+        "Caitie": {
+          "raw": 39.01,
+          "benchmark": 47.008,
+          "adj_shipped": -1.5093,
+          "adj_internal": -1.5093
+        },
+        "Sadie": {
+          "raw": 86.287,
+          "benchmark": 80.33,
+          "adj_shipped": 3.0285,
+          "adj_internal": 3.0285
+        },
+        "Gutenberg": {
+          "raw": 44.9,
+          "benchmark": 40.98,
+          "adj_shipped": 0.6642,
+          "adj_internal": 0.6642
+        },
+        "LaMelo": {
+          "raw": 77.96,
+          "benchmark": 85.2,
+          "adj_shipped": -4.8919,
+          "adj_internal": -4.8919
+        },
+        "Mateo": {
+          "raw": 76.41,
+          "benchmark": 90.87,
+          "adj_shipped": -10.0,
+          "adj_internal": -10.0
+        },
+        "Myopia": {
+          "raw": 83.776,
+          "benchmark": 87.928,
+          "adj_shipped": -3.4394,
+          "adj_internal": -3.4394
+        }
+      }
+    }
+  }
+}
