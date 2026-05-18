@@ -12,6 +12,21 @@ This is the **resume document**. A fresh session should: (1) read [[Probe-Driven
 - Datasets: `~/local/nas-comp-datasets/` (symlinked as `datasets/`)
 - venv: `.venv/bin/python` (torch 2.11.0+cu128). Dev loop = rsync local→spark, run via ssh, results rsync back.
 
+## ✅ EGNAS-macro CIFARTile diagnostic — COMPLETE (2026-05-18, 3 seeds). Verdict: **PASS + 2 caveats**
+
+Authoritative writeup: **[[Tier 2b - Results]]**. Make-or-break **passed**: CIFARTile **−0.515±0.521 → +0.167±0.269** (all 3 seeds above benchmark, σ↓) — the ceiling Tier-1 couldn't move; EGNAS beats Tier-1 on the 3-ds mean (+6.79→+10.05). **But:** (1) the CIFARTile gain is *small* (real frontier lever = E2/Deep-Sets), (2) the macro search is itself a **Q8 arch-lottery** (s2024 picked D=5 for AddNIST → −2.81). EGNAS-macro is validated & kept but **not a finished engine**. **Decision: fix arch-selection (average the short-train signal over ≥2 restarts / robust pick) and re-run the same 3-ds diagnostic BEFORE any full sweep.** Spark is free.
+
+**Live status:**
+```bash
+ssh spark "cd ~/projects/HerriML-NAS-Unseen-Data-Challenge-2026 && \
+  grep -E 'config=|started:|finished:|Total score|COMPLETE' dev/logs/egnasdiag-all.log; \
+  echo '— active —'; tail -n 4 \"\$(ls -t dev/logs/egnasdiag/*.log | head -1)\"; \
+  pgrep -af run_egnas_diagnostic | grep -v pgrep | head -1"
+```
+`pgrep` empty + `COMPLETE` = done. Per-seed logs `dev/logs/egnasdiag/egnas_s<seed>.log` (scores + `EGNAS macro done: best D=/W=` + per-arch search trace); pool JSONs `dev/logs/egnasdiag/egnas_s<seed>/<codename>_egnas_pool.json`.
+
+**On landing:** pull (`rsync -a spark:'~/projects/.../dev/logs/egnasdiag*' dev/logs/`); compare CIFARTile mean±std (3 seeds) vs Tier-1 `full_s*` CIFARTile (−0.515 ± 0.521); also AddNIST (high-var sanity) + GeoClassing (must-not-regress). **Decision gate:** if CIFARTile beats the ceiling multi-seed → full 11-dataset sweep + write `Tier 2b - Results.md`, fold into thesis. If not → that is a thesis-critical finding (architecture has little headroom here) → consolidate/ship a reliable Tier-1-class submission instead of chasing peak. Either way: aggregate (extend `aggregate_e1.py` pattern), measure arch-selection stability across seeds (Q8 — does macro-search pick consistent D/W?), commit the Tier 2b batch (no AI attribution).
+
 ## ✅ E1 validation — COMPLETE (2026-05-16 → 2026-05-18, 3 seeds). Verdict: **MIXED**
 
 Authoritative writeup: **[[E1 - Results]]**. Headline: the mechanism is validated on its target (**AddNIST σ 5.45→1.00 ×0.18 AND mean −0.38→+2.75**), but E1 is **NOT a blanket reliability layer** — total submission σ only ×0.75 (per-seed totals still −0.04…+12.56), **GeoClassing regressed −0.34** (under-trained member dilutes a budget-saturating solo m0), and Language's +4.74 is noise-inflated (σ ×2.78). Decisive takeaway: residual variance is **structural/dataset-level → cannot be ensembled away → reinforces the probe/Tier-2 direction**. E1 → conditional, probe-gated component for AddNIST-class datasets with a member-quality + slack gate (a **Tier-3 design note**, not re-run now). Decision 2026-05-18: **proceed to Tier 2**, designed so the search emits an *ensemble-able pool*. The live-status / "when it lands" blocks below are historical (done).
@@ -77,19 +92,22 @@ Outputs on Spark:
 1. ~~Aggregate + variance finding + Multi-Seed note + fold caveats~~ **✅ DONE 2026-05-16** — [[Multi-Seed - Results]]; Tier 1 caveat + thesis methodology + Overview folded in; committed.
 2. ~~Step 0 (Q8 search-stability) + implement E1 + smoke~~ **✅ DONE 2026-05-16** — `dev/analyze_search_stability.py` (search instability universal but not the discriminating cause → E1 ensembles restarts *and* candidate archs); `baselines/tier1e1_ensemble/` built, smoke-passed.
 3. ~~E1 validation + writeup + fold + commit~~ **✅ DONE 2026-05-18** — [[E1 - Results]] (MIXED verdict: mechanism validated on AddNIST, not a blanket fix, GeoClassing regression, Language noise; residual variance structural → argues for Tier 2). Folded into thesis §E1 + Overview; aggregator verdict-line de-rosed; E1 batch committed (see Git state). Decision: proceed to Tier 2.
-4. **← ACTIVE HEAD.** Implement **Probe v1 / Tier 2a** — P1 aug-safety **only** (P3-lite deferred: multi-seed shows GameOfLife stable +0.91±0.50, its single-seed regression was noise). Asymmetric keep-aug fail-safe; only seed-stable target is the Language-type aug-regression (aug-off costs −9.6 on AddNIST). Validate against the multi-seed aug-oracle (already have it). New dir `baselines/tier2a_probe_v1/`. **Design Tier 2 so search emits an ensemble-able pool, not a single argmax arch** (E1's residual-structural-variance finding). Carry the E1 member-quality + slack gate as a [[Tier 3 - EGNAS + Reliability]] design note.
-5. **E3** architecture×dataset gold grid (thesis validation harness — proves/kills the probe approach).
-6. Non-ML prerequisites (long lead): email organisers re Sudoku placeholder + **Myofibre unconfirmed benchmark** + broken Cryptic/Windspeed DOIs; x86 cross-verify with eval-pinned env ([[Threats to Validity]] §1).
-7. E2 (non-conv primitive — Deep-Sets head first for CIFARTile).
+4. ~~Implement Tier 2b EGNAS-macro + CIFARTile diagnostic~~ **✅ DONE 2026-05-18** — [[Tier 2b - Results]] (make-or-break PASSED: CIFARTile −0.515→+0.167 all 3 seeds, σ↓; beats Tier-1 on the 3-ds mean). Caveats: small CIFARTile gain (→E2), and macro search is a Q8 arch-lottery. Folded into thesis Q8 + Overview; committed.
+5. **← ACTIVE HEAD. Stabilise EGNAS arch-selection, then re-run the same 3-ds diagnostic** (decision 2026-05-18: don't full-sweep a known arch-lottery). Mechanism: in `baselines/tier2b_egnas_macro/nas.py`, replace single-run argmax-val candidate ranking with a more robust signal — average the short-train val over ≥2 restarts per candidate (or pick by mean−std / median). Re-run `dev/run_egnas_diagnostic.sh` (CIFARTile+AddNIST+GeoClassing ×3 seeds) → target: kill the D=5-type catastrophic mispick (AddNIST σ drops, no below-benchmark arch), CIFARTile gain holds. Only then consider the full 11-ds sweep.
+6. **Tier 2a / Probe v1** — P1 aug-safety only. Design locked ([[Tier 2a - Probe v1]]) but **deferred behind Tier 2b**.
+7. **E3** architecture×dataset gold grid (thesis validation harness). **E2** (non-conv / Deep-Sets) — confirmed CIFARTile's real frontier lever by [[Tier 2b - Results]].
+8. Non-ML prerequisites (long lead, user-owned): organiser email re Sudoku placeholder + **Myofibre unconfirmed benchmark** + broken Cryptic/Windspeed DOIs; x86 cross-verify ([[Threats to Validity]] §1) — *user will do soonish*.
 
 ## "Questions we want answered"
 
-Not duplicated here — they live in [[Probe-Driven Self-Configuration]] §"Questions we want answered" (8-item priority list). Q2 (variance scale) **answered** ([[Multi-Seed - Results]]); Q8 (search variance-amplifying?) **answered** (Step 0: instability universal, *not* the discriminating cause — `dev/analyze_search_stability.py`); Q4 (does ensembling convert slack→robust gain?) **answered** ([[E1 - Results]]: partially — yes for AddNIST-class, no at submission level; residual variance is structural); E3 answers Q3/Q5; partial Q1/Q6 pending Tier 2a.
+Not duplicated here — they live in [[Probe-Driven Self-Configuration]] §"Questions we want answered" (8-item priority list). Q2 (variance scale) **answered** ([[Multi-Seed - Results]]); Q8 (search variance-amplifying?) **answered** — Step 0: Tier-1 op-search instability universal but not the *downstream* driver; **[[Tier 2b - Results]]: EGNAS-macro definitively IS arch-variance-amplifying** (s2024 D=5/AddNIST → −2.81; arch-aware Spearman-0.91 fails at our budget) → arch-selection stabilisation is the active next action; Q4 **answered** ([[E1 - Results]]: partial — yes AddNIST-class, no at submission level; residual variance structural); E3 answers Q3/Q5; partial Q1/Q6 pending Tier 2a.
 
 ## Git state
 
 - `main` — pristine.
 - `baseline_approaches` (pushed) — Tier 0+1 impl, results notebase, thesis adoption + NAS survey. 2 commits.
 - `exploration/probe-self-config` (this branch) — thesis P1 redesign + E1/E2/E3 + arch menu + questions, `BASELINE_SEED` env var, `dev/run_multiseed.sh`, handoff doc.
-  - **Commit `c69e9d9` (2026-05-16) — multi-seed results: LOCAL ONLY, NOT pushed.** `dev/aggregate_multiseed.py`, `--multiseed` plot mode, `Multi-Seed - Results.md`, `multiseed.png`, Tier 1/Overview/thesis fold-in, `dev/logs/multiseed/_aggregate.json` force-added (raw `dev/logs/` gitignored, lives on Spark).
-  - **UNCOMMITTED E1 batch** (commit when the validation sweep lands, with the results): `baselines/tier1e1_ensemble/` (new), `dev/run_e1_validation.sh` (new), `dev/analyze_search_stability.py` (new), and this handoff update. `.obsidian/workspace.json` is local UI noise — never stage it. Commit-msg rule: no AI/Claude/Co-Authored-By attribution.
+  - `c69e9d9` (2026-05-16) — multi-seed results (aggregate_multiseed, --multiseed, Multi-Seed note, Tier1/Overview/thesis fold-in, _aggregate.json).
+  - `47eba55` (2026-05-18) — E1 validation batch: `baselines/tier1e1_ensemble/`, `dev/analyze_search_stability.py`, `dev/aggregate_e1.py`, `dev/run_e1_validation.sh`, `--e1` plot, `E1 - Results.md`+`e1.png`, thesis §E1/Overview/Plan-Overview fold-in, `_e1_aggregate.json`.
+  - `<tier2b>` (2026-05-18) — Tier 2b batch: `baselines/tier2b_egnas_macro/` (only `nas.py` differs from Tier 1), `dev/aggregate_egnas.py`, `dev/run_egnas_diagnostic.sh`, `Tier 2b - Results.md`, plan notes (`Tier 2a/2b`), thesis Q8 + Overview + Plan-Overview fold-in, `_egnas_aggregate.json`.
+  - **All commits LOCAL ONLY — `exploration/probe-self-config` is NOT pushed.** `.obsidian/workspace.json` is local UI noise — never stage it. Commit-msg rule: no AI/Claude/Co-Authored-By attribution.

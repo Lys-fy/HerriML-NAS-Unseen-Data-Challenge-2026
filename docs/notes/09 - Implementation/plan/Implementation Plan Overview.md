@@ -35,8 +35,8 @@ Experimental branches:
 |------|------|--------|
 | [[Tier 0 - Hardcoded CNN]] | Validate harness, clock, shape adaptation. No search. | ✓ done — −0.355, see [[Tier 0 - Results]] |
 | [[Tier 1 - Augmentation + Op Search]] | Regularization stack + residual blocks + random op-search. Made the budget productive; +24.644. Its ablation motivates the probe thesis. | ✓ done — +24.644, see [[Tier 1 - Results]] |
-| **Tier 2a — Probe v1** | P1 (aug-safety probe) + P3-lite (task-structure → regularization strength). Both proven-needed by the Tier 1 ablation. Cheap, low-risk, ships first. Target ≈ +30. See [[Probe-Driven Self-Configuration]]. | next |
-| [[Tier 2 - EGNAS-Light]] (→ Tier 2b) | EGNAS depth/width macro-search, **gated by P4** (macro-sensitivity probe). EGNAS becomes a *triggered component*, not the default method. | planned |
+| [[Tier 2b - EGNAS-light (macro)]] | **Macro architecture search** (depth-grow + width-prune), the proven 2025 core. Primary job: crack the **CIFARTile** ceiling Tier 1 can't move. Macro-only v1, single-best + log pool, ≥3-seed paired. Design locked 2026-05-18. | **← ACTIVE HEAD** |
+| [[Tier 2a - Probe v1]] | P1 aug-safety probe only (design locked 2026-05-18). **Deferred to after Tier 2b** — pivot 2026-05-18: confront the NAS core (EGNAS/CIFARTile) before the orthogonal aug-probe side-quest. | planned (after 2b) |
 | [[Tier 3 - EGNAS + Reliability]] | Full probe suite (add P2 invariance) + unified controller + OOM-safe / fallback + **Neural Ensemble Search** (Zaidi 2021 — robustness under dataset shift, hedges the −10 clip). The complete self-configuring pipeline. | planned |
 | [[Tier 4 - Phase-2 Polish]] | Iterate from Phase-2 leaderboard signal. Per-regime tuning of probe thresholds, mixed precision (if env-safe). | planned |
 

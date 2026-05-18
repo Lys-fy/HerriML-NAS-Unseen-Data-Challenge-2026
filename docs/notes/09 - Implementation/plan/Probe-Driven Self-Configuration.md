@@ -209,7 +209,7 @@ The experiments above (multi-seed run, E1–E3, probes P1–P4) exist to answer 
 5. **Can a non-conv primitive break the CIFARTile ceiling** where EGNAS macro-search (more conv) cannot? → E2/E3, Deep-Sets head first.
 6. **Does P3-lite recover GameOfLife without re-flooring AddNIST?** (the dangerous false-positive — over-reg-detection safety).
 7. **What is the optimal model size *per unit wall-clock* per dataset type?** (capacity–budget frontier, run at simulated VRAM caps so it also informs the tiny-GPU degradation ladder).
-8. **Is the search itself variance-amplifying?** It ranks 8 candidates on cuDNN-nondeterministic short-train val → can pick a different arch per run. Does averaging the candidate signal stabilise it?
+8. **Is the search itself variance-amplifying?** → **ANSWERED — yes.** Tier-1 op-search (Step 0/Q8): instability universal but not the *downstream* driver. **Tier 2b EGNAS-macro ([[Tier 2b - Results]]): definitively yes** — it picks a different depth/width per seed on a cuDNN-noisy short-train val; on s2024 it chose D=5 for AddNIST → AddNIST collapsed to −2.81. The architecture-aware schedule's paper Spearman-0.91 does **not** hold at our budget. ⇒ arch selection must be stabilised (average the short-train signal over ≥2 restarts / robust pick) before EGNAS can ship — the active next action.
 
 ## Open questions
 
