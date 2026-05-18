@@ -32,6 +32,8 @@ IMPL_DIR = REPO_ROOT / "docs" / "notes" / "09 - Implementation" / "implementatio
 
 # Machine-readable aggregate produced by dev/aggregate_multiseed.py.
 MULTISEED_JSON = REPO_ROOT / "dev" / "logs" / "multiseed" / "_aggregate.json"
+# Machine-readable aggregate produced by dev/aggregate_e1.py.
+E1_JSON = REPO_ROOT / "dev" / "logs" / "e1val" / "_e1_aggregate.json"
 
 CODENAME_TO_DATASET = {
     "Adaline": "AddNIST",
@@ -388,6 +390,84 @@ def plot_multiseed(out_path):
     print(f"  wrote {out_path.relative_to(REPO_ROOT)}")
 
 
+def plot_e1(out_path):
+    """Two-panel E1-vs-Tier1 figure from dev/aggregate_e1.py's JSON.
+
+      A) per-dataset mean ± std, Tier-1 vs E1 grouped bars + per-seed dots
+         (does the bar shrink AND not drop — the success picture).
+      B) σ (std) per dataset, Tier-1 → E1 — the variance collapse, the
+         headline (AddNIST target σ < 2).
+    """
+    if not E1_JSON.exists():
+        print(f"  {E1_JSON.relative_to(REPO_ROOT)} not found — run "
+              f"dev/aggregate_e1.py after the E1 sweep lands.")
+        return
+    agg = json.loads(E1_JSON.read_text())
+    rows = agg.get("rows", [])
+    if not rows:
+        print("  E1 aggregate has no rows yet (sweep not landed) — skipping.")
+        return
+    names = [r["ds"] for r in rows]
+    x = np.arange(len(rows))
+    w = 0.38
+
+    fig, (axA, axB) = plt.subplots(2, 1, figsize=(12, 10))
+
+    bm = np.array([r["base"]["mean"] for r in rows])
+    bs = np.array([r["base"]["std"] for r in rows])
+    em = np.array([r["e1"]["mean"] for r in rows])
+    es = np.array([r["e1"]["std"] for r in rows])
+    axA.bar(x - w / 2, bm, w, yerr=bs, capsize=3, label="Tier 1 (paired)",
+            color="#1f77b4", edgecolor="black", linewidth=0.5,
+            error_kw=dict(ecolor="#333", lw=1.0))
+    axA.bar(x + w / 2, em, w, yerr=es, capsize=3, label="E1 ensemble",
+            color="#2c8a3a", edgecolor="black", linewidth=0.5,
+            error_kw=dict(ecolor="#333", lw=1.0))
+    for xi, r in zip(x, rows):
+        for v in r["base"]["vals"]:
+            axA.scatter(xi - w / 2, v, s=22, color="black", zorder=5, alpha=.7)
+        for v in r["e1"]["vals"]:
+            axA.scatter(xi + w / 2, v, s=22, color="black", zorder=5, alpha=.7)
+        axA.text(xi, max(bm[list(x).index(xi)], em[list(x).index(xi)]) + 1.0,
+                 f"Δ{r['d_mean']:+.2f}", ha="center", fontsize=8,
+                 color="#2c8a3a" if r["d_mean"] >= 0 else "#b53030",
+                 fontweight="bold")
+    axA.axhline(0, color="black", linewidth=0.8)
+    axA.set_xticks(x)
+    axA.set_xticklabels(names, fontsize=9)
+    axA.set_ylabel("internal adj (mean ± std, 3 seeds)")
+    axA.set_title("A. Tier-1 vs E1 per dataset — mean ± std + per-seed dots "
+                  "(Δ = E1 − Tier-1 mean; want σ↓ without mean↓)", fontsize=11)
+    axA.legend(loc="lower left", framealpha=.9)
+    axA.grid(axis="y", alpha=.3)
+
+    axB.bar(x - w / 2, bs, w, label="Tier 1 σ", color="#1f77b4",
+            edgecolor="black", linewidth=.5)
+    axB.bar(x + w / 2, es, w, label="E1 σ", color="#2c8a3a",
+            edgecolor="black", linewidth=.5)
+    for xi, r in zip(x, rows):
+        axB.text(xi, max(bs[list(x).index(xi)], es[list(x).index(xi)]) + 0.1,
+                 f"×{r['sigma_ratio']:.2f}", ha="center", fontsize=8,
+                 fontweight="bold")
+    axB.axhline(2.0, color="#b53030", linestyle=":", linewidth=1.0,
+                label="AddNIST σ target (<2)")
+    axB.set_xticks(x)
+    axB.set_xticklabels(names, fontsize=9)
+    axB.set_ylabel("σ of internal adj across 3 seeds")
+    axB.set_title("B. Variance collapse — Tier-1 σ → E1 σ "
+                  "(the headline; ×ratio annotated)", fontsize=11)
+    axB.legend(loc="upper right", framealpha=.9)
+    axB.grid(axis="y", alpha=.3)
+
+    fig.suptitle("E1 budget-filling ensemble vs Tier-1 (paired: same 5 "
+                 "datasets × seeds 42/1337/2024 × 2 h) — thesis Q4",
+                 fontsize=13, y=0.997)
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=120, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  wrote {out_path.relative_to(REPO_ROOT)}")
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -397,12 +477,21 @@ def main():
     p.add_argument("--multiseed", action="store_true",
                    help="Produce the multi-seed variance + aug-effect figure "
                         "(reads dev/logs/multiseed/_aggregate.json) and exit.")
+    p.add_argument("--e1", action="store_true",
+                   help="Produce the E1-vs-Tier1 variance-collapse figure "
+                        "(reads dev/logs/e1val/_e1_aggregate.json) and exit.")
     args = p.parse_args()
 
     if args.multiseed:
         print("=== Multi-seed figure ===")
         IMPL_DIR.mkdir(parents=True, exist_ok=True)
         plot_multiseed(IMPL_DIR / "multiseed.png")
+        return
+
+    if args.e1:
+        print("=== E1 figure ===")
+        IMPL_DIR.mkdir(parents=True, exist_ok=True)
+        plot_e1(IMPL_DIR / "e1.png")
         return
 
     cfg = TIER_CONFIG[args.tier]

@@ -1,7 +1,7 @@
 # Implementation Results Overview
 
 > **Status:** current | **Topic:** Index of *actual* implementation runs, findings, and scores. The plans live in [[Implementation Plan Overview]]; this folder is what happened when we ran them.
-> **Related:** [[Implementation Plan Overview]], [[Tier 0 - Results]], [[Tier 1 - Results]], [[Multi-Seed - Results]], [[Reliability vs Peak]], [[Threats to Validity]]
+> **Related:** [[Implementation Plan Overview]], [[Tier 0 - Results]], [[Tier 1 - Results]], [[Multi-Seed - Results]], [[E1 - Results]], [[Reliability vs Peak]], [[Threats to Validity]]
 
 This is the **results** half of section 09. The split:
 
@@ -20,18 +20,21 @@ The **Tier 1 ×3-seed** row supersedes the single-seed +24.644 as the honest num
 
 Sudoku ships `benchmark: 0.0` (placeholder). Internal-benchmark scoring (Sudoku = Tier 0's 70.95 %) is tracked in `dev/internal_benchmarks.py` and used in [[Tier 1 - Results]] for the honest delta.
 
-## Per-tier notes
+## Per-note index (the actual progression, in order)
 
 - [[Tier 0 - Results]] — Hardcoded-CNN baseline. The "what does zero search get us" measurement. Established that the binding constraint is **overfitting**, not search.
-- [[Tier 1 - Results]] — Augmentation + regularization + random op-search. The +25 swing, the Language regression, and the **single-feature ablation** that quantified what each component is worth.
+- [[Tier 1 - Results]] — Augmentation + regularization + random op-search. The (single-seed) +25 swing, the Language regression, and the single-feature ablation.
+- [[Multi-Seed - Results]] — **the last completed test run**: Tier 1 ×3 seeds (`full`) **+ the `aug-off` arm** ×3 seeds (54 runs total). The authoritative numbers. Contains: the seed-variance headline (σ≈100 %), the per-dataset stability table, and **§C the augmentation-effect table (full vs aug-off)** — aug is worth +21.5 over the 7 aug-firing datasets; Language is the lone seed-stable reversal. *This is the "aug-off / ect" results the scoreboard's single rows don't show — they live here.*
+- [[E1 - Results]] — ✅ **complete (3 seeds) — MIXED verdict**: the budget-filling ensemble's *mechanism* is validated on its target (AddNIST σ 5.45→1.00 ×0.18, mean ↑) but it is **not a blanket fix** — total σ only ×0.75, GeoClassing regressed −0.34, Language gain is noise-inflated. Carries the full reasoning chain (multi-seed → Step 0/Q8 → why E1) and the honest analysis. Conditional/probe-gated component, not a default wrapper.
 
 ## Headline findings so far
 
 1. **Reliability-before-peak is empirically validated.** Tier 0 → Tier 1 went −0.355 → +24.644 (single-seed; **≈ +11 ± 8 over 3 seeds**, [[Multi-Seed - Results]]) almost entirely by *not catastrophically under/over-fitting*, exactly as [[Reliability vs Peak]] predicts. The jump is real; the precise total was lucky.
-2. **Metadata-only augmentation is double-edged.** It's worth +11.86 adj on AddNIST but −5.65 on Language, and we *cannot* tell from metadata which case a hidden dataset is. This is the central open problem heading into Tier 2 (→ runtime aug-safety probe).
-3. **The random op-type search is doing real work** (+2.9 adj on AddNIST vs all-Conv3), not noise — justifies escalating to EGNAS macro-search in [[Tier 2 - EGNAS-Light]].
+2. **Augmentation is strongly net-positive but sharply targeted** (multi-seed `aug-off` arm, [[Multi-Seed - Results]] §C — supersedes the old single-seed +11.86/−5.65). Over the 7 aug-firing datasets aug is worth **+21.5**; on AddNIST/MultNIST aug-off is a dead **−10 ± 0 floor** every seed; the *only* seed-stable reversal is **Language (aug-cost −6.82 ± 1.88)**. Metadata can't predict which → the runtime aug-safety probe (P1) has a precisely-localised job.
+3. **Search instability is universal but not the variance driver** (Step 0 / Q8, `dev/analyze_search_stability.py`). The op-search picks a *different* arch every seed for 10/11 datasets, yet downstream variance is huge only on AddNIST/MultNIST and tiny elsewhere (GeoClassing equally unstable, σ 0.29). So the old single-seed "+2.9 vs all-Conv3" is unconfirmed under variance, and Tier 2's macro-search would inherit the same lottery → it must emit an ensemble-able pool, not a single argmax arch.
 4. **Architectural ceilings are real.** CIFARTile stays below benchmark under every Tier 1 configuration — no amount of training-side tuning fixes it; only macro architecture search will.
-5. **Seed variance is ≈100 % of the signal** ([[Multi-Seed - Results]], the headline). The Tier 1 recipe at 3 seeds = +8.4 ± 8.4 internal; AddNIST/MultNIST swing ±5.4/±3.0 (never "fixed", just lucky once). Consequences: single-seed deltas are dead as evidence; **E1 (diverse-restart ensemble) is promoted from optional to necessary**; the aug double-edge *direction* is the only seed-stable thing, which is exactly what makes it probeable (P1).
+5. **Seed variance is ≈100 % of the signal** ([[Multi-Seed - Results]], the headline). The Tier 1 recipe at 3 seeds = +8.4 ± 8.4 internal; AddNIST/MultNIST swing ±5.4/±3.0 (never "fixed", just lucky once). Single-seed deltas are dead as evidence; the aug double-edge *direction* is the only seed-stable thing → probeable (P1).
+6. **Ensembling (E1) is a partial, conditional answer to variance — not the answer** ([[E1 - Results]], 3 seeds). It collapses the *right kind* of variance brilliantly (AddNIST σ ×0.18 + mean ↑) but **does not collapse total submission variance** (×0.75) and can regress budget-saturating datasets (GeoClassing −0.34). The decisive consequence: the residual variance is **structural / dataset-level**, not per-run noise — you cannot ensemble it away, you must *characterize the dataset and configure* (the probe thesis). This is the empirical bridge into Tier 2. E1 stays as a probe-gated component for AddNIST-class datasets, not a default wrapper.
 
 ## Graph index
 
@@ -40,7 +43,8 @@ All plots are generated by `dev/plot_tier_results.py` and embedded in the per-ti
 - `tier0_scores.png`, `tier0_curves.png` — Tier 0 per-dataset adj + learning curves
 - `tier1_scores.png`, `tier1_curves.png` — Tier 1 per-dataset adj + learning curves
 - `tier1_ablation.png` — Tier 1 full vs single-feature-disabled, the per-component value chart
-- `multiseed.png` — 3-seed variance + augmentation-effect figure (in [[Multi-Seed - Results]])
+- `multiseed.png` — 3-seed variance + aug-off-effect figure (in [[Multi-Seed - Results]])
+- `e1.png` — E1 vs Tier-1 per-dataset means + σ-collapse (in [[E1 - Results]])
 
 Regenerate any of them with:
 
@@ -48,4 +52,5 @@ Regenerate any of them with:
 python3 dev/plot_tier_results.py --tier tier0
 python3 dev/plot_tier_results.py --tier tier1 --ablation
 python3 dev/aggregate_multiseed.py && python3 dev/plot_tier_results.py --multiseed
+python3 dev/aggregate_e1.py && python3 dev/plot_tier_results.py --e1   # after E1 lands
 ```

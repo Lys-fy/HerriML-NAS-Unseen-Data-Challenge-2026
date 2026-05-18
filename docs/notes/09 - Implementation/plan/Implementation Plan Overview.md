@@ -9,7 +9,7 @@ The [[Submission Contract|submission code]] is built in **tiers** rather than wr
 
 The whole structure is driven by the strategy notes' central claim: [[Reliability vs Peak|reliability dominates peak]]. Tiers exist so the *first* shippable version is a confirmed-working pipeline (Tier 0), and every later tier inherits its working harness. Going straight to EGNAS would mean debugging architecture search against an unverified harness — the failure modes overlap and become hard to bisect.
 
-**Status as of 2026-05-15:** Tier 0 (−0.355) and Tier 1 (+24.644) implemented and measured — see [[Tier 0 - Results]], [[Tier 1 - Results]]. Tier 1's single-feature ablation is the empirical motivation for the probe thesis. Tier 2+ is reframed below.
+**Status as of 2026-05-17:** Tier 0 (−0.355) and Tier 1 implemented & measured; the multi-seed sweep ([[Multi-Seed - Results]]) is the authoritative read — Tier 1 = **+11.3 ± 8.2 shipped / +8.4 ± 8.4 internal** (the single-seed +24.644 was a tail draw), seed variance ≈100 % of the signal, plus the `aug-off` arm quantifying augmentation (+21.5 over 7 ds; Language the lone seed-stable reversal). That finding promoted **E1 (budget-filling ensemble)** from optional to necessary — its validation sweep is **running now** ([[E1 - Results]]). Tier 2+ decision is gated on the E1 verdict. See [[Run State + Handoff]] for live operational state.
 
 ## Two axes
 
