@@ -3,6 +3,10 @@
 > **Status:** drafting | **Topic:** Three MNIST images stacked as RGB; label = (r + g + b) − 1, 20 classes.
 > **Related:** [[Datasets Overview]], [[MultNIST]], [[Score-Efficient Targeting]]
 
+![[AddNIST.png]]
+> *Example samples + the classification target — raw `.npy` arrays rendered for viewing. Regenerate: `python3 dev/plot_dataset_examples.py`.*
+
+
 Three MNIST digits stacked as the R/G/B channels of a 3×28×28 image. Label is `l = (r + g + b) − 1`, where `r,g,b` are the underlying digits.
 
 | Field | Value |

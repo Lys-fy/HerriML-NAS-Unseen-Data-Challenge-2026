@@ -3,6 +3,10 @@
 > **Status:** drafting | **Topic:** 9×9 partially-masked sudoku grids; predict the value of one target cell (label = value − 1).
 > **Related:** [[Datasets Overview]], [[GameOfLife]]
 
+![[Sudoku.png]]
+> *Example samples + the classification target — raw `.npy` arrays rendered for viewing. Regenerate: `python3 dev/plot_dataset_examples.py`.*
+
+
 Algorithmically generated sudoku grids stored as 9×9 single-channel "images". Real sudoku digits 1–9 are stored as 0.1–0.9; missing cells are 0; **the target cell is encoded as 1**. The task is to classify what digit (1–9) the target cell should hold. Different masking levels (number of missing cells) per grid.
 
 | Field | Value |

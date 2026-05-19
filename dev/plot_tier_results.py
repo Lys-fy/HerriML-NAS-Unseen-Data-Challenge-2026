@@ -64,6 +64,15 @@ TIER_CONFIG = {
         out_dir=IMPL_DIR,
         title="Tier 1 — Augmentation + Random Op Search",
     ),
+    # Single-seed snapshot of the full-EGNAS sweep (seed 42). NOT a verdict —
+    # the 3-seed paired analysis is the trustworthy read; this is the same
+    # tier0/tier1-style overview the user asked for.
+    "tier2b_s42": dict(
+        csv_dir=REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_s42",
+        log_file=REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_s42.log",
+        out_dir=IMPL_DIR,
+        title="Tier 2b — Full EGNAS (macro+micro), seed 42 — single seed, NOT a verdict",
+    ),
 }
 
 # Tier 1 ablation: full baseline vs single-feature-disabled configs, on the

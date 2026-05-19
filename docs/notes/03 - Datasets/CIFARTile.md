@@ -3,6 +3,10 @@
 > **Status:** drafting | **Topic:** Four CIFAR-10 images tiled in a 2×2 grid; label = (number of distinct CIFAR classes) − 1.
 > **Related:** [[Datasets Overview]], [[Score-Efficient Targeting]], [[DARTS Family]]
 
+![[CIFARTile.png]]
+> *Example samples + the classification target — raw `.npy` arrays rendered for viewing. Regenerate: `python3 dev/plot_dataset_examples.py`.*
+
+
 Four CIFAR-10 images placed in a 2×2 grid (so a 3×64×64 image). Label is the count of *distinct* CIFAR-10 classes among the four sub-images, minus one — so labels run 0–3.
 
 | Field | Value |

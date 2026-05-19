@@ -117,6 +117,82 @@ for f in data.get('files', []):
     done <<< "$files_tsv"
 done
 
+# --- Edinburgh DataShare datasets (DSpace, NOT figshare) ------------------
+# Windspeed / Cryptic: 2025 datasets, published late (2025-12-05) so the
+# starter-kit DOIs (10.7488/ds/8053, ds/8054) now resolve. CC-BY-4.0.
+# Each is a single <file>.tar.gz that unpacks to the standard competition
+# layout (6 npy + metadata + README), possibly nested one dir deep.
+# Format: "name dspace_handle_suffix tarfilename"
+DATASHARE=(
+    "Cryptic 9132 cryptic.tar.gz"
+    "Windspeed 9131 windspeed.tar.gz"
+)
+
+for entry in "${DATASHARE[@]}"; do
+    read -r name handle tarname <<< "$entry"
+
+    if [[ ${#filter[@]} -gt 0 ]] && ! contains "$name" "${filter[@]}"; then
+        continue
+    fi
+
+    printf '\n=== %s (Edinburgh DataShare 10283/%s) ===\n' "$name" "$handle"
+    dest="$DATASETS_DIR/$name"
+
+    if [[ -f "$dest/metadata" ]] && [[ -f "$dest/train_x.npy" ]]; then
+        printf '  skip   %s (already extracted)\n' "$name"
+        continue
+    fi
+    mkdir -p "$dest"
+
+    url="https://datashare.ed.ac.uk/bitstream/handle/10283/$handle/$tarname"
+    tmp="$dest/.$tarname.tmp"
+    printf '  fetch  %s\n' "$url"
+    if ! curl -fL -sS "$url" -o "$tmp"; then
+        printf '  ERROR: download failed for %s\n' "$name" >&2
+        rm -f "$tmp"; total_failures=$((total_failures + 1)); continue
+    fi
+
+    extract="$dest/.extract"
+    rm -rf "$extract"; mkdir -p "$extract"
+    if ! tar -xzf "$tmp" -C "$extract"; then
+        printf '  ERROR: extract failed for %s\n' "$name" >&2
+        rm -rf "$tmp" "$extract"; total_failures=$((total_failures + 1)); continue
+    fi
+
+    # Locate the dir actually containing the dataset (handles nested tars).
+    meta=$(find "$extract" -maxdepth 4 -name metadata -type f 2>/dev/null | head -1 || true)
+    if [[ -z "$meta" ]]; then
+        printf '  ERROR: no metadata file found inside %s tarball\n' "$name" >&2
+        rm -rf "$tmp" "$extract"; total_failures=$((total_failures + 1)); continue
+    fi
+    srcdir=$(dirname "$meta")
+    shopt -s dotglob
+    mv -f "$srcdir"/* "$dest"/
+    shopt -u dotglob
+
+    # Clean macOS AppleDouble sidecars and sanitise the metadata JSON: some
+    # DataShare tars ship `"benchmark": ?` (an unfilled placeholder) which is
+    # invalid JSON and would crash json.loads() in the harness. Normalise to
+    # 0.0 — the same convention as Sudoku's shipped placeholder.
+    find "$dest" -name '._*' -delete 2>/dev/null || true
+    python3 - "$dest/metadata" <<'PYEOF' || true
+import json, re, sys, pathlib
+p = pathlib.Path(sys.argv[1])
+try:
+    txt = p.read_text()
+    try:
+        json.loads(txt)
+    except Exception:
+        md = json.loads(re.sub(r'("benchmark"\s*:\s*)\?', r'\g<1>0.0', txt))
+        p.write_text(json.dumps(md))
+        print(f"  note   sanitised metadata (placeholder benchmark -> 0.0)")
+except Exception as e:
+    print(f"  WARN   could not sanitise {p}: {e}")
+PYEOF
+    rm -rf "$tmp" "$extract"
+    printf '  ok     %s extracted -> %s\n' "$name" "$dest"
+done
+
 echo
 echo "Done."
 echo "Destination: $DATASETS_DIR"

@@ -3,6 +3,10 @@
 > **Status:** drafting | **Topic:** Sentinel-2 satellite RGB images classified by European country. 10 classes.
 > **Related:** [[Datasets Overview]]
 
+![[GeoClassing.png]]
+> *Example samples + the classification target — raw `.npy` arrays rendered for viewing. Regenerate: `python3 dev/plot_dataset_examples.py`.*
+
+
 Satellite photography from BigEarthNet, relabelled by country (rather than the original ground-cover labels). The country was determined by cross-referencing the sentinel patch coordinates against a map of Europe.
 
 | Field | Value |

@@ -1,7 +1,27 @@
 # Tier 2b — EGNAS-light (macro)
 
-> **Status:** planned — design locked 2026-05-18 | **Topic:** The competition's proven core: macro architecture search (depth-grow + width-prune), scaled to the Phase-2 clock. The first *real* NAS engine in the repo; primary job is to crack the **CIFARTile** ceiling Tier 1 can't move.
-> **Related:** [[Tier 2 - EGNAS-Light]] (original algorithm reference), [[EGNAS]], [[2025 - EVAI]], [[Tier 1 - Augmentation + Op Search]], [[Multi-Seed - Results]], [[E1 - Results]], [[Probe-Driven Self-Configuration]], [[Reliability vs Peak]], [[Run State + Handoff]]
+> **Status:** macro DONE ([[Tier 2b - Results]]) → **completed to FULL EGNAS (macro + micro) 2026-05-18**; full 11-ds × 3-seed sweep next | **Topic:** The competition's proven core: macro architecture search + micro op-search, scaled to the Phase-2 clock. The first *real* NAS engine in the repo; primary job is to crack the **CIFARTile** ceiling Tier 1 can't move.
+> **Related:** [[Tier 2 - EGNAS-Light]] (original algorithm reference), [[Tier 2b - Results]], [[EGNAS]], [[2025 - EVAI]], [[Tier 1 - Augmentation + Op Search]], [[Multi-Seed - Results]], [[E1 - Results]], [[Probe-Driven Self-Configuration]], [[Reliability vs Peak]], [[Run State + Handoff]]
+
+## ⏵ Update 2026-05-18 — completed to FULL EGNAS (macro + micro). Reasoning.
+
+The macro-only diagnostic ([[Tier 2b - Results]]) **passed the make-or-break** (CIFARTile −0.515→+0.167, all 3 seeds, σ↓ — the ceiling no Tier-1 config could move) but with two caveats: the gain was *small*, and the macro argmax-over-noisy-candidates selection was a **Q8 arch-lottery** (s2024 picked D=5 for AddNIST → −2.81).
+
+**Why we did NOT pivot to E2 or polish the ranking (the reasoning):**
+- Concluding "conv-search is tapped out, jump to a novel architecture (E2)" from a *deliberately half-built* EGNAS was **premature** — you can't judge the proven 2025-winning method by running half of it. (This was a real over-reach in the earlier recommendation; corrected here.)
+- A small "re-rank the finalists" denoiser is low-EV polish on an *incomplete* method.
+- The principled move: **finish EGNAS** (add the micro phase), *then* judge it. Highest-EV (completes the proven competition core), lowest novelty-risk.
+
+**What "full" adds, and why micro also fixes the lottery:**
+- **Micro op hill-climb:** from the all-Conv3 macro winner, per layer try {Conv3, Conv5, SepConv3}; keep a swap only if it beats the incumbent by `MICRO_MARGIN`. This searches *what each layer computes* (not just depth/width).
+- It is **incumbent-kept** — a single noisy short-train cannot hijack the choice (unlike macro's argmax-of-noisy-candidates). So completing the method is *also the principled fix* for the Q8 lottery, not a bolted-on denoiser.
+- Budget: macro gets `MACRO_FRACTION` (60 %) of the 30 % search slice, micro the rest; whole-search failure → Tier-1 default (never a new −10).
+
+**Code hygiene / traceability (why a new dir):** `baselines/tier2b_egnas_macro/` is **frozen** as the macro-only comparator; the full method lives in **`baselines/tier2b_egnas_full/`** (only `nas.py` differs). This keeps a clean full-vs-macro attribution on the 3-ds `egnasdiag` and lets us reproduce/trace exactly what micro bought.
+
+**Validation (user decision 2026-05-18):** run the **full 11-dataset × 3-seed sweep directly** (`dev/run_tier2b_full.sh`), paired vs the Tier-1 `full_s*` baseline — for a comprehensive read of *actual* performance rather than another cheap gate. A ~15-min correctness smoke still precedes it (guards against burning ~30 h on never-executed code; *not* the strategic gate being skipped). The "what micro adds" attribution stays precise on the 3-ds `egnasdiag` (macro frozen there).
+
+**E2 is not abandoned — re-ordered:** a relational/non-conv primitive belongs as a candidate **op in EGNAS's search vocabulary** (probe-thesis-consistent: the search discovers when to use it), considered *after* full EGNAS is validated — not as a premature hand-built sidestep.
 
 ## Why this, why now
 

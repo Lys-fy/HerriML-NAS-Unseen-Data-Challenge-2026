@@ -3,6 +3,10 @@
 > **Status:** drafting | **Topic:** Late-game chess board states one-hot-encoded as 12×8×8 tensors. 3 classes (W/D/B).
 > **Related:** [[Datasets Overview]], [[Failure Modes]]
 
+![[Chesseract.png]]
+> *Example samples + the classification target — raw `.npy` arrays rendered for viewing. Regenerate: `python3 dev/plot_dataset_examples.py`.*
+
+
 Late-game (final 15% of moves) board positions from games played by 8 grandmasters (Fischer, Kasparov, Carlsen, Anand, Nakamura, Karpov, Caruana, Tal). Each board is one-hot-encoded by piece type × colour, producing **12 channels** (6 piece types × 2 colours) on an 8×8 board. Label = game outcome (White wins, Draw, Black wins).
 
 | Field | Value |

@@ -3,6 +3,10 @@
 > **Status:** drafting | **Topic:** Three consecutive words from public-domain texts, encoded as a 27×18 letter-position grid. 6 authors.
 > **Related:** [[Datasets Overview]], [[Language]], [[Threats to Validity]]
 
+![[Gutenberg.png]]
+> *Example samples + the classification target — raw `.npy` arrays rendered for viewing. Regenerate: `python3 dev/plot_dataset_examples.py`.*
+
+
 Concatenated 3-word sequences (each 3–6 letters, padded to 6) from English translations of works by 6 authors: Aquinas, Confucius, Hawthorne, Plato, Shakespeare, Tolstoy. Encoded as a binary 27×18 image (y-axis = letter A–Z + space; x-axis = position in the 18-character string).
 
 | Field | Value |

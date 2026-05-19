@@ -3,6 +3,10 @@
 > **Status:** drafting | **Topic:** Three MNIST images stacked as RGB; label = (r × g × b) mod 10, 10 classes.
 > **Related:** [[Datasets Overview]], [[AddNIST]]
 
+![[MultNIST.png]]
+> *Example samples + the classification target — raw `.npy` arrays rendered for viewing. Regenerate: `python3 dev/plot_dataset_examples.py`.*
+
+
 Sister dataset to [[AddNIST]]: same channel-stacked MNIST construction, different arithmetic. Label is `l = (r * g * b) mod 10`.
 
 | Field | Value |

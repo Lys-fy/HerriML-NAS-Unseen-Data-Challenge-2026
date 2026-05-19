@@ -3,6 +3,10 @@
 > **Status:** drafting | **Topic:** 3-D shape classification on a 20×20×20 voxel grid. Channels axis is *spatial-z*, not RGB.
 > **Related:** [[Datasets Overview]], [[Failure Modes]]
 
+![[Voxel.png]]
+> *Example samples + the classification target — raw `.npy` arrays rendered for viewing. Regenerate: `python3 dev/plot_dataset_examples.py`.*
+
+
 3-D voxelised shapes, where the shape is constructed by intersecting a generated 3-D primitive with a 20×20×20 grid of points. The "channel" dimension here is repurposed as a spatial-z axis — there is no colour. 7 classes: Sphere, Cube, Cone, Cylinder, Ellipsoid, Cuboid, Pyramid.
 
 | Field | Value |

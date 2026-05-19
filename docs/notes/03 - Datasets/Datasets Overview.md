@@ -3,7 +3,7 @@
 > **Status:** drafting | **Topic:** All 14 known competition datasets in one comparison table; era split (CVPR 2021–23 vs AutoML era 2024+); characteristic groupings.
 > **Related:** [[AddNIST]], [[Language]], [[MultNIST]], [[CIFARTile]], [[Gutenberg]], [[Isabella]], [[GeoClassing]], [[Chesseract]], [[Sudoku]], [[Voxel]], [[Myofibre]], [[GameOfLife]], [[Cryptic]], [[Windspeed]], [[Score-Efficient Targeting]], [[Reliability vs Peak]]
 
-The competition pool spans **14 named datasets** across two eras. **13 are publicly downloadable**; [[Isabella]] is held back due to license issues with the Isabella Stewart Gardner Museum recordings. Two 2025 datasets ([[Cryptic]], [[Windspeed]]) appeared on the 2025 leaderboard but their starter-kit DOIs (`10.7488/ds/8054`, `10.7488/ds/8053`) currently resolve to wrong content — sources still being tracked down (see those notes).
+The competition pool spans **14 named datasets** across two eras. **All but [[Isabella]] are now publicly downloadable** (Isabella held back over museum-recording licensing). The two 2025 datasets ([[Cryptic]], [[Windspeed]]) — DOIs `10.7488/ds/8054` / `10.7488/ds/8053` — were *not broken*, just **published late (2025-12-05)**; they now resolve correctly to Edinburgh DataShare (`datashare.ed.ac.uk/handle/10283/9132` and `/9131`), CC-BY-4.0. Specs confirmed (2026-05-19) — see those notes.
 
 All datasets share the same on-disk shape: six `.npy` files (`{train,valid,test}_{x,y}`) plus a `metadata` JSON (`num_classes`, `codename`, `input_shape`, `benchmark`) and a README. Pixels are channels-first 4-D `(N, C, H, W)`. The `benchmark` field is the ResNet-18 accuracy used as the zero-point in the [[Scoring]] formula.
 
@@ -23,8 +23,8 @@ All datasets share the same on-disk shape: six `.npy` files (`{train,valid,test}
 | [[Voxel]] | Volga | 2024 | 20×20×20² | 7 | 71.35% | — | 3D-encoded |
 | [[Myofibre]] | — | 2024 | 3×128×128 | 2 | unconfirmed | — | image-y, medical |
 | [[GameOfLife]] | conway | 2025 | 1×10×10 | 25 | 47.53% | — | encoded, T1 |
-| [[Cryptic]] | unknown | 2025 | unknown | unknown | unknown | — | unknown |
-| [[Windspeed]] | unknown | 2025 | unknown | unknown | unknown | — | unknown (regression-flavoured) |
+| [[Cryptic]] | unknown | 2025 | 6×768 (6 words, BERT-encoded) | unknown | ~73–76% (lb-inferred) | — | encoded text (cryptic-crossword clues) |
+| [[Windspeed]] | unknown | 2025 | 12×32×32 (6h×{temp,pres}, ERA5) | ~21 (Beaufort bins 20–40) | ~13–14% (lb-inferred) | — | regression→ordinal classes; temporal shift (tr20–22/va23/te24) |
 
 ¹ Sudoku metadata ships `benchmark: 0.0` — almost certainly a placeholder, not a real ResNet-18 result. Treat as unknown.
 ² Voxel uses the channels dimension as a third *spatial* axis (not RGB) — see [[Voxel]].
@@ -46,7 +46,7 @@ All datasets share the same on-disk shape: six `.npy` files (`{train,valid,test}
 **Encoded-non-image** (Type-2 — a "channels-first 4-D tensor" but the spatial axes don't carry visual structure; a human cannot solve them by looking):
 - [[Language]], [[Gutenberg]] (character-position grids), [[Isabella]] (audio spectrograms), [[Voxel]] (3-D shape in voxel grid, with spatial-z cosplaying as channels).
 
-**Unknown** ([[Cryptic]], [[Windspeed]]): no public description.
+**Encoded-non-image, 2025** ([[Cryptic]], [[Windspeed]]) — *now confirmed*: Cryptic = 6 cryptic-crossword words → 6×768 BERT embeddings; Windspeed = 6 h ERA5 temp+pressure (12×32×32) → ~21 ordered Beaufort bins (a discretised regression, with a temporal train/test shift).
 
 ## NAS-rewardingness (CVPR-era datasets)
 
@@ -78,6 +78,6 @@ Implication for [[Score-Efficient Targeting]]: **don't over-invest in low-benchm
 
 ## Open dataset questions
 
-- [[Cryptic]] and [[Windspeed]] sources — figshare DOIs in the starter kit are wrong. Tracked separately in those notes.
+- ~~[[Cryptic]] and [[Windspeed]] sources — DOIs wrong~~ **RESOLVED 2026-05-19**: DOIs were fine, datasets just published late (2025-12-05) to Edinburgh DataShare, CC-BY-4.0. Specs in those notes.
 - [[Isabella]] generation script said "coming soon" by the organisers — not yet visible at github.com/Towers-D/NAS-Unseen-Datasets.
 - Whether the Phase 2/3 dataset rotation in 2026 keeps any 2025 set.

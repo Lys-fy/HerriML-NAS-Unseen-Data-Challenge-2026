@@ -3,6 +3,10 @@
 > **Status:** drafting | **Topic:** Four 6-letter words concatenated, encoded as a 24×24 binary letter-position grid. 10 languages.
 > **Related:** [[Datasets Overview]], [[Gutenberg]]
 
+![[Language.png]]
+> *Example samples + the classification target — raw `.npy` arrays rendered for viewing. Regenerate: `python3 dev/plot_dataset_examples.py`.*
+
+
 A 24-character string (four six-letter words from one language) encoded as a binary 24×24 image: y-axis = string position, x-axis = letter (A–X, no Y, Z, or diacritic letters). Each filled pixel marks "letter X is at position Y". Label = source language.
 
 | Field | Value |

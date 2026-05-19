@@ -3,6 +3,10 @@
 > **Status:** drafting | **Topic:** Conway's Game of Life next-step prediction. Predict the count of alive cells in the next generation. 25 classes.
 > **Related:** [[Datasets Overview]], [[Sudoku]], [[2025 - EVAI]]
 
+![[GameOfLife.png]]
+> *Example samples + the classification target — raw `.npy` arrays rendered for viewing. Regenerate: `python3 dev/plot_dataset_examples.py`.*
+
+
 A 10×10 binary grid showing a randomly-initialised Conway's Game of Life starting state, with random initial alive-cell density. The label is the **number of alive cells in the next generation** (i.e. after one Conway step). Limited to 25 classes (0–24) because higher counts become exponentially rare.
 
 | Field | Value |
