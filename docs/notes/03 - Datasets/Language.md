@@ -1,7 +1,7 @@
 # Language
 
 > **Status:** drafting | **Topic:** Four 6-letter words concatenated, encoded as a 24×24 binary letter-position grid. 10 languages.
-> **Related:** [[Datasets Overview]], [[Gutenberg]]
+> **Related:** [[Datasets Overview]], [[Gutenberg]], [[Tier 2a - Language Deep Dive]] (our empirical findings), [[Tier 2a - Results]] (probe history), [[Multi-Seed - Results]] (the aug-oracle), [[Reliability vs Peak]]
 
 ![[Language.png]]
 > *Example samples + the classification target — raw `.npy` arrays rendered for viewing. Regenerate: `python3 dev/plot_dataset_examples.py`.*
@@ -42,3 +42,57 @@ Word-level data leakage is prevented: any given word appears in only one of trai
 - Score-relevance is moderate (benchmark ~85%, slope ~0.67 / 1%).
 - Worth piloting a "skip search, use ResNeXt-style fixed backbone" path here — especially if the [[Clock and Time Budget]] is tight. See [[Score-Efficient Targeting]].
 - Augmentation selection matters more than architecture: this is a "no spatial invariance" dataset.
+
+## Empirical findings (2026-05-28) — what we have tried
+
+Documented in detail in **[[Tier 2a - Language Deep Dive]]**. Summary of what holds up under 3 seeds per configuration:
+
+### What does NOT help (training-side, with current Conv-only OP_VOCAB)
+
+| Intervention | Effect on Language raw acc | Verdict |
+|---|---|---|
+| **Default augmentation (`crop_pad=2, cutout=4`)** | drops raw to **68-73 %** (mean 70.16 % ± 2.62), often hits the −10 floor. | **Decisively harmful.** Confirmed across Tier-1, EGNAS-full, and P1 v4. The pixel-shift + cutout breaks the binary letter-position encoding. |
+| Patience extension (30 → 60 epochs) | 79.10 % → 80.02 % (+0.6 adj) | small, not enough |
+| Lower LR + longer warmup (0.025 → 0.01, 5 → 10) | 79.10 % → 79.68 % (+0.4 adj) | small, not enough |
+| Larger model width (48 → 72) | 79.10 % → 80.32 % (+0.8 adj) | small, not enough |
+| Combined patience + LR + Mixup | matches Mixup alone on mean | only stabilises variance |
+
+**The training-side ceiling is ~81.5 % raw** on the Tier-1 fixed-Conv3 stack with aug-off. We have shown this with 6 variations × 3 seeds; mean spread of the 6 variations is only 2.5 pp (79.1 % → 81.6 %). No training-side intervention crosses the harness benchmark of 85.20 %.
+
+### What DOES help (validated through 3-seed sweeps)
+
+| Intervention | Effect on Language | Notes |
+|---|---|---|
+| **Turn augmentation off** | +5 to +10 pp raw vs default | The single biggest training-side lever. Implemented via the P1 aug-safety probe — see [[Tier 2a - Results]]. |
+| **Mixup α=0.2** (with spatial aug off) | +1.6 adj over aug-off baseline → **81.5 % raw** | Implicit regularisation via label-space mixing; perturbs the loss landscape so the model keeps learning past where it would memorise/saturate. **Novel in the published NAS-Unseen literature** — no past team has documented this on Language. |
+
+### What the literature says is needed to cross the benchmark
+
+Per **Geada et al. arXiv:2404.02189** (CVPR 2024), the architectural lever for Language is **grouped convolutions with high cardinality (ResNeXt-style)**:
+
+- ResNeXt-50 (cardinality 32, 4-wide-per-group) **vanilla** hits **93.97 %** — 4 pp above any NAS method tried.
+- PC-DARTS / DARTS hit **90.12 %** — cell-based NAS, doesn't include grouped convs natively.
+- The best public competition submission only hit **89.71 %** — still 4 pp below vanilla ResNeXt.
+- DrNAS **88.55 %**, Bonsai-Net **87.65 %**.
+
+**Implication: an architectural change to add grouped convolutions is the data-backed lever, not more training tricks.** Our current `OP_VOCAB` (`Conv3 / Conv5 / SepConv3 / MaxPool / Identity`) has no grouped-conv option — `SepConv3` is the degenerate max-cardinality endpoint (depthwise) and `Conv3` is the zero-cardinality endpoint (full mixing). The middle ground (cardinality 8/16/32) is exactly where ResNeXt operates.
+
+### Planned next experiment
+
+Adding `GroupConv3` (`Conv2d(in, out, k=3, groups=min(in_ch, 32))`) as a new entry in `OP_VOCAB`. The existing EGNAS micro hill-climb can then pick it per-layer. Combined with the v5 P1 probe (driver C from v4 shadow data) + Mixup-on-OFF, the expected outcome is the first time any configuration we run crosses the 85.20 % Language benchmark. See [[Tier 2a - Language Deep Dive]] §8 for the full design.
+
+### Per-method raw acc summary table
+
+| Method | Language raw acc (mean ± σ, 3 seeds) | Crosses 85.20% benchmark? |
+|---|---:|---|
+| Multi-seed Tier-1 (aug-on) | 70.16 % ± 2.62 | No (≤73%) |
+| Tier 2b — EGNAS-full | 72.49 % ± 2.96 | No |
+| P1 v4 (probe-driven) | 78.39 % ± 3.39 | No |
+| Multi-seed Tier-1 (aug-off, with op-search) | 81.41 % ± 3.00 | No (best seed 83.47%) |
+| Excursion V3 (Mixup α=0.2, fixed Conv3) | 81.49 % ± 0.60 | No |
+| Excursion V5 (combo V1+V2+V3) | **81.58 % ± 0.31** ← our best | No |
+| --- *(reference targets — Geada et al.)* --- | | |
+| ResNet-18 (paper) | 87.00 % | yes (+1.8) |
+| Best published competition submission | 89.71 % | yes (+4.5) |
+| PC-DARTS / DARTS | 90.12 % | yes (+4.9) |
+| **ResNeXt-50 — public SOTA** | **93.97 %** | yes (+8.8) |

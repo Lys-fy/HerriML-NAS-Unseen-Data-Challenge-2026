@@ -25,15 +25,25 @@ matplotlib.use("Agg")  # non-GUI backend — avoids Gdk segfaults on headless / 
 import matplotlib.pyplot as plt
 import numpy as np
 
+from internal_benchmarks import resolve_benchmark  # Sokoto=70.95 override etc.
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 # All plots live in the notebase so Obsidian can embed them with ![[name.png]].
 IMPL_DIR = REPO_ROOT / "docs" / "notes" / "09 - Implementation" / "implementation"
+# All PNGs go into an `images/` subfolder to keep the implementation/ note
+# folder uncluttered. Obsidian's `![[name.png]]` resolves by basename, so
+# embeds in the notes don't need updating after moving files here.
+IMG_DIR = IMPL_DIR / "images"
 
 # Machine-readable aggregate produced by dev/aggregate_multiseed.py.
 MULTISEED_JSON = REPO_ROOT / "dev" / "logs" / "multiseed" / "_aggregate.json"
 # Machine-readable aggregate produced by dev/aggregate_e1.py.
 E1_JSON = REPO_ROOT / "dev" / "logs" / "e1val" / "_e1_aggregate.json"
+# Machine-readable aggregate produced by dev/aggregate_tier2bfull.py.
+TIER2BFULL_JSON = REPO_ROOT / "dev" / "logs" / "tier2bfull" / "_tier2bfull_aggregate.json"
+TIER2A_P1_V4_JSON = (REPO_ROOT / "dev" / "logs" / "tier2a_p1_v4"
+                     / "_tier2a_p1_v4_aggregate.json")
 
 CODENAME_TO_DATASET = {
     "Adaline": "AddNIST",
@@ -47,6 +57,8 @@ CODENAME_TO_DATASET = {
     "Myopia": "Myofibre",
     "Sokoto": "Sudoku",
     "Volga": "Voxel",
+    "Cryptic": "Cryptic",
+    "windspeed": "Windspeed",
 }
 
 # Per-tier path resolution. Add new tiers here. All outputs land in IMPL_DIR
@@ -55,23 +67,64 @@ TIER_CONFIG = {
     "tier0": dict(
         csv_dir=REPO_ROOT / "dev" / "logs" / "training-2h",
         log_file=REPO_ROOT / "dev" / "logs" / "tier0-sweep-2h.log",
-        out_dir=IMPL_DIR,
+        out_dir=IMG_DIR,
         title="Tier 0 — Hardcoded CNN",
     ),
     "tier1": dict(
         csv_dir=REPO_ROOT / "dev" / "logs" / "training-tier1-2h",
         log_file=REPO_ROOT / "dev" / "logs" / "tier1-sweep-2h.log",
-        out_dir=IMPL_DIR,
+        out_dir=IMG_DIR,
         title="Tier 1 — Augmentation + Random Op Search",
     ),
     # Single-seed snapshot of the full-EGNAS sweep (seed 42). NOT a verdict —
     # the 3-seed paired analysis is the trustworthy read; this is the same
     # tier0/tier1-style overview the user asked for.
+    # Per-seed Tier-2b configs pull from both the original 11-ds sweep dir and
+    # the Windspeed+Cryptic follow-on dir, so the per-seed score bars + curves
+    # cover all 13 datasets.
     "tier2b_s42": dict(
-        csv_dir=REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_s42",
-        log_file=REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_s42.log",
-        out_dir=IMPL_DIR,
+        csv_dir=(REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_s42",
+                 REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_new_s42"),
+        log_file=(REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_s42.log",
+                  REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_new_s42.log"),
+        out_dir=IMG_DIR,
         title="Tier 2b — Full EGNAS (macro+micro), seed 42 — single seed, NOT a verdict",
+    ),
+    "tier2b_s1337": dict(
+        csv_dir=(REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_s1337",
+                 REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_new_s1337"),
+        log_file=(REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_s1337.log",
+                  REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_new_s1337.log"),
+        out_dir=IMG_DIR,
+        title="Tier 2b — Full EGNAS (macro+micro), seed 1337 — single seed",
+    ),
+    "tier2b_s2024": dict(
+        csv_dir=(REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_s2024",
+                 REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_new_s2024"),
+        log_file=(REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_s2024.log",
+                  REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_new_s2024.log"),
+        out_dir=IMG_DIR,
+        title="Tier 2b — Full EGNAS (macro+micro), seed 2024 — single seed",
+    ),
+    # Tier-2a / P1 v4 — full EGNAS + 3-probe shadow comparison (A drives,
+    # B+C shadow). Per-seed view; v4 verdict lives in Tier 2a - Results.md.
+    "tier2a_p1_v4_s42": dict(
+        csv_dir=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v4" / "p1v4_s42",
+        log_file=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v4" / "p1v4_s42.log",
+        out_dir=IMG_DIR,
+        title="Tier 2a / P1 v4 (3-probe shadow, A drives), seed 42",
+    ),
+    "tier2a_p1_v4_s1337": dict(
+        csv_dir=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v4" / "p1v4_s1337",
+        log_file=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v4" / "p1v4_s1337.log",
+        out_dir=IMG_DIR,
+        title="Tier 2a / P1 v4 (3-probe shadow, A drives), seed 1337",
+    ),
+    "tier2a_p1_v4_s2024": dict(
+        csv_dir=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v4" / "p1v4_s2024",
+        log_file=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v4" / "p1v4_s2024.log",
+        out_dir=IMG_DIR,
+        title="Tier 2a / P1 v4, seed 2024 — PARTIAL (sweep still running)",
     ),
 }
 
@@ -91,20 +144,36 @@ ABLATION_LOGS = {
 ABLATION_DATASETS = ["Adaline", "Caitie", "LaMelo"]
 
 
-def parse_scores(log_path: Path):
-    text = log_path.read_text()
-    scores = {}
+def _as_paths(x):
+    """Normalize a Path or sequence of Paths to a list."""
+    if isinstance(x, Path):
+        return [x]
+    return list(x)
+
+
+def parse_scores(log_path):
+    """Parse score lines from one log file or several (tuple/list of Paths).
+
+    Later files override earlier ones if a codename appears in both."""
     pat = re.compile(
         r"\s*(\w+):\s*raw=([\d.]+)%\s+benchmark=\s*([\d.]+)%\s+adj=\s*([+-]?[\d.]+)"
     )
-    for m in pat.finditer(text):
-        codename = m.group(1)
-        scores[codename] = {
-            "raw": float(m.group(2)),
-            "benchmark": float(m.group(3)),
-            "adj": float(m.group(4)),
-        }
+    scores = {}
+    for p in _as_paths(log_path):
+        if not p.exists():
+            continue
+        for m in pat.finditer(p.read_text()):
+            scores[m.group(1)] = {
+                "raw": float(m.group(2)),
+                "benchmark": float(m.group(3)),
+                "adj": float(m.group(4)),
+            }
     return scores
+
+
+def _ds_name(code):
+    """Alphabetic-sort key: case-insensitive dataset name (or codename fallback)."""
+    return CODENAME_TO_DATASET.get(code, code).lower()
 
 
 def load_csv(csv_path: Path):
@@ -116,7 +185,7 @@ def load_csv(csv_path: Path):
 
 
 def plot_score_bars(scores, out_path, title_prefix):
-    items = sorted(scores.items(), key=lambda kv: -kv[1]["adj"])
+    items = sorted(scores.items(), key=lambda kv: _ds_name(kv[0]))
     names = [CODENAME_TO_DATASET.get(c, c) for c, _ in items]
     adj = np.array([s["adj"] for _, s in items])
     raw = np.array([s["raw"] for _, s in items])
@@ -157,7 +226,8 @@ def plot_score_bars(scores, out_path, title_prefix):
 
 
 def plot_learning_curves(scores, csv_dir, out_path, title_prefix):
-    codenames_in_order = sorted(scores.keys(), key=lambda c: -scores[c]["adj"])
+    codenames_in_order = sorted(scores.keys(), key=_ds_name)
+    csv_dirs = _as_paths(csv_dir)
     n = len(codenames_in_order)
     cols = 4
     rows = (n + cols - 1) // cols
@@ -165,8 +235,9 @@ def plot_learning_curves(scores, csv_dir, out_path, title_prefix):
     axes_flat = axes.flatten()
 
     for ax, codename in zip(axes_flat, codenames_in_order):
-        csv_path = csv_dir / f"{codename}.csv"
-        if not csv_path.exists():
+        csv_path = next((d / f"{codename}.csv" for d in csv_dirs
+                         if (d / f"{codename}.csv").exists()), None)
+        if csv_path is None:
             ax.set_title(f"{codename} (no CSV)")
             ax.axis("off")
             continue
@@ -307,7 +378,7 @@ def plot_multiseed(out_path):
 
     # ---- A: full per-dataset mean±std + per-seed dots --------------------
     axA = fig.add_subplot(gs[0])
-    items = sorted(fbd.items(), key=lambda kv: -kv[1]["adj"]["mean"])
+    items = sorted(fbd.items(), key=lambda kv: c2d.get(kv[0], kv[0]).lower())
     names = [c2d.get(c, c) for c, _ in items]
     means = np.array([d["adj"]["mean"] for _, d in items])
     stds = np.array([d["adj"]["std"] for _, d in items])
@@ -477,6 +548,431 @@ def plot_e1(out_path):
     print(f"  wrote {out_path.relative_to(REPO_ROOT)}")
 
 
+def plot_tier2bfull(out_path):
+    """Two-panel figure for the Tier-2b FULL EGNAS sweep (11 ds × 3 seeds).
+
+      A) per-dataset Tier-1 vs EGNAS-full mean ± std grouped bars + per-seed
+         dots; sorted by Δmean desc; Δ annotated above each pair.
+      B) per-dataset σ comparison — the variance-collapse picture.
+
+    Reads dev/logs/tier2bfull/_tier2bfull_aggregate.json. Mirrors plot_e1's
+    style for visual consistency with [[E1 - Results]] and the multi-seed
+    figure.
+    """
+    if not TIER2BFULL_JSON.exists():
+        print(f"  {TIER2BFULL_JSON.relative_to(REPO_ROOT)} not found — run "
+              f"dev/aggregate_tier2bfull.py after the sweep lands.")
+        return
+    agg = json.loads(TIER2BFULL_JSON.read_text())
+    rows = agg.get("rows", {})
+    if not rows:
+        print("  no rows yet — skipping.")
+        return
+    # Sort by Δmean desc so big wins read first.
+    names = sorted(rows.keys(), key=str.lower)
+    x = np.arange(len(names))
+    bm = np.array([rows[n]["tier1"]["mean"] for n in names])
+    bs = np.array([rows[n]["tier1"]["std"]  for n in names])
+    em = np.array([rows[n]["egnas"]["mean"] for n in names])
+    es = np.array([rows[n]["egnas"]["std"]  for n in names])
+
+    fig, (axA, axB) = plt.subplots(2, 1, figsize=(14, 11))
+    w = 0.38
+
+    # A — paired means
+    axA.bar(x - w / 2, bm, w, yerr=bs, capsize=3, label="Tier 1 (paired)",
+            color="#1f77b4", edgecolor="black", linewidth=.5,
+            error_kw=dict(ecolor="#333", lw=1.0))
+    axA.bar(x + w / 2, em, w, yerr=es, capsize=3, label="EGNAS-full (macro+micro)",
+            color="#2c8a3a", edgecolor="black", linewidth=.5,
+            error_kw=dict(ecolor="#333", lw=1.0))
+    for i, n in enumerate(names):
+        for v in rows[n]["tier1"]["vals"]:
+            axA.scatter(i - w / 2, v, s=18, color="black", zorder=5, alpha=.6)
+        for v in rows[n]["egnas"]["vals"]:
+            axA.scatter(i + w / 2, v, s=18, color="black", zorder=5, alpha=.6)
+        d = rows[n]["d_mean"]
+        top = max(bm[i] + bs[i], em[i] + es[i])
+        axA.text(i, top + 0.5, f"Δ{d:+.1f}", ha="center", fontsize=8,
+                 fontweight="bold",
+                 color="#2c8a3a" if d > 0 else "#b53030")
+    axA.axhline(0, color="black", lw=.8)
+    axA.set_xticks(x)
+    axA.set_xticklabels(names, rotation=22, ha="right", fontsize=9)
+    axA.set_ylabel("internal adj (mean ± std, 3 seeds)")
+    T = agg.get("totals") or {}
+    if T.get("tier1") and T.get("egnas"):
+        Tb, Te = T["tier1"], T["egnas"]
+        ratio = Te['std'] / Tb['std'] if Tb['std'] > 1e-9 else float('nan')
+        axA.set_title(
+            "A. Tier-1 vs EGNAS-full per dataset — alphabetic order "
+            "(black dots = individual seeds; Δ annotated above each pair)\n"
+            f"Total (11 ds): Tier-1 {Tb['mean']:+.2f} ± {Tb['std']:.2f}  →  "
+            f"EGNAS-full {Te['mean']:+.2f} ± {Te['std']:.2f}   "
+            f"(Δmean {Te['mean']-Tb['mean']:+.2f}, σ ×{ratio:.2f})",
+            fontsize=11)
+    axA.legend(loc="lower left", framealpha=.9)
+    axA.grid(axis="y", alpha=.3)
+
+    # B — σ collapse
+    axB.bar(x - w / 2, bs, w, label="Tier 1 σ",
+            color="#1f77b4", edgecolor="black", linewidth=.5)
+    axB.bar(x + w / 2, es, w, label="EGNAS-full σ",
+            color="#2c8a3a", edgecolor="black", linewidth=.5)
+    for i in range(len(names)):
+        ratio = es[i] / max(bs[i], 1e-9)
+        top = max(bs[i], es[i])
+        axB.text(i, top + 0.12, f"×{ratio:.2f}", ha="center", fontsize=8,
+                 fontweight="bold")
+    axB.set_xticks(x)
+    axB.set_xticklabels(names, rotation=22, ha="right", fontsize=9)
+    axB.set_ylabel("σ of internal adj across 3 seeds")
+    axB.set_title("B. Variance collapse per dataset — Tier-1 σ → EGNAS-full σ "
+                  "(×ratio annotated)", fontsize=11)
+    axB.legend(loc="upper right", framealpha=.9)
+    axB.grid(axis="y", alpha=.3)
+
+    fig.suptitle("Tier-2b FULL EGNAS (macro + micro) — 3-seed × 11-dataset "
+                 f"paired vs Tier-1   (seeds {agg.get('seeds')})",
+                 fontsize=13, y=0.997)
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=120, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  wrote {out_path.relative_to(REPO_ROOT)}")
+
+
+def plot_tier2bfull_curves(out_path):
+    """Per-dataset aggregated learning curves across the 3 EGNAS-full seeds.
+
+    For each dataset: thin grey lines = each seed's val_acc trajectory; bold
+    green = mean across seeds (NaN-aware so early-stopped seeds don't bias
+    later epochs); shaded band = ±std. Reads
+    `dev/logs/tier2bfull/t2bfull_s{42,1337,2024}/<codename>.csv` (the
+    per-epoch CSVs the Tier-1 trainer writes via BASELINE_LOG_DIR).
+    """
+    base = REPO_ROOT / "dev" / "logs" / "tier2bfull"
+    seeds = [42, 1337, 2024]
+    # Original 11-ds sweep lives in t2bfull_s{seed}/; the Windspeed+Cryptic
+    # follow-on landed in t2bfull_new_s{seed}/. Union both so the figure now
+    # covers all 13 datasets.
+    s42_dirs = [base / "t2bfull_s42", base / "t2bfull_new_s42"]
+    s42_dirs = [d for d in s42_dirs if d.exists()]
+    if not s42_dirs:
+        print(f"  no t2bfull s42 dirs found under {base.relative_to(REPO_ROOT)}.")
+        return
+    codes = sorted({p.stem for d in s42_dirs for p in d.glob("*.csv")},
+                   key=_ds_name)
+    if not codes:
+        print("  no per-codename CSVs found.")
+        return
+
+    def _egnas_paths(code):
+        """Return candidate CSV paths for `code` across the 3 seeds, looking
+        in both the original sweep dir and the new-datasets follow-on dir."""
+        return [base / f"{tag}_s{s}" / f"{code}.csv"
+                for s in seeds
+                for tag in ("t2bfull", "t2bfull_new")]
+
+    cols = 4
+    rows = (len(codes) + cols - 1) // cols
+    fig, axes = plt.subplots(rows, cols, figsize=(4.5 * cols, 3.2 * rows),
+                             squeeze=False)
+    flat = axes.flatten()
+
+    base_t1 = REPO_ROOT / "dev" / "logs" / "multiseed"  # paired Tier-1 CSVs
+
+    def _aggregate(paths):
+        """Load val_acc curves from CSV paths → per-seed list + max_ep."""
+        per = []
+        mx = 0
+        for p in paths:
+            if not p.exists():
+                continue
+            rs = load_csv(p)
+            va = np.array([r["val_acc"] for r in rs]) * 100
+            per.append(va)
+            mx = max(mx, len(va))
+        return per, mx
+
+    for ax, code in zip(flat, codes):
+        ds = CODENAME_TO_DATASET.get(code, code)
+
+        # --- dataset benchmark (ResNet-18 zero-point of adj-score) ---
+        try:
+            md_p = REPO_ROOT / "datasets" / ds / "metadata"
+            if md_p.exists():
+                md = json.loads(md_p.read_text())
+                bench = resolve_benchmark(code, float(md.get("benchmark", 0.0) or 0.0))
+                if bench > 0.5:  # skip placeholder/zero benchmarks
+                    ax.axhline(bench, color="#b53030", linestyle="--", lw=1.0,
+                               alpha=0.75, label=f"benchmark {bench:.1f}%")
+        except Exception:
+            pass
+
+        # --- Tier-1 baseline (multiseed full_s*) underneath ---
+        t1_per, t1_max = _aggregate([base_t1 / f"full_s{s}" / f"{code}.csv"
+                                     for s in seeds])
+        if t1_per:
+            mat = np.full((len(t1_per), t1_max), np.nan)
+            for i, v in enumerate(t1_per):
+                mat[i, : len(v)] = v
+            m1, s1 = np.nanmean(mat, axis=0), np.nanstd(mat, axis=0)
+            ax.fill_between(np.arange(t1_max), m1 - s1, m1 + s1,
+                            color="#1f77b4", alpha=0.16, label="Tier-1 ±std")
+            ax.plot(np.arange(t1_max), m1, color="#1f77b4", lw=1.4, alpha=0.9,
+                    label="Tier-1 mean")
+
+        # --- EGNAS-full (on top) ---
+        eg_per, eg_max = _aggregate(_egnas_paths(code))
+        for v in eg_per:
+            ax.plot(np.arange(len(v)), v, color="#3a3", alpha=0.30, lw=0.5)
+        if eg_per:
+            mat = np.full((len(eg_per), eg_max), np.nan)
+            for i, v in enumerate(eg_per):
+                mat[i, : len(v)] = v
+            me, se = np.nanmean(mat, axis=0), np.nanstd(mat, axis=0)
+            ax.fill_between(np.arange(eg_max), me - se, me + se,
+                            color="#2c8a3a", alpha=0.24, label="EGNAS-full ±std")
+            ax.plot(np.arange(eg_max), me, color="#2c8a3a", lw=2.0,
+                    label="EGNAS-full mean")
+
+        ax.set_title(ds, fontsize=10)
+        ax.set_xlabel("epoch", fontsize=8)
+        ax.set_ylabel("val acc %", fontsize=8)
+        ax.set_ylim(0, 100)
+        ax.grid(alpha=0.3)
+        ax.tick_params(labelsize=7)
+        ax.legend(loc="lower right", fontsize=6, framealpha=0.85)
+
+    for ax in flat[len(codes):]:
+        ax.axis("off")
+
+    fig.suptitle("Tier-2b Full EGNAS — per-dataset learning curves vs Tier-1 "
+                 "(blue = Tier-1 mean ± std across 3 seeds; "
+                 "green = EGNAS-full mean ± std; thin green = each seed)",
+                 fontsize=11, y=1.0)
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=110, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  wrote {out_path.relative_to(REPO_ROOT)}")
+
+
+def plot_tier2a_p1_v4(out_path):
+    """Two-panel figure for Tier-2a / P1 v4 (paired vs EGNAS-full, 13 ds × 3 seeds).
+
+    Same shape as plot_tier2bfull but reads _tier2a_p1_v4_aggregate.json,
+    where rows have `egnas` and `p1` fields instead of `tier1` and `egnas`.
+    Panel A: per-dataset EG vs +P1 mean ± std + seed dots + Δ annotation.
+    Panel B: σ change EG → +P1 (×ratio annotated).
+    """
+    if not TIER2A_P1_V4_JSON.exists():
+        print(f"  {TIER2A_P1_V4_JSON.relative_to(REPO_ROOT)} not found — run "
+              "dev/aggregate_tier2a_p1_v4.py after the sweep lands.")
+        return
+    agg = json.loads(TIER2A_P1_V4_JSON.read_text())
+    rows = agg.get("rows", {})
+    if not rows:
+        print("  no rows yet — skipping.")
+        return
+    names = sorted(rows.keys(), key=str.lower)
+    x = np.arange(len(names))
+    em = np.array([rows[n]["egnas"]["mean"] for n in names])
+    es = np.array([rows[n]["egnas"]["std"]  for n in names])
+    pm = np.array([rows[n]["p1"]["mean"]    for n in names])
+    ps = np.array([rows[n]["p1"]["std"]     for n in names])
+
+    fig, (axA, axB) = plt.subplots(2, 1, figsize=(14, 11))
+    w = 0.38
+
+    # A — paired means
+    axA.bar(x - w / 2, em, w, yerr=es, capsize=3, label="EGNAS-full (paired baseline)",
+            color="#2c8a3a", edgecolor="black", linewidth=.5,
+            error_kw=dict(ecolor="#333", lw=1.0))
+    axA.bar(x + w / 2, pm, w, yerr=ps, capsize=3, label="+P1 v4 (3-probe shadow, A drives)",
+            color="#d97706", edgecolor="black", linewidth=.5,
+            error_kw=dict(ecolor="#333", lw=1.0))
+    for i, n in enumerate(names):
+        for v in rows[n]["egnas"]["vals"]:
+            axA.scatter(i - w / 2, v, s=18, color="black", zorder=5, alpha=.6)
+        for v in rows[n]["p1"]["vals"]:
+            axA.scatter(i + w / 2, v, s=18, color="black", zorder=5, alpha=.6)
+        d = rows[n]["d_mean"]
+        top = max(em[i] + es[i], pm[i] + ps[i])
+        axA.text(i, top + 0.5, f"Δ{d:+.1f}", ha="center", fontsize=8,
+                 fontweight="bold",
+                 color="#2c8a3a" if d > 0 else "#b53030")
+    # Mark which datasets had the probe applied vs skipped (no-aug metadata).
+    probes_field = agg.get("probe_decisions", {})
+    for i, n in enumerate(names):
+        # codename lookup: invert
+        code = next((c for c, dn in {"Adaline":"AddNIST","Caitie":"CIFARTile",
+                "Chester":"Chesseract","conway":"GameOfLife","Sadie":"GeoClassing",
+                "Gutenberg":"Gutenberg","LaMelo":"Language","Mateo":"MultNIST",
+                "Myopia":"Myofibre","Sokoto":"Sudoku","Volga":"Voxel",
+                "Cryptic":"Cryptic","windspeed":"Windspeed"}.items() if dn == n), n)
+        decs = probes_field.get(code, {})
+        if not decs:
+            axA.text(i, axA.get_ylim()[0] + 0.3, "(skip-probe)", ha="center",
+                     fontsize=7, color="#888", style="italic")
+    axA.axhline(0, color="black", lw=.8)
+    axA.set_xticks(x)
+    axA.set_xticklabels(names, rotation=22, ha="right", fontsize=9)
+    axA.set_ylabel("internal adj (mean ± std, 3 seeds)")
+    T = agg.get("totals") or {}
+    if T.get("egnas") and T.get("p1"):
+        Te, Tp = T["egnas"], T["p1"]
+        ratio = Tp['std'] / Te['std'] if Te['std'] > 1e-9 else float('nan')
+        axA.set_title(
+            "A. EGNAS-full vs +P1 v4 per dataset — alphabetic order "
+            "(black dots = individual seeds; Δ annotated above each pair)\n"
+            f"Total (13 ds): EGNAS {Te['mean']:+.2f} ± {Te['std']:.2f}  →  "
+            f"+P1 v4 {Tp['mean']:+.2f} ± {Tp['std']:.2f}   "
+            f"(Δmean {Tp['mean']-Te['mean']:+.2f}, σ ×{ratio:.2f})",
+            fontsize=11)
+    axA.legend(loc="lower left", framealpha=.9)
+    axA.grid(axis="y", alpha=.3)
+
+    # B — σ change
+    axB.bar(x - w / 2, es, w, label="EGNAS-full σ",
+            color="#2c8a3a", edgecolor="black", linewidth=.5)
+    axB.bar(x + w / 2, ps, w, label="+P1 v4 σ",
+            color="#d97706", edgecolor="black", linewidth=.5)
+    for i in range(len(names)):
+        ratio = ps[i] / max(es[i], 1e-9)
+        top = max(es[i], ps[i])
+        axB.text(i, top + 0.12, f"×{ratio:.2f}", ha="center", fontsize=8,
+                 fontweight="bold",
+                 color="#b53030" if ratio > 1 else "#2c8a3a")
+    axB.set_xticks(x)
+    axB.set_xticklabels(names, rotation=22, ha="right", fontsize=9)
+    axB.set_ylabel("σ of internal adj across 3 seeds")
+    axB.set_title("B. σ change per dataset — EGNAS-full σ → +P1 v4 σ "
+                  "(×ratio annotated; red = P1 noisier than EG)", fontsize=11)
+    axB.legend(loc="upper right", framealpha=.9)
+    axB.grid(axis="y", alpha=.3)
+
+    fig.suptitle("Tier-2a / P1 v4 (3-probe shadow, A drives) — 3-seed × 13-dataset "
+                 f"paired vs EGNAS-full   (seeds {agg.get('seeds')})",
+                 fontsize=13, y=0.997)
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=120, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  wrote {out_path.relative_to(REPO_ROOT)}")
+
+
+def plot_tier2a_p1_v4_curves(out_path):
+    """Per-dataset aggregated learning curves: EGNAS-full (green) vs +P1 v4 (orange).
+
+    Mirrors plot_tier2bfull_curves but compares EGNAS-full baseline (the
+    paired EG sweep dirs) against +P1 v4. 13 panels alphabetic; benchmark
+    line per panel; thin lines = each seed, bold = across-seed mean, band
+    = ±std.
+    """
+    base_eg = REPO_ROOT / "dev" / "logs" / "tier2bfull"
+    base_p1 = REPO_ROOT / "dev" / "logs" / "tier2a_p1_v4"
+    seeds = [42, 1337, 2024]
+    s42_dirs = [base_eg / "t2bfull_s42", base_eg / "t2bfull_new_s42"]
+    s42_dirs = [d for d in s42_dirs if d.exists()]
+    p1_seed_dir = base_p1 / "p1v4_s42"
+    if not p1_seed_dir.exists():
+        print(f"  {p1_seed_dir.relative_to(REPO_ROOT)} not found.")
+        return
+    # Union codenames (EG sweep + P1 v4 sweep).
+    codes = sorted({p.stem for d in s42_dirs for p in d.glob("*.csv")}
+                   | {p.stem for p in p1_seed_dir.glob("*.csv")},
+                   key=_ds_name)
+    if not codes:
+        print("  no per-codename CSVs found.")
+        return
+
+    def _aggregate(paths):
+        per = []
+        mx = 0
+        for p in paths:
+            if not p.exists():
+                continue
+            rs = load_csv(p)
+            va = np.array([r["val_acc"] for r in rs]) * 100
+            per.append(va)
+            mx = max(mx, len(va))
+        return per, mx
+
+    def _eg_paths(code):
+        return [base_eg / f"{tag}_s{s}" / f"{code}.csv"
+                for s in seeds
+                for tag in ("t2bfull", "t2bfull_new")]
+
+    def _p1_paths(code):
+        return [base_p1 / f"p1v4_s{s}" / f"{code}.csv" for s in seeds]
+
+    cols = 4
+    rows = (len(codes) + cols - 1) // cols
+    fig, axes = plt.subplots(rows, cols, figsize=(4.5 * cols, 3.2 * rows),
+                             squeeze=False)
+    flat = axes.flatten()
+
+    for ax, code in zip(flat, codes):
+        ds = CODENAME_TO_DATASET.get(code, code)
+
+        # benchmark reference (dashed red)
+        try:
+            md_p = REPO_ROOT / "datasets" / ds / "metadata"
+            if md_p.exists():
+                md = json.loads(md_p.read_text())
+                bench = resolve_benchmark(code, float(md.get("benchmark", 0.0) or 0.0))
+                if bench > 0.5:
+                    ax.axhline(bench, color="#b53030", linestyle="--", lw=1.0,
+                               alpha=0.75, label=f"benchmark {bench:.1f}%")
+        except Exception:
+            pass
+
+        # EGNAS-full baseline (green, under)
+        eg_per, eg_max = _aggregate(_eg_paths(code))
+        if eg_per:
+            mat = np.full((len(eg_per), eg_max), np.nan)
+            for i, v in enumerate(eg_per):
+                mat[i, : len(v)] = v
+            m1, s1 = np.nanmean(mat, axis=0), np.nanstd(mat, axis=0)
+            ax.fill_between(np.arange(eg_max), m1 - s1, m1 + s1,
+                            color="#2c8a3a", alpha=0.16, label="EGNAS-full ±std")
+            ax.plot(np.arange(eg_max), m1, color="#2c8a3a", lw=1.4, alpha=0.9,
+                    label="EGNAS-full mean")
+
+        # +P1 v4 (orange, on top)
+        p1_per, p1_max = _aggregate(_p1_paths(code))
+        for v in p1_per:
+            ax.plot(np.arange(len(v)), v, color="#d97706", alpha=0.30, lw=0.5)
+        if p1_per:
+            mat = np.full((len(p1_per), p1_max), np.nan)
+            for i, v in enumerate(p1_per):
+                mat[i, : len(v)] = v
+            me, se = np.nanmean(mat, axis=0), np.nanstd(mat, axis=0)
+            ax.fill_between(np.arange(p1_max), me - se, me + se,
+                            color="#d97706", alpha=0.24, label="+P1 v4 ±std")
+            ax.plot(np.arange(p1_max), me, color="#d97706", lw=2.0,
+                    label="+P1 v4 mean")
+
+        ax.set_title(ds, fontsize=10)
+        ax.set_xlabel("epoch", fontsize=8)
+        ax.set_ylabel("val acc %", fontsize=8)
+        ax.set_ylim(0, 100)
+        ax.grid(alpha=0.3)
+        ax.tick_params(labelsize=7)
+        ax.legend(loc="lower right", fontsize=6, framealpha=0.85)
+
+    for ax in flat[len(codes):]:
+        ax.axis("off")
+
+    fig.suptitle("Tier-2a / P1 v4 vs EGNAS-full — per-dataset learning curves "
+                 "(green = EGNAS-full mean ± std across 3 seeds; "
+                 "orange = +P1 v4 mean ± std; thin orange = each seed)",
+                 fontsize=11, y=1.0)
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=110, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  wrote {out_path.relative_to(REPO_ROOT)}")
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -489,18 +985,56 @@ def main():
     p.add_argument("--e1", action="store_true",
                    help="Produce the E1-vs-Tier1 variance-collapse figure "
                         "(reads dev/logs/e1val/_e1_aggregate.json) and exit.")
+    p.add_argument("--tier2bfull", action="store_true",
+                   help="Produce the Tier-2b FULL EGNAS vs Tier-1 figure "
+                        "(reads dev/logs/tier2bfull/_tier2bfull_aggregate.json) "
+                        "and exit.")
+    p.add_argument("--tier2bfull-curves", action="store_true",
+                   help="Produce per-dataset aggregated learning curves "
+                        "for Tier-2b FULL EGNAS (3 seeds, mean ± std).")
+    p.add_argument("--tier2a-p1-v4", action="store_true",
+                   help="Produce the Tier-2a / P1 v4 vs EGNAS-full figure "
+                        "(reads dev/logs/tier2a_p1_v4/_tier2a_p1_v4_aggregate.json) "
+                        "and exit.")
+    p.add_argument("--tier2a-p1-v4-curves", action="store_true",
+                   help="Produce per-dataset aggregated learning curves for "
+                        "Tier-2a / P1 v4 with EGNAS-full overlay (3 seeds).")
     args = p.parse_args()
 
     if args.multiseed:
         print("=== Multi-seed figure ===")
         IMPL_DIR.mkdir(parents=True, exist_ok=True)
-        plot_multiseed(IMPL_DIR / "multiseed.png")
+        plot_multiseed(IMG_DIR / "multiseed.png")
         return
 
     if args.e1:
         print("=== E1 figure ===")
         IMPL_DIR.mkdir(parents=True, exist_ok=True)
-        plot_e1(IMPL_DIR / "e1.png")
+        plot_e1(IMG_DIR / "e1.png")
+        return
+
+    if args.tier2bfull:
+        print("=== Tier-2b FULL EGNAS figure ===")
+        IMPL_DIR.mkdir(parents=True, exist_ok=True)
+        plot_tier2bfull(IMG_DIR / "tier2bfull.png")
+        return
+
+    if args.tier2bfull_curves:
+        print("=== Tier-2b FULL EGNAS — aggregated learning curves ===")
+        IMPL_DIR.mkdir(parents=True, exist_ok=True)
+        plot_tier2bfull_curves(IMG_DIR / "tier2bfull_curves.png")
+        return
+
+    if args.tier2a_p1_v4:
+        print("=== Tier-2a / P1 v4 figure ===")
+        IMPL_DIR.mkdir(parents=True, exist_ok=True)
+        plot_tier2a_p1_v4(IMG_DIR / "tier2a_p1_v4.png")
+        return
+
+    if args.tier2a_p1_v4_curves:
+        print("=== Tier-2a / P1 v4 — aggregated learning curves ===")
+        IMPL_DIR.mkdir(parents=True, exist_ok=True)
+        plot_tier2a_p1_v4_curves(IMG_DIR / "tier2a_p1_v4_curves.png")
         return
 
     cfg = TIER_CONFIG[args.tier]
@@ -510,15 +1044,36 @@ def main():
     title_prefix = cfg["title"]
 
     print(f"=== {title_prefix} ===")
-    print(f"Reading scores from {log_file.relative_to(REPO_ROOT)}")
-    scores = parse_scores(log_file)
+    log_paths = _as_paths(log_file)
+    print("Reading scores from",
+          ", ".join(str(p.relative_to(REPO_ROOT)) for p in log_paths))
+    scores = parse_scores(log_paths)
     print(f"  parsed {len(scores)} datasets")
 
-    print(f"Reading CSVs from {csv_dir.relative_to(REPO_ROOT)}")
-    for path in sorted(csv_dir.glob("*.csv")):
-        print(f"  {path.name}")
+    csv_dirs = _as_paths(csv_dir)
+    print("Reading CSVs from",
+          ", ".join(str(d.relative_to(REPO_ROOT)) for d in csv_dirs))
+    for d in csv_dirs:
+        for path in sorted(d.glob("*.csv")):
+            print(f"  {path.relative_to(REPO_ROOT)}")
 
     out_dir.mkdir(parents=True, exist_ok=True)
+    if not scores:
+        # Partial run — the harness's `Scoring` section hasn't printed yet,
+        # but per-dataset CSVs exist for datasets that already finished
+        # training. Skip the score-bars chart (needs adj scores) and draw
+        # only the learning-curves grid for whatever CSVs are on disk.
+        seen = sorted({p.stem for d in csv_dirs for p in d.glob("*.csv")})
+        if not seen:
+            print("  no scores AND no CSVs — nothing to plot")
+            return
+        print(f"  no Scoring section yet; partial-run mode, drawing curves "
+              f"only for {len(seen)} CSV-discovered codenames: {seen}")
+        scores = {c: {"raw": 0.0, "benchmark": 0.0, "adj": 0.0} for c in seen}
+        plot_learning_curves(scores, csv_dir,
+                             out_dir / f"{args.tier}_curves.png",
+                             title_prefix + "  [PARTIAL — sweep still running]")
+        return
     plot_score_bars(scores, out_dir / f"{args.tier}_scores.png", title_prefix)
     plot_learning_curves(scores, csv_dir, out_dir / f"{args.tier}_curves.png", title_prefix)
 
