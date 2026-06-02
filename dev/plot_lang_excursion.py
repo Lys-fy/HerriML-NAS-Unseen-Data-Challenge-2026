@@ -245,5 +245,7 @@ def plot_across_methods(out_path: Path):
 
 
 if __name__ == "__main__":
-    plot_excursion(IMG / "lang_excursion.png")
-    plot_across_methods(IMG / "lang_across_methods.png")
+    lang_dir = IMG / "language"
+    lang_dir.mkdir(parents=True, exist_ok=True)
+    plot_excursion(lang_dir / "lang_excursion.png")
+    plot_across_methods(lang_dir / "lang_across_methods.png")

@@ -36,6 +36,32 @@ IMPL_DIR = REPO_ROOT / "docs" / "notes" / "09 - Implementation" / "implementatio
 # embeds in the notes don't need updating after moving files here.
 IMG_DIR = IMPL_DIR / "images"
 
+
+def _img_out(name):
+    """Route a figure basename into its topic subfolder under images/.
+    Obsidian embeds resolve by basename, so ![[name.png]] keeps working
+    regardless of which subfolder the file lives in."""
+    name = Path(name).name
+    if name.startswith("tier0"):
+        sub = "tier0"
+    elif name.startswith("tier1"):
+        sub = "tier1"
+    elif name.startswith("tier2a"):
+        sub = "tier2a"
+    elif name.startswith("tier2b"):
+        sub = "tier2b"
+    elif name.startswith("e1"):
+        sub = "e1"
+    elif name.startswith("multiseed"):
+        sub = "multiseed"
+    elif name.startswith("lang"):
+        sub = "language"
+    else:
+        sub = ""
+    d = (IMG_DIR / sub) if sub else IMG_DIR
+    d.mkdir(parents=True, exist_ok=True)
+    return d / name
+
 # Machine-readable aggregate produced by dev/aggregate_multiseed.py.
 MULTISEED_JSON = REPO_ROOT / "dev" / "logs" / "multiseed" / "_aggregate.json"
 # Machine-readable aggregate produced by dev/aggregate_e1.py.
@@ -44,6 +70,8 @@ E1_JSON = REPO_ROOT / "dev" / "logs" / "e1val" / "_e1_aggregate.json"
 TIER2BFULL_JSON = REPO_ROOT / "dev" / "logs" / "tier2bfull" / "_tier2bfull_aggregate.json"
 TIER2A_P1_V4_JSON = (REPO_ROOT / "dev" / "logs" / "tier2a_p1_v4"
                      / "_tier2a_p1_v4_aggregate.json")
+TIER2A_P1_V6_JSON = (REPO_ROOT / "dev" / "logs" / "tier2a_p1_v6"
+                     / "_tier2a_p1_v6_aggregate.json")
 
 CODENAME_TO_DATASET = {
     "Adaline": "AddNIST",
@@ -125,6 +153,45 @@ TIER_CONFIG = {
         log_file=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v4" / "p1v4_s2024.log",
         out_dir=IMG_DIR,
         title="Tier 2a / P1 v4, seed 2024 — PARTIAL (sweep still running)",
+    ),
+    # Tier-2a / P1 v5 — driver C + Mixup-on-OFF + GroupConv3 + ResNeXt in OP_VOCAB.
+    "tier2a_p1_v5_s42": dict(
+        csv_dir=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v5" / "p1v5_s42",
+        log_file=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v5" / "p1v5_s42.log",
+        out_dir=IMG_DIR,
+        title="Tier 2a / P1 v5 (driver C + Mixup-on-OFF + GroupConv3 + ResNeXt), seed 42",
+    ),
+    "tier2a_p1_v5_s1337": dict(
+        csv_dir=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v5" / "p1v5_s1337",
+        log_file=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v5" / "p1v5_s1337.log",
+        out_dir=IMG_DIR,
+        title="Tier 2a / P1 v5, seed 1337",
+    ),
+    "tier2a_p1_v5_s2024": dict(
+        csv_dir=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v5" / "p1v5_s2024",
+        log_file=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v5" / "p1v5_s2024.log",
+        out_dir=IMG_DIR,
+        title="Tier 2a / P1 v5, seed 2024",
+    ),
+    # Tier-2a / P1 v6 — C-only probe + 9-op vocab + K=12 + verify-of-accepts
+    # + clock-extend + zero-shot shadow. Per-seed view; v6 verdict in notes.
+    "tier2a_p1_v6_s42": dict(
+        csv_dir=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v6" / "p1v6_s42",
+        log_file=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v6" / "p1v6_s42.log",
+        out_dir=IMG_DIR,
+        title="Tier 2a / P1 v6 (C-only + 9 ops + verify + clock-extend), seed 42",
+    ),
+    "tier2a_p1_v6_s1337": dict(
+        csv_dir=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v6" / "p1v6_s1337",
+        log_file=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v6" / "p1v6_s1337.log",
+        out_dir=IMG_DIR,
+        title="Tier 2a / P1 v6, seed 1337",
+    ),
+    "tier2a_p1_v6_s2024": dict(
+        csv_dir=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v6" / "p1v6_s2024",
+        log_file=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v6" / "p1v6_s2024.log",
+        out_dir=IMG_DIR,
+        title="Tier 2a / P1 v6, seed 2024 — PARTIAL (sweep still running)",
     ),
 }
 
@@ -757,19 +824,19 @@ def plot_tier2bfull_curves(out_path):
     print(f"  wrote {out_path.relative_to(REPO_ROOT)}")
 
 
-def plot_tier2a_p1_v4(out_path):
-    """Two-panel figure for Tier-2a / P1 v4 (paired vs EGNAS-full, 13 ds × 3 seeds).
+def plot_tier2a_p1_v6(out_path):
+    """Two-panel figure for Tier-2a / P1 v6 (paired vs EGNAS-full, 13 ds × 3 seeds).
 
     Same shape as plot_tier2bfull but reads _tier2a_p1_v4_aggregate.json,
     where rows have `egnas` and `p1` fields instead of `tier1` and `egnas`.
     Panel A: per-dataset EG vs +P1 mean ± std + seed dots + Δ annotation.
     Panel B: σ change EG → +P1 (×ratio annotated).
     """
-    if not TIER2A_P1_V4_JSON.exists():
-        print(f"  {TIER2A_P1_V4_JSON.relative_to(REPO_ROOT)} not found — run "
-              "dev/aggregate_tier2a_p1_v4.py after the sweep lands.")
+    if not TIER2A_P1_V6_JSON.exists():
+        print(f"  {TIER2A_P1_V6_JSON.relative_to(REPO_ROOT)} not found — run "
+              "dev/aggregate_tier2a_p1_v6.py after the sweep lands.")
         return
-    agg = json.loads(TIER2A_P1_V4_JSON.read_text())
+    agg = json.loads(TIER2A_P1_V6_JSON.read_text())
     rows = agg.get("rows", {})
     if not rows:
         print("  no rows yet — skipping.")
@@ -788,7 +855,7 @@ def plot_tier2a_p1_v4(out_path):
     axA.bar(x - w / 2, em, w, yerr=es, capsize=3, label="EGNAS-full (paired baseline)",
             color="#2c8a3a", edgecolor="black", linewidth=.5,
             error_kw=dict(ecolor="#333", lw=1.0))
-    axA.bar(x + w / 2, pm, w, yerr=ps, capsize=3, label="+P1 v4 (3-probe shadow, A drives)",
+    axA.bar(x + w / 2, pm, w, yerr=ps, capsize=3, label="+P1 v6 (C-only + 9 ops + verify)",
             color="#d97706", edgecolor="black", linewidth=.5,
             error_kw=dict(ecolor="#333", lw=1.0))
     for i, n in enumerate(names):
@@ -817,16 +884,16 @@ def plot_tier2a_p1_v4(out_path):
     axA.axhline(0, color="black", lw=.8)
     axA.set_xticks(x)
     axA.set_xticklabels(names, rotation=22, ha="right", fontsize=9)
-    axA.set_ylabel("internal adj (mean ± std, 3 seeds)")
+    axA.set_ylabel("internal adj (mean ± std across seeds)")
     T = agg.get("totals") or {}
     if T.get("egnas") and T.get("p1"):
         Te, Tp = T["egnas"], T["p1"]
         ratio = Tp['std'] / Te['std'] if Te['std'] > 1e-9 else float('nan')
         axA.set_title(
-            "A. EGNAS-full vs +P1 v4 per dataset — alphabetic order "
+            "A. EGNAS-full vs +P1 v6 per dataset — alphabetic order "
             "(black dots = individual seeds; Δ annotated above each pair)\n"
             f"Total (13 ds): EGNAS {Te['mean']:+.2f} ± {Te['std']:.2f}  →  "
-            f"+P1 v4 {Tp['mean']:+.2f} ± {Tp['std']:.2f}   "
+            f"+P1 v6 {Tp['mean']:+.2f} ± {Tp['std']:.2f}   "
             f"(Δmean {Tp['mean']-Te['mean']:+.2f}, σ ×{ratio:.2f})",
             fontsize=11)
     axA.legend(loc="lower left", framealpha=.9)
@@ -835,7 +902,7 @@ def plot_tier2a_p1_v4(out_path):
     # B — σ change
     axB.bar(x - w / 2, es, w, label="EGNAS-full σ",
             color="#2c8a3a", edgecolor="black", linewidth=.5)
-    axB.bar(x + w / 2, ps, w, label="+P1 v4 σ",
+    axB.bar(x + w / 2, ps, w, label="+P1 v6 σ",
             color="#d97706", edgecolor="black", linewidth=.5)
     for i in range(len(names)):
         ratio = ps[i] / max(es[i], 1e-9)
@@ -845,39 +912,39 @@ def plot_tier2a_p1_v4(out_path):
                  color="#b53030" if ratio > 1 else "#2c8a3a")
     axB.set_xticks(x)
     axB.set_xticklabels(names, rotation=22, ha="right", fontsize=9)
-    axB.set_ylabel("σ of internal adj across 3 seeds")
-    axB.set_title("B. σ change per dataset — EGNAS-full σ → +P1 v4 σ "
+    axB.set_ylabel("σ of internal adj across seeds")
+    axB.set_title("B. σ change per dataset — EGNAS-full σ → +P1 v6 σ "
                   "(×ratio annotated; red = P1 noisier than EG)", fontsize=11)
     axB.legend(loc="upper right", framealpha=.9)
     axB.grid(axis="y", alpha=.3)
 
-    fig.suptitle("Tier-2a / P1 v4 (3-probe shadow, A drives) — 3-seed × 13-dataset "
+    fig.suptitle("Tier-2a / P1 v6 (C-only + 9 ops + verify) — multi-seed × 13-dataset "
                  f"paired vs EGNAS-full   (seeds {agg.get('seeds')})",
-                 fontsize=13, y=0.997)
+                 fontsize=13, y=0.997)  # v6: s42+s1337 complete, s2024 partial
     fig.tight_layout()
     fig.savefig(out_path, dpi=120, bbox_inches="tight")
     plt.close(fig)
     print(f"  wrote {out_path.relative_to(REPO_ROOT)}")
 
 
-def plot_tier2a_p1_v4_curves(out_path):
-    """Per-dataset aggregated learning curves: EGNAS-full (green) vs +P1 v4 (orange).
+def plot_tier2a_p1_v6_curves(out_path):
+    """Per-dataset aggregated learning curves: EGNAS-full (green) vs +P1 v6 (orange).
 
     Mirrors plot_tier2bfull_curves but compares EGNAS-full baseline (the
-    paired EG sweep dirs) against +P1 v4. 13 panels alphabetic; benchmark
+    paired EG sweep dirs) against +P1 v6. 13 panels alphabetic; benchmark
     line per panel; thin lines = each seed, bold = across-seed mean, band
     = ±std.
     """
     base_eg = REPO_ROOT / "dev" / "logs" / "tier2bfull"
-    base_p1 = REPO_ROOT / "dev" / "logs" / "tier2a_p1_v4"
+    base_p1 = REPO_ROOT / "dev" / "logs" / "tier2a_p1_v6"
     seeds = [42, 1337, 2024]
     s42_dirs = [base_eg / "t2bfull_s42", base_eg / "t2bfull_new_s42"]
     s42_dirs = [d for d in s42_dirs if d.exists()]
-    p1_seed_dir = base_p1 / "p1v4_s42"
+    p1_seed_dir = base_p1 / "p1v6_s42"
     if not p1_seed_dir.exists():
         print(f"  {p1_seed_dir.relative_to(REPO_ROOT)} not found.")
         return
-    # Union codenames (EG sweep + P1 v4 sweep).
+    # Union codenames (EG sweep + P1 v6 sweep).
     codes = sorted({p.stem for d in s42_dirs for p in d.glob("*.csv")}
                    | {p.stem for p in p1_seed_dir.glob("*.csv")},
                    key=_ds_name)
@@ -903,7 +970,7 @@ def plot_tier2a_p1_v4_curves(out_path):
                 for tag in ("t2bfull", "t2bfull_new")]
 
     def _p1_paths(code):
-        return [base_p1 / f"p1v4_s{s}" / f"{code}.csv" for s in seeds]
+        return [base_p1 / f"p1v6_s{s}" / f"{code}.csv" for s in seeds]
 
     cols = 4
     rows = (len(codes) + cols - 1) // cols
@@ -938,7 +1005,7 @@ def plot_tier2a_p1_v4_curves(out_path):
             ax.plot(np.arange(eg_max), m1, color="#2c8a3a", lw=1.4, alpha=0.9,
                     label="EGNAS-full mean")
 
-        # +P1 v4 (orange, on top)
+        # +P1 v6 (orange, on top)
         p1_per, p1_max = _aggregate(_p1_paths(code))
         for v in p1_per:
             ax.plot(np.arange(len(v)), v, color="#d97706", alpha=0.30, lw=0.5)
@@ -948,9 +1015,9 @@ def plot_tier2a_p1_v4_curves(out_path):
                 mat[i, : len(v)] = v
             me, se = np.nanmean(mat, axis=0), np.nanstd(mat, axis=0)
             ax.fill_between(np.arange(p1_max), me - se, me + se,
-                            color="#d97706", alpha=0.24, label="+P1 v4 ±std")
+                            color="#d97706", alpha=0.24, label="+P1 v6 ±std")
             ax.plot(np.arange(p1_max), me, color="#d97706", lw=2.0,
-                    label="+P1 v4 mean")
+                    label="+P1 v6 mean")
 
         ax.set_title(ds, fontsize=10)
         ax.set_xlabel("epoch", fontsize=8)
@@ -963,9 +1030,9 @@ def plot_tier2a_p1_v4_curves(out_path):
     for ax in flat[len(codes):]:
         ax.axis("off")
 
-    fig.suptitle("Tier-2a / P1 v4 vs EGNAS-full — per-dataset learning curves "
-                 "(green = EGNAS-full mean ± std across 3 seeds; "
-                 "orange = +P1 v4 mean ± std; thin orange = each seed)",
+    fig.suptitle("Tier-2a / P1 v6 vs EGNAS-full — per-dataset learning curves "
+                 "(green = EGNAS-full mean ± std across seeds; "
+                 "orange = +P1 v6 mean ± std; thin orange = each seed)",
                  fontsize=11, y=1.0)
     fig.tight_layout()
     fig.savefig(out_path, dpi=110, bbox_inches="tight")
@@ -999,42 +1066,61 @@ def main():
     p.add_argument("--tier2a-p1-v4-curves", action="store_true",
                    help="Produce per-dataset aggregated learning curves for "
                         "Tier-2a / P1 v4 with EGNAS-full overlay (3 seeds).")
+    p.add_argument("--tier2a-p1-v6", action="store_true",
+                   help="Produce the Tier-2a / P1 v6 vs EGNAS-full figure "
+                        "(reads dev/logs/tier2a_p1_v6/_tier2a_p1_v6_aggregate.json) "
+                        "and exit.")
+    p.add_argument("--tier2a-p1-v6-curves", action="store_true",
+                   help="Produce per-dataset aggregated learning curves for "
+                        "Tier-2a / P1 v6 with EGNAS-full overlay.")
     args = p.parse_args()
 
     if args.multiseed:
         print("=== Multi-seed figure ===")
         IMPL_DIR.mkdir(parents=True, exist_ok=True)
-        plot_multiseed(IMG_DIR / "multiseed.png")
+        plot_multiseed(_img_out("multiseed.png"))
         return
 
     if args.e1:
         print("=== E1 figure ===")
         IMPL_DIR.mkdir(parents=True, exist_ok=True)
-        plot_e1(IMG_DIR / "e1.png")
+        plot_e1(_img_out("e1.png"))
         return
 
     if args.tier2bfull:
         print("=== Tier-2b FULL EGNAS figure ===")
         IMPL_DIR.mkdir(parents=True, exist_ok=True)
-        plot_tier2bfull(IMG_DIR / "tier2bfull.png")
+        plot_tier2bfull(_img_out("tier2bfull.png"))
         return
 
     if args.tier2bfull_curves:
         print("=== Tier-2b FULL EGNAS — aggregated learning curves ===")
         IMPL_DIR.mkdir(parents=True, exist_ok=True)
-        plot_tier2bfull_curves(IMG_DIR / "tier2bfull_curves.png")
+        plot_tier2bfull_curves(_img_out("tier2bfull_curves.png"))
         return
 
     if args.tier2a_p1_v4:
         print("=== Tier-2a / P1 v4 figure ===")
         IMPL_DIR.mkdir(parents=True, exist_ok=True)
-        plot_tier2a_p1_v4(IMG_DIR / "tier2a_p1_v4.png")
+        plot_tier2a_p1_v4(_img_out("tier2a_p1_v4.png"))
         return
 
     if args.tier2a_p1_v4_curves:
         print("=== Tier-2a / P1 v4 — aggregated learning curves ===")
         IMPL_DIR.mkdir(parents=True, exist_ok=True)
-        plot_tier2a_p1_v4_curves(IMG_DIR / "tier2a_p1_v4_curves.png")
+        plot_tier2a_p1_v4_curves(_img_out("tier2a_p1_v4_curves.png"))
+        return
+
+    if args.tier2a_p1_v6:
+        print("=== Tier-2a / P1 v6 figure ===")
+        IMPL_DIR.mkdir(parents=True, exist_ok=True)
+        plot_tier2a_p1_v6(_img_out("tier2a_p1_v6.png"))
+        return
+
+    if args.tier2a_p1_v6_curves:
+        print("=== Tier-2a / P1 v6 — aggregated learning curves ===")
+        IMPL_DIR.mkdir(parents=True, exist_ok=True)
+        plot_tier2a_p1_v6_curves(_img_out("tier2a_p1_v6_curves.png"))
         return
 
     cfg = TIER_CONFIG[args.tier]
@@ -1071,15 +1157,15 @@ def main():
               f"only for {len(seen)} CSV-discovered codenames: {seen}")
         scores = {c: {"raw": 0.0, "benchmark": 0.0, "adj": 0.0} for c in seen}
         plot_learning_curves(scores, csv_dir,
-                             out_dir / f"{args.tier}_curves.png",
+                             _img_out(f"{args.tier}_curves.png"),
                              title_prefix + "  [PARTIAL — sweep still running]")
         return
-    plot_score_bars(scores, out_dir / f"{args.tier}_scores.png", title_prefix)
-    plot_learning_curves(scores, csv_dir, out_dir / f"{args.tier}_curves.png", title_prefix)
+    plot_score_bars(scores, _img_out(f"{args.tier}_scores.png"), title_prefix)
+    plot_learning_curves(scores, csv_dir, _img_out(f"{args.tier}_curves.png"), title_prefix)
 
     if args.ablation:
         print("\n=== Tier 1 ablation chart ===")
-        plot_ablation(out_dir / "tier1_ablation.png")
+        plot_ablation(_img_out("tier1_ablation.png"))
 
 
 if __name__ == "__main__":

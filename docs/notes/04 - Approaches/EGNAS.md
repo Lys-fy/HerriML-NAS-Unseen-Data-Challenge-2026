@@ -79,6 +79,45 @@ No specialised tricks (no Mixup, no RandAugment, no SWA) — Section 5.2 explici
 - **Initialization** matters (Table 2): start `Sep + 3×3` always — it dominates the other three init strategies.
 - **The strikes constants** (3 fails for grow, 3 for prune) are aggressive on small datasets where val accuracy is noisy. Average 2–3 seeds before deciding to stop.
 
+## Our port vs upstream — discrepancies found by reading the actual code (2026-05-28)
+
+Source: github.com/siddikui/Efficient-Macro-Micro-NAS (matched against arXiv:2502.03553). Comparison was triggered by v5's GameOfLife regression — the new ops we added to OP_VOCAB (GroupConv3, ResNeXt) produced noisy short-train picks that didn't hold up at full training. The mismatch with the original paper's methodology explains why.
+
+| Aspect | Original (paper + code) | Our port (v5) | Note |
+|---|---|---|---|
+| OP_VOCAB size | **4** (`{plain_conv, sep_conv} × {k=3, k=5}`) | 7 (v5), 9 swappable (v6) | We've radically expanded the search space |
+| Micro per-candidate K | hard-coded `args.epochs = 2` (`search.py:363`) | 2-6 depth-scaled (v5) | We're MORE generous than upstream |
+| Macro initial K | `args.epochs = 10`, grows +1 per depth step | 2-6 depth-scaled | We're under-budgeting the macro phase by 4-5 × |
+| Acceptance rule | `next_acc >= curr - 0.0` (ties accept) | `> curr + 0.003` (stricter) | Ours is more conservative — fewer false accepts but also fewer correct accepts |
+| Verification of accepts | **none** | none (v5) → **2× K re-train, revert if fails** (v6) | Original commits noise; their 600-epoch final train washes it out. We can't afford that at 2 h, hence v6 verification |
+| Final training | **600 epochs** (paper §4.1.2) | ~70 epochs at 2h budget | Their methodology's noise tolerance is built on a 10 × longer final train |
+| Param-fairness in candidate eval | YES (`while candidate_params > baseline + 0.01: channels -= 1`, `search.py:394-398`) | **NO** | We compare arches with very different param counts (Conv3 10K vs GroupConv3 1.4K vs ResNeXt 6.3K) — uncontrolled confound |
+| Search-time ranker | TEST acc (`valid_size=0.0`) | proper VAL acc | Ours is legal-cleaner but slightly noisier; not a fundamental difference |
+| Search vs training time | wall-clock unbounded for both (no `--time-limit`) | 30 % search / 70 % training | Competition imposed; original didn't have this constraint |
+| Search range | D ∈ [10, 100], W ∈ [16, 256] | D ∈ [3, 12], W ∈ [16, 48] | Massively smaller search range in our port — narrow vocab × wide range vs wide vocab × narrow range |
+
+### What the misread "Spearman 0.91" claim actually measured
+
+The paper's headline "Spearman 0.91 between rank at incrementally-trained budget and full-trained" is **NOT** "2-epoch val_acc on Unseen X predicts 600-epoch test acc on Unseen X". It is:
+> "we sample 50 networks from 240 and sort w.r.t. their parameters in ascending order... the smallest network trained only for 1 epoch, the next one for 2 epochs, and so on. We observe a high correlation value of 0.91"
+
+i.e., correlation of **(param count, sorted) ↔ (val_acc when each net is trained for monotonically-increasing epochs)** on **CIFAR-10 only**, aggregate over 50 sampled nets. Our Q8 analysis (Spearman ranges +0.7 to −0.5 across our datasets) was measuring a different thing — **we haven't been failing to reproduce anything the paper claimed**.
+
+### Zero-shot proxies
+
+Standard NAS technique that bypasses short-train val_acc entirely. Four well-validated proxies (NASWOT, Synflow, SNIP, ZenScore) are mathematical functions of an *untrained* random-init network — Kendall's τ vs full-train rankings is typically 0.4-0.7 on NAS-Bench-201 (Abdelfattah et al. ICLR 2021).
+
+**Legal under competition rules.** They're not a trained model, not pre-trained weights, no external data — just architecture analysis on the random initialization. Same legal category as "we compute FLOPs".
+
+In v6 we log all 4 per EGNAS candidate as **shadow signals** (no decision impact). Post-sweep Spearman analysis tells us if any of them transfer to the Unseen suite. If τ ≥ 0.5 for any proxy, v7 could replace the noisy short-train ranker with the proxy → 10-1000 × faster search.
+
+References:
+- Mellor et al. ICML 2021 — NASWOT
+- Tanaka et al. NeurIPS 2020 — Synflow
+- Lee et al. ICLR 2019 — SNIP
+- Lin et al. ICCV 2021 — Zen-NAS / ZenScore
+- Abdelfattah et al. ICLR 2021 — comprehensive benchmark
+
 ## Open questions
 
 - Per-dataset search vs single global architecture: paper searches once per dataset. With a 30-min budget per dataset, can we cache discovered shapes across competition datasets and skip the depth-grow phase on similar ones? See [[Search vs Train Split]].
