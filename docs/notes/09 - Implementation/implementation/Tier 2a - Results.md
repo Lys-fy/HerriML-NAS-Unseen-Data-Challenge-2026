@@ -285,6 +285,23 @@ Full table of all iterations:
 | v6 | C only + Mixup-on-OFF + 9 ops + K=12 + verify + clock-extend + zero-shot shadow | Swept; net **−12.10 vs EGNAS-full, σ ×2.98** (worse on both) | richer vocab is a LIABILITY (poisoned Sudoku −20pp via exotic-op picks that win short-train, lose full-train); macro prune craters depth/width tasks; ONLY Language probe (+4.23) helps. → v7 = simplify back to EGNAS-full + Language probe + macro-prune-verify |
 | v7 (planned) | v6 + **recurrent op family** (row-BiLSTM, cross-axis BiLSTM) + extended NASWOT to gate activations | TBD | targeted at Language-style sequential / 1D-ish inputs where SpatialSelfAttn2D already showed lift in v6 mid-sweep (Language L0, +24 pp on K=12 short-train val) |
 
+### ✅✅ v7 SWEPT — VERDICT (2026-06-03): v7 BEATS EGNAS-full, the best documented result
+
+3-seed × 13-ds, internal benchmarks. `baselines/tier2a_p1_augsafety_v7/` (EGNAS-full clean search + 4 conv ops + macro-prune-verify + C-only aug-probe). Aggregator `dev/aggregate_tier2a_p1_v7.py`.
+
+> **EGNAS-full +35.51 ± 3.07 → +P1 v7 +41.94 ± 3.45 → Δmean +6.43, σ ×1.12.** Per-seed v7 [43.24, 38.03, 44.54]. First version to **beat the proven EGNAS-full baseline**.
+
+**Where the +6.43 comes from (Δ vs EGNAS-full):**
+- **Language +7.34** (−8.32 → −0.98) — the aug-probe chose **OFF on all 3 seeds**; this is essentially the *whole* win. The macro-verify's real contribution: stabilising the archs so the aug-off gain isn't eaten by arch variance (which is what killed it in v6).
+- **GameOfLife +0.65** — better mean *and* tighter (σ 2.28→1.95); the depth verify-of-rejects reduced the lottery (in-sweep 99.4/82.3/99.7 — solved 2/3).
+- Cryptic +0.17, Sudoku +0.15 (σ 0.39→0.19), CIFARTile +0.10, Gutenberg +0.06 — small stable gains.
+- **MultNIST −1.15** — the one real regression (v7's deep-plain-conv < EGNAS-full's MultNIST arch). Myofibre −0.36, AddNIST −0.31 (but σ 0.50→0.06), Voxel/Windspeed −0.1.
+
+![[tier2a_p1_v7.png]]
+![[tier2a_p1_v7_curves.png]]
+
+**Key insights (drive the next run):** (1) **the aug-probe is the engine, not the search** — verify+aug-probe are the validated combo. (2) **The LSTM's marginal value shrank to ~+1.4 on Language** — conv+aug-off already reaches −0.98 (≈84-85 %, near benchmark), so the LSTM is now a small top-up, not the big lever it looked like vs raw EGNAS-full. (3) **MultNIST −1.15 is the biggest single fix opportunity**, larger than the LSTM top-up. → next run = "representation bake-off" (channel-embed stem + row-BiLSTM as fail-safe A/B arms), led by the data-preprocessing lever + MultNIST recovery; v7 core unchanged (the validated +6.43 winner). See [[Next-Run Ideas - lecture-informed]].
+
 ### ✅ LSTM Language probe — RESULT (2026-06-02): row-BiLSTM cracks Language
 
 The out-of-band full-budget research gate (`dev/run_lstm_language_probe.sh`, 4 arms × 3 seeds, fixed 5-block @ W=24, `fixed_arch_probe` baseline, all with the C-only aug-probe). **First architecture in the whole project to put Language *reliably above benchmark*.**
