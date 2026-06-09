@@ -31,8 +31,21 @@ Unclaimed between two poles: [[2022 - RF-Next]] searches per-layer dilations per
 5. **Proxy pre-filter for the aug probe** ([[2025 - EG-ENAS]]): fisher + jacob_cov on one minibatch to shortlist transforms, then our trusted two-arm probe on the survivor.
 6. **LC extrapolation as verify pre-filter** ([[2023 - LC-PFN Bayesian Learning Curve Extrapolation]], [[2024 - ifBO In-Context Freeze-Thaw BO]]): caveat, published early-stopping criteria fail on curves with LR-schedule inflection points (our shape); must validate offline before trusting.
 
-## Offline experiments we can run for free (no GPU)
-The TCN probe left full learning curves for 3 backbones x 13 datasets. Against those CSVs we can validate, with zero GPU: TSE vs early val-acc ranking quality, LC-PFN / power-law extrapolation accuracy at minute 3/5/10, and the steepness-gate decision quality (would the gate have skipped search exactly on the flat datasets?).
+## Offline validation results (2026-06-09, `dev/validate_offline_signals.py`)
+Ran against the existing curves (3 backbones x 13 datasets, seed 42). Task: pick the right backbone from a 3/5/10-minute curve prefix. References: always-tcn2d +59.1, oracle +63.2.
+
+| budget | earlyval | TSE | powlaw | **gated (abstain to default)** |
+|---|---|---|---|---|
+| 3 min | +56.8 | +59.4 | +53.3 | **+60.2** |
+| 5 min | +61.3 | +59.1 | +55.9 | **+60.2** |
+| 10 min | +58.7 | +55.6 | +60.7 | **+60.8** |
+
+Three findings:
+1. **The gate is the only signal that beats the fixed default at every budget** (+1.0 to +1.7), and it is the only one that never falls below it. Early val-acc swings from -2.3 to +2.2 depending on budget; the gate is stable. This validates the abstention principle: trust the leader only when the separation exceeds the measured noise, otherwise keep the default. Exactly the racing/[[2024 - AdaptSH Hypothesis-Test Successive Halving]] mechanism, and it is the load-bearing piece of the proposal story.
+2. **TSE does NOT transfer to cross-family ranking** (honest negative). It degenerates to voting for whichever arch drops its training loss fastest (tcn2d almost everywhere), adding nothing over the fixed default and failing at 10 min. The published TSE results rank similar architectures within one space; comparing raw loss trajectories across different families is not sound. Keep TSE in mind for within-family decisions only (e.g., our depth search), not the backbone choice.
+3. **Power-law extrapolation fails at early budgets** (-5.9 at 3 min), exactly as the LC-PFN literature warns for curves with LR-schedule inflection points (our cosine schedule). It only becomes useful at 10 min (+1.6, 8/13 top-1). Extrapolation is not a shortcut around the proxy wall in our regime.
+
+Caveats: single seed, and the prefix curves and the final outcomes come from the same runs (noise is correlated), so live gains would be somewhat smaller. The structural result (gate never loses to the default, rankers swing) is the durable part. Top-1 accuracy is the wrong metric here; regret is what matters (GameOfLife's "wrong" picks cost 0.002).
 
 ## The proposal story this supports
 A NAS pipeline that measures the dataset and its own search landscape, then spends its 1-hour budget only on decisions the evidence can support: fingerprint probes (Gap 2) pick the architecture family, a steepness probe (Gap 1) decides whether searching is worth its budget slice, and significance-gated verification protects every acceptance. Each component is individually validated against the proxy wall, and three components sit in confirmed publication gaps.
