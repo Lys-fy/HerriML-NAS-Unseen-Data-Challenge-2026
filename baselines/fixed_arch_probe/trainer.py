@@ -32,9 +32,10 @@ from helpers import ModelEMA, lr_for_epoch
 
 
 SAFETY_MARGIN_SECONDS = 60.0
-MAX_EPOCHS = 200
+MAX_EPOCHS = int(os.environ.get("TRAIN_MAX_EPOCHS", "200"))
 WARMUP_EPOCHS = 20
-PATIENCE = 30
+PATIENCE = int(os.environ.get("TRAIN_PATIENCE", "30"))   # GameOfLife fix: tune higher for oscillating deep nets
+LR_SCALE = float(os.environ.get("TRAIN_LR_SCALE", "1.0"))  # GameOfLife fix: <1 dampens the deep-net val oscillation
 LR_WARMUP_EPOCHS = 5  # for the LR schedule (not to be confused with patience-warmup)
 SEED = int(os.environ.get("BASELINE_SEED", "42"))
 
@@ -160,7 +161,7 @@ class Trainer:
         torch.backends.cudnn.benchmark = True
 
         criterion = nn.CrossEntropyLoss(label_smoothing=LABEL_SMOOTHING)
-        base_lr = 0.025
+        base_lr = 0.025 * LR_SCALE
         optimizer = torch.optim.SGD(
             self.model.parameters(), lr=base_lr, momentum=0.9, weight_decay=3e-4, nesterov=True
         )

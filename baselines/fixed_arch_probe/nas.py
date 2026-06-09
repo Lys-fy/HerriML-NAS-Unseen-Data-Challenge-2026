@@ -257,6 +257,24 @@ class NAS:
             self._refund_clock(nas_start)
             return model
 
+        # Experiment hook: PROBE_ARCH=tcn1d|tcn2d builds a TCN probe (dilated-
+        # conv net) instead of the conv search — full-budget numbers for the
+        # TCN excursion across all datasets. FIXED_WIDTH sets base_width;
+        # PROBE_TCN_BLOCKS / PROBE_TCN_KERNEL override the per-kind defaults.
+        probe_arch = os.environ.get("PROBE_ARCH")
+        if probe_arch in ("tcn1d", "tcn2d"):
+            from helpers import build_tcn
+            fw = int(os.environ.get("FIXED_WIDTH", str(W_MAX)))
+            nb = int(os.environ.get("PROBE_TCN_BLOCKS", "0"))
+            k = int(os.environ.get("PROBE_TCN_KERNEL", "0"))
+            print(f"  PROBE_ARCH={probe_arch}: building TCN @ W={fw} "
+                  f"blocks={nb or 'default'} kernel={k or 'default'} "
+                  f"(in={in_ch}x{h}x{w}, classes={nc})")
+            model = build_tcn(probe_arch, in_ch, nc, h, w,
+                              base_width=fw, n_blocks=nb, kernel=k)
+            self._refund_clock(nas_start)
+            return model
+
         # Experiment hook: FIXED_ARCH="Op1,Op2,..." skips search entirely and
         # builds the named op sequence, then hands it to the real trainer for
         # the full budget. Used by the v7 LSTM probe to get faithful
@@ -267,11 +285,63 @@ class NAS:
         if fixed:
             ops = [o.strip() for o in fixed.split(",") if o.strip()]
             fw = int(os.environ.get("FIXED_WIDTH", str(W_MAX)))
-            print(f"  FIXED_ARCH: building {len(ops)}-block arch @ W={fw}: {ops}")
+            stem = os.environ.get("FIXED_STEM", "conv3")  # bake-off: conv3 | channel_embed
+            print(f"  FIXED_ARCH: building {len(ops)}-block arch @ W={fw} stem={stem}: {ops}")
             model = build_cnn(in_ch, nc, h, w, ops=ops,
-                              base_width=fw, drop_path_rate=0.1)
+                              base_width=fw, drop_path_rate=0.1, stem=stem)
             self._refund_clock(nas_start)
             return model
+
+        # Experiment hook: RAND_SEARCH=1 — random search over a WIDE op vocab.
+        # The random-Bonsai idea: directed/greedy search overfits to normal-image
+        # architectures, so on weird-shaped inputs (Chesseract, Sudoku, Gutenberg)
+        # random sampling of a wider space can find odd-but-good designs the
+        # greedy search never visits. Sample K archs (random depth/width/ops from
+        # the wide vocab, minus the recurrent ops that crude short-train SGD
+        # cannot fit), short-train each, keep the best on val, hand it to the full
+        # trainer. No verification — the test is whether a budget-limited random
+        # arm beats our best on the datasets where every fixed backbone is stuck.
+        if os.environ.get("RAND_SEARCH") == "1":
+            import random as _random
+            rng = _random.Random(int(os.environ.get("BASELINE_SEED", "42")))
+            wide = [o for o in OP_NAMES if o not in ("RowBiLSTM", "CrossAxisBiLSTM")]
+            K = int(os.environ.get("RAND_K", "12"))
+            rand_budget = self.clock.check() * float(os.environ.get("RAND_BUDGET_FRAC", "0.45"))
+            per_cand = rand_budget / max(K, 1)
+            rand_deadline = time.perf_counter() + rand_budget
+            print(f"  RAND_SEARCH: {K} samples from {len(wide)} ops, "
+                  f"budget {rand_budget:.0f}s (~{per_cand:.0f}s/cand), "
+                  f"D in [{D_MIN},{D_MAX}] W in {{16,24,32,48}}")
+            best_ops, best_w, best_val, pool = None, W_MAX, -1.0, []
+            for k in range(K):
+                if time.perf_counter() >= rand_deadline:
+                    print("  RAND_SEARCH: budget exhausted"); break
+                D = rng.randint(D_MIN, D_MAX)
+                W = rng.choice([16, 24, 32, 48])
+                ops = [rng.choice(wide) for _ in range(D)]
+                cd = min(time.perf_counter() + per_cand, rand_deadline)
+                try:
+                    val, params, _zs, _wc = self._eval_ops(in_ch, nc, h, w, ops, W, device, cd)
+                except Exception as ex:
+                    print(f"  rand {k:2d} D={D:2d} W={W:2d} FAILED ({type(ex).__name__})"); continue
+                pool.append({"phase": "rand", "D": D, "W": W, "ops": list(ops),
+                             "val": round(val, 4), "params": params})
+                mark = ""
+                if val > best_val:
+                    best_val, best_ops, best_w, mark = val, ops, W, "  <- best"
+                print(f"  rand {k:2d} D={D:2d} W={W:2d} val={val:.4f}{mark}")
+            if best_ops is None:
+                best_ops, best_w = [MACRO_OP] * 6, W_MAX
+                print("  RAND_SEARCH: nothing trained -> default 6-block Conv3")
+            try:
+                self._log_pool(pool)
+            except Exception:
+                pass
+            print(f"  RAND_SEARCH best: D={len(best_ops)} W={best_w} "
+                  f"val={best_val:.4f} ops={best_ops}")
+            # used real search budget -> do NOT refund; trainer gets what is left
+            return build_cnn(in_ch, nc, h, w, ops=best_ops, base_width=best_w,
+                             drop_path_rate=0.1)
 
         # v6 clock-extend: in exploration mode, give the search a HUGE
         # budget so its internal deadlines never fire — let macro / micro

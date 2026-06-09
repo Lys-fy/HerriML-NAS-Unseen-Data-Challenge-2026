@@ -5,7 +5,14 @@
 
 This is the **resume document**. A fresh session should: (1) read **[[Key Learnings]]** for the distilled what-we-know, (2) read this for operational state, (3) `ssh spark` and re-check live — never trust a stale snapshot.
 
-## ⟵ CURRENT STATE (2026-06-02)
+## ⟵ CURRENT STATE (2026-06-09)
+
+- **v8 = the consolidated config, seed-42 verdict +48.2** (v7 +41.94 core + train-to-budget + adaptive stem; micro dropped). `baselines/tier2a_p1_augsafety_v8/`. The big lever was **train-to-budget** (no early-stop, train the final model to the full per-dataset budget and anneal LR to 0): validated 5 wins / 2 ties / 0 regress on frozen archs, and it recovered the v7 MultNIST regression without the (dropped, harmful) micro-fix. One weak spot: Language −1.03 under live search.
+- **✅ TCN excursion COMPLETE — the dilated-conv backbone wins.** Full writeup: **[[Tier 2a - TCN Excursion]]**. Fixed TCN-2d (2-D dilated conv) beats the **searched** conv backbone by **+10.9 total adj** (conv +48.2 to TCN-2d-fixed +59.2, seed 42), winning 6 / tying 4 / losing 3. Losses (Gutenberg, Sudoku, Chesseract) are all small odd-shaped logic inputs. TCN-1d (1-D sequence) is a specialist (Cryptic/Language/Voxel), below conv overall. Backbone bake-off is fragile (proxy wall at backbone level). Plots `images/tier2a/tier2a_tcn_curves_grid.png`, `images/language/lang_tcn_curves.png`.
+- **IN FLIGHT (queued, random then v9):** **v9** = the dilated TCN-2d block searched (depth/width per dataset) inside v8, 3 seeds — `baselines/tier2a_p1_augsafety_v9/`, `dev/run_tier2a_p1_v9.sh` (micro off, EGNAS_DMAX=8). **Random-search arm** = `RAND_SEARCH=1` in `baselines/fixed_arch_probe/nas.py`, on the 3 stuck datasets x 3 seeds, `dev/run_random_search.sh` — tests random-Bonsai's "wider search wins on weird inputs" where conv beats TCN-2d.
+- **Live status:** `ssh spark "cd ~/projects/HerriML-NAS-Unseen-Data-Challenge-2026 && pgrep -af mock_harness|grep -v pgrep; ls dev/logs/random_search/*.done dev/logs/tier2a_p1_v9/*.done 2>/dev/null|wc -l"`
+
+### Older state (2026-06-02)
 
 - **v6 P1 sweep DONE — verdict: net regression.** EGNAS-full +35.51 ± 3.07 → +P1 v6 +23.41 ± 9.17 (internal, 13 ds × 3 seeds), Δmean **−12.10**, σ **×2.98**. Rich vocab poisoned Sudoku (−20 pp), macro-prune cratered GameOfLife (depth lottery). Only win = Language aug-probe +4.23. Full deep analysis + 3-seed figures in [[Tier 2a - Results]].
 - **LSTM Language probe DONE — row-BiLSTM cracks Language.** First arch in the project reliably above benchmark: 85.76 % (all 3 seeds > 85.20). Attention doesn't cross (84.8 %); cross-axis unstable (one seed 78 %). Figure `images/language/lstm_lang_probe.png`.

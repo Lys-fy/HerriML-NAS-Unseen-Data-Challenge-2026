@@ -2,6 +2,12 @@
 
 Team submission for the [5th NAS Unseen-Data Competition](https://www.nascompetition.com/) at AutoML 2026.
 
+## Authors
+
+- Luis Melzer
+- Sebastian Seifert
+- Leander von Gottberg
+
 The competition hands our pipeline three unseen 4D-image classification datasets at evaluation time. The pipeline must process the data, search for an architecture, train it, and produce predictions — all under a fixed time budget per dataset. Score per dataset is `(accuracy − benchmark) × scale`, capped at +10 / −10. Crashes, OOMs, and timeouts each score −10.
 
 ## Quick start

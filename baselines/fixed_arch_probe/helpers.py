@@ -466,15 +466,27 @@ class ResConvBlock(nn.Module):
 
 
 def build_cnn(in_channels: int, num_classes: int, input_h: int, input_w: int,
-              ops: Sequence[str], base_width: int = 48, drop_path_rate: float = 0.1) -> nn.Sequential:
+              ops: Sequence[str], base_width: int = 48, drop_path_rate: float = 0.1,
+              stem: str = "conv3") -> nn.Sequential:
     n_blocks = len(ops)
     plan = plan_downsamples(input_h, input_w, n_blocks)
 
-    layers: List[nn.Module] = [
-        # Stem: plain Conv3 (always) — gives every architecture a consistent
-        # starting representation.
-        _conv_bn_act(in_channels, base_width, 3, 1),
-    ]
+    # Stem = the data-processor front-end (the "input interpretation"):
+    #   "conv3"        — plain 3x3 conv: treat the input as a 2D image (default).
+    #   "channel_embed"— 1x1 conv first (mix ONLY the channels, per pixel, as
+    #                    features), then a 3x3 spatial conv. For inputs whose
+    #                    channels are semantic feature planes (Chesseract 12
+    #                    piece-types, Voxel 20 slices, Windspeed 12 frames)
+    #                    rather than colours. Separates channel-mixing from
+    #                    spatial-mixing — the bake-off's data-preprocessing arm.
+    if stem == "channel_embed":
+        stem_layers: List[nn.Module] = [
+            _conv_bn_act(in_channels, base_width, 1, 1),   # 1x1 channel embed
+            _conv_bn_act(base_width, base_width, 3, 1),    # then spatial
+        ]
+    else:
+        stem_layers = [_conv_bn_act(in_channels, base_width, 3, 1)]
+    layers: List[nn.Module] = list(stem_layers)
     ch = base_width
     for i, downsample in enumerate(plan):
         op_name = ops[i]
@@ -498,6 +510,114 @@ def build_default_cnn(in_channels: int, num_classes: int, input_h: int, input_w:
     return build_cnn(in_channels, num_classes, input_h, input_w,
                      ops=["Conv3"] * n_blocks,
                      base_width=base_width, drop_path_rate=drop_path_rate)
+
+
+# ---------------------------------------------------------------------------
+# TCN probes (excursion, suggested by a colleague): Temporal Convolutional
+# Networks — stacks of dilated convs + residuals whose receptive field grows
+# EXPONENTIALLY with depth. Two interpretations of "TCN on a C×H×W tensor":
+#
+#   build_tcn_1d  — TRUE sequence TCN. Reshape the input to a 1-D signal
+#                   (C channels, length H*W) and run 1-D dilated convs. This
+#                   is a genuine sequence model — expected to shine on the
+#                   sequential datasets (Language, Cryptic) and to struggle on
+#                   the 2-D image sets (flattening discards spatial locality).
+#                   Crucially, being convolutional it trains under plain SGD,
+#                   so unlike the row-BiLSTM it is *searchable* in principle.
+#   build_tcn_2d  — 2-D dilated-conv "TCN-style" net. Keeps spatial structure,
+#                   adopts the TCN essence (exponential 2-D dilation + residual
+#                   blocks). A fair general-architecture test on all 13.
+#
+# Both: 1×1 stem → N residual dilated-conv blocks (each = two dilated convs +
+# residual, non-causal 'same' padding — classification needs no causality) →
+# global-avg-pool → linear. Dilation is capped to the relevant extent so it
+# never degenerates into all-padding on small inputs.
+# ---------------------------------------------------------------------------
+
+
+class _TCNBlock1D(nn.Module):
+    def __init__(self, ch: int, kernel: int, dilation: int):
+        super().__init__()
+        pad = (kernel - 1) * dilation // 2  # 'same' for odd kernel
+        self.net = nn.Sequential(
+            nn.Conv1d(ch, ch, kernel, padding=pad, dilation=dilation, bias=False),
+            nn.BatchNorm1d(ch), nn.ReLU(inplace=True),
+            nn.Conv1d(ch, ch, kernel, padding=pad, dilation=dilation, bias=False),
+            nn.BatchNorm1d(ch),
+        )
+        self.act = nn.ReLU(inplace=True)
+
+    def forward(self, x):
+        return self.act(self.net(x) + x)
+
+
+class TCN1D(nn.Module):
+    def __init__(self, in_channels: int, num_classes: int, seq_len: int,
+                 base_width: int = 48, n_blocks: int = 8, kernel: int = 7):
+        super().__init__()
+        self.stem = nn.Sequential(nn.Conv1d(in_channels, base_width, 1, bias=False),
+                                  nn.BatchNorm1d(base_width), nn.ReLU(inplace=True))
+        max_dil = max(1, seq_len // 4)  # don't let RF exceed the sequence
+        self.blocks = nn.Sequential(*[
+            _TCNBlock1D(base_width, kernel, dilation=min(2 ** i, max_dil))
+            for i in range(n_blocks)])
+        self.head = nn.Linear(base_width, num_classes)
+
+    def forward(self, x):
+        b, c, h, w = x.shape
+        x = x.contiguous().reshape(b, c, h * w)   # C×H×W → (C, L=H*W)
+        x = self.blocks(self.stem(x))
+        return self.head(x.mean(dim=2))           # global avg pool over L
+
+
+class _TCNBlock2D(nn.Module):
+    def __init__(self, ch: int, kernel: int, dilation: int):
+        super().__init__()
+        pad = (kernel - 1) * dilation // 2
+        self.net = nn.Sequential(
+            nn.Conv2d(ch, ch, kernel, padding=pad, dilation=dilation, bias=False),
+            nn.BatchNorm2d(ch), nn.ReLU(inplace=True),
+            nn.Conv2d(ch, ch, kernel, padding=pad, dilation=dilation, bias=False),
+            nn.BatchNorm2d(ch),
+        )
+        self.act = nn.ReLU(inplace=True)
+
+    def forward(self, x):
+        return self.act(self.net(x) + x)
+
+
+class TCN2D(nn.Module):
+    def __init__(self, in_channels: int, num_classes: int, input_h: int, input_w: int,
+                 base_width: int = 48, n_blocks: int = 6, kernel: int = 3):
+        super().__init__()
+        self.stem = _conv_bn_act(in_channels, base_width, 3, 1)
+        max_dil = max(1, min(input_h, input_w) // 2)  # cap to spatial extent
+        self.blocks = nn.Sequential(*[
+            _TCNBlock2D(base_width, kernel, dilation=min(2 ** i, max_dil))
+            for i in range(n_blocks)])
+        self.head = nn.Sequential(nn.AdaptiveAvgPool2d(1), nn.Flatten(),
+                                  nn.Linear(base_width, num_classes))
+
+    def forward(self, x):
+        return self.head(self.blocks(self.stem(x)))
+
+
+def build_tcn(kind: str, in_channels: int, num_classes: int, input_h: int, input_w: int,
+              base_width: int = 48, n_blocks: int = 0, kernel: int = 0) -> nn.Module:
+    """Dispatch a TCN probe. kind ∈ {"tcn1d","tcn2d"}. n_blocks/kernel=0 → the
+    per-kind defaults (1D: 8 blocks k=7 over the long flattened sequence;
+    2D: 6 blocks k=3 over the spatial grid)."""
+    if kind == "tcn1d":
+        nb = n_blocks or 8
+        k = kernel or 7
+        return TCN1D(in_channels, num_classes, seq_len=input_h * input_w,
+                     base_width=base_width, n_blocks=nb, kernel=k)
+    if kind == "tcn2d":
+        nb = n_blocks or 6
+        k = kernel or 3
+        return TCN2D(in_channels, num_classes, input_h, input_w,
+                     base_width=base_width, n_blocks=nb, kernel=k)
+    raise ValueError(f"unknown TCN kind: {kind!r}")
 
 
 # ---------------------------------------------------------------------------
