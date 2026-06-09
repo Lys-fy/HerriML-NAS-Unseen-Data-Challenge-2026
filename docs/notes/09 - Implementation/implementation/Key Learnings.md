@@ -1,7 +1,7 @@
 # Key Learnings — the distilled insight from every experiment
 
-> **Status:** living synthesis (2026-06-02) | **Topic:** The handful of findings that actually generalise, pulled out of the full experimental arc (Tier 0 → 1 → Multi-seed → E1 → Tier 2b EGNAS → Tier 2a P1 v1–v7 → LSTM probe). If you read one note to understand *what we know*, read this.
-> **Related:** [[Implementation Results Overview]], [[Tier 2b - Results]], [[Tier 2a - Results]], [[Tier 2a - Language Deep Dive]], [[Multi-Seed - Results]], [[E1 - Results]], [[Run State + Handoff]]
+> **Status:** living synthesis (2026-06-10) | **Topic:** The handful of findings that actually generalise, pulled out of the full experimental arc (Tier 0 → 1 → Multi-seed → E1 → Tier 2b EGNAS → Tier 2a P1 v1–v7 → v8 train-to-budget → TCN excursion → random arm → SOTA scan + offline validations). If you read one note to understand *what we know*, read this.
+> **Related:** [[Implementation Results Overview]], [[Tier 2b - Results]], [[Tier 2a - Results]], [[Tier 2a - TCN Excursion]], [[v10 - Design + Idea Ledger]], [[SOTA Scan - Novel Directions]], [[Multi-Seed - Results]], [[E1 - Results]], [[Run State + Handoff]]
 
 The competition is the **AutoML 2026 NAS Unseen Data Challenge**: the Phase-2/3 datasets are *hidden*, their codenames are values we have never seen, and the method gets a fixed time budget on an *unknown* GPU. Every learning below is shaped by that: **the method must decide everything at runtime from metadata or a cheap probe, identically on every dataset, robust to unknown compute.** No dataset gates, ever.
 
@@ -60,16 +60,31 @@ The nets patience-stop (warmup 20, patience 30) at convergence in **~5 min** on 
 ### 9. We held our pipeline to a standard the EGNAS paper never claimed
 Reading the actual EGNAS code/paper: their "Spearman 0.91" is **(param count) ↔ (val at incrementally-trained budget) on CIFAR-10**, aggregated over 50 nets — *not* "2-epoch val on Unseen-X predicts 600-epoch test acc". Their setup also differs (4-op binary vocab, hard K=2, 600-epoch final train, test-acc ranking, param-equalised width). Our Q8 problems aren't a contradiction of the paper — we measured a different, harder thing. ([[EGNAS]] §"Our port vs upstream")
 
+### 10. Train-to-budget: the "free lever" from Learning 8, now validated (2026-06)
+Early-stop wasted the non-transferable per-dataset budget AND cut the cosine anneal short. Removing it (PATIENCE high, schedule fills the budget, LR to 0): **5 wins / 2 ties / 0 regressions** on frozen archs, and it recovered the v7 MultNIST regression on its own. v8 (v7 + train-to-budget + adaptive stem) seed-42 total: **+48.2 vs v7's +41.94**. The biggest cheap win in the project. ([[Run State + Handoff]])
+
+### 11. The backbone family dominates the search (the TCN excursion)
+A FIXED 2-D dilated-conv backbone (TCN-2d, no search at all) beats the entire searched conv pipeline: **+59.2 vs +48.2** (seed 42, full 2h, all 13). Wins 6 / ties 4 / loses 3; CIFARTile alone goes 48 → 72 raw. The receptive field, not the op micro-choice, is the architectural lever. Independently matches the literature (search SPACE beats search strategy; UniRepLKNet's fixed wide-RF net travels across modalities). The 3 losses (Gutenberg, Sudoku, Chesseract) are all small odd encoded inputs. ([[Tier 2a - TCN Excursion]])
+
+### 12. Decisions beat rankings: the abstention gate (offline-validated)
+At a 3/5/10-min curve prefix, picking the backbone by the early leaderboard swings from −2.3 to +2.2 vs just fixing TCN-2d. The **gate** (trust the leader only when its margin beats the measured noise, else keep the default) is the only signal that beats the fixed default at EVERY budget (+1.0 to +1.7) and never falls below it. Two honest negatives from the same validation: **TSE is biased across families** (dilated nets drop loss faster regardless of final quality) and **learning-curve extrapolation breaks** on our cosine-inflection curves at small budgets. (`dev/validate_offline_signals.py`, [[SOTA Scan - Novel Directions]])
+
+### 13. Measuring the data sidesteps the proxy wall (the fingerprint)
+Local pixel correlation (corr1) on raw tensors, seconds of CPU, no training: **corr1 ≈ 0 identifies exactly the 4 encoded datasets** (Language, Sudoku, Chesseract, Gutenberg) with a 5x gap to the nearest image-like dataset. Those are precisely where the default backbone loses or a specialist wins. And the **random-search arm wins exactly there**: Chesseract +0.90 vs conv +0.30 (all 3 seeds), while losing on normal data. Both confirm the design rule from Learning 5, extended: when you cannot rank candidates, measure the data instead. (`dev/fingerprint_probe.py`)
+
+### 14. Verdicts go stale when the regime changes
+The stem, the aug decisions, and the verification machinery were all validated on the CONV backbone with early-stop training. After switching to the dilated backbone + train-to-budget, those verdicts are conjectures again. Phase A re-checks them (stem x dilated, aug x tcn1d, does verification ever fire usefully for the dilated family). Rule: a component verdict is only as durable as the regime it was measured in.
+
 ---
 
-## Where this leaves us — the ideal path forward
+## Where this leaves us — the path forward (updated 2026-06-10)
 
-The data has converged on a clear strategy (it took the long way, through v5/v6, to earn it):
+The 2026-06-02 version of this section said: ship v7-conv, recurrence as a gated A/B, try the training-length lever. All three happened and the picture moved on:
 
-1. **Ship the robust core: `v7-conv`** = EGNAS-full's proven simple search + 4 conv ops + macro-prune-verify (Learning 7) + the aug-safety probe (Learning 4). Fully compute-robust, no fragile moving parts. Recovers v6's self-inflicted Sudoku/GameOfLife losses; with the Language probe it could *beat* EGNAS-full (the prize: ≈ +40 vs +35.5 if the regressions are eliminated while the +4.23 is kept).
-2. **Recurrence as a fail-safe, budget-gated A/B opt-in** (Learning 6 + ⭐ + 8). Train conv to convergence first (guaranteed shippable floor); *only if the measured clock allows*, train the row-BiLSTM variant and keep the better. Currently being **validated**: the A/B must pick *conv* on conv-optimal datasets (Sudoku/AddNIST/CIFARTile) — the guard against over-picking recurrence.
-3. **Cheap free wins:** macro-prune-verify; possibly the training-length lever (Learning 8).
-4. **Stop chasing search sophistication** (Learning 3). The richer-vocab direction is closed.
-5. **Document the architectural findings** (recurrence cracks Language; non-conv is CIFARTile's frontier) as thesis contributions regardless of whether they deploy.
+1. **The current experimental chain (running unattended):** v9 seed 42 (the dilated backbone INSIDE the search) → Phase A decision-harness tests (backbone-gate arms, TSE-in-search logging, aug pre-filter, regime retests) → then assemble **v10** = measure-gate-train pipeline (fingerprint → aug probe → backbone gate with abstain-to-default → steepness gate → optional search → optional random arm → train-to-budget), full design in [[v10 - Design + Idea Ledger]]. v10 is an EXPERIMENT, not the submission; the 3-seed treatment is reserved for whatever config earns it.
+2. **The validated core today:** dilated TCN-2d backbone (Learning 11) + train-to-budget (Learning 10) + aug-probe (Learning 4) + gated decisions (Learning 12), with the random arm for encoded inputs (Learning 13).
+3. **v11 direction (parked, deliberate):** the TCN excursion proved one different family was worth +11, so screen MORE families with the same cheap probe protocol, aimed at the encoded datasets the fingerprint flags: state-space models (sequence beyond TCN), MLP-Mixer-style (no spatial prior, fits encoded data), modern ConvNeXt-style blocks (stronger image default).
+4. **Stop chasing search sophistication** (Learning 3) still stands; the new corollary is **spend the cleverness on decisions, not on the search** (Learnings 12, 13).
+5. **Deadlines:** proposal June 15 (the story: measure first, gate every decision, the proxy-wall map as the contribution). Phase 2 opens July 1 at ~1h per dataset, so a 1h-budget validation pass of the final config is mandatory before packaging.
 
-The meta-point: **the project's value isn't a single peak number — it's the map of where cheap signals work and where they don't.** That map (Learning ⭐) is the contribution.
+The meta-point survives every update: **the project's value isn't a single peak number — it's the map of where cheap signals work and where they don't.** That map (Learning ⭐, now with Learnings 12 and 13 as its constructive answer) is the contribution.
