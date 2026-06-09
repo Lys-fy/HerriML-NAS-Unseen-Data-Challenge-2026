@@ -46,7 +46,7 @@ from typing import Dict, List
 import torch
 import torch.nn as nn
 
-from helpers import build_cnn, build_default_cnn
+from helpers import build_cnn, build_default_cnn, OP_NAMES
 
 try:
     from zeroshot import compute_all_zeroshot
