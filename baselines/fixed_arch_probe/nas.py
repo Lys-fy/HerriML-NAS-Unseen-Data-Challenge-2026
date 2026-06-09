@@ -133,8 +133,13 @@ class NAS:
             model.parameters(), lr=0.025, momentum=0.9, weight_decay=3e-4, nesterov=True
         )
         epoch = 0
+        # Phase A / TSE: per-epoch mean training losses, stashed for _eval_ops
+        # to log. Enables offline TSE-vs-valacc ranking comparison of search
+        # candidates (within-family only; cross-family TSE is biased).
+        self._last_epoch_losses = []
         while epoch < max_epochs and time.perf_counter() < deadline:
             model.train()
+            ep_loss, ep_batches = 0.0, 0
             for xb, yb in self.train_loader:
                 if time.perf_counter() > deadline:
                     break
@@ -148,6 +153,10 @@ class NAS:
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)
                 optimizer.step()
+                ep_loss += float(loss.item())
+                ep_batches += 1
+            if ep_batches:
+                self._last_epoch_losses.append(round(ep_loss / ep_batches, 5))
             epoch += 1
         return self._quick_eval(model, device)
 
@@ -186,6 +195,9 @@ class NAS:
             val = self._short_train(model, device, deadline=cand_deadline,
                                     max_epochs=K)
             wall_clock_s = time.perf_counter() - t_start
+            # Phase A / TSE: one parseable line per candidate eval.
+            print(f"  TSE_LOG D={len(ops)} W={base_width} val={val:.4f} "
+                  f"losses={getattr(self, '_last_epoch_losses', [])}")
             return val, params, zs, wall_clock_s
         finally:
             del model
@@ -267,11 +279,12 @@ class NAS:
             fw = int(os.environ.get("FIXED_WIDTH", str(W_MAX)))
             nb = int(os.environ.get("PROBE_TCN_BLOCKS", "0"))
             k = int(os.environ.get("PROBE_TCN_KERNEL", "0"))
+            tstem = os.environ.get("PROBE_TCN_STEM", "conv3")
             print(f"  PROBE_ARCH={probe_arch}: building TCN @ W={fw} "
                   f"blocks={nb or 'default'} kernel={k or 'default'} "
-                  f"(in={in_ch}x{h}x{w}, classes={nc})")
+                  f"stem={tstem} (in={in_ch}x{h}x{w}, classes={nc})")
             model = build_tcn(probe_arch, in_ch, nc, h, w,
-                              base_width=fw, n_blocks=nb, kernel=k)
+                              base_width=fw, n_blocks=nb, kernel=k, stem=tstem)
             self._refund_clock(nas_start)
             return model
 

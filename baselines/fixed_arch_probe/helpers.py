@@ -588,9 +588,19 @@ class _TCNBlock2D(nn.Module):
 
 class TCN2D(nn.Module):
     def __init__(self, in_channels: int, num_classes: int, input_h: int, input_w: int,
-                 base_width: int = 48, n_blocks: int = 6, kernel: int = 3):
+                 base_width: int = 48, n_blocks: int = 6, kernel: int = 3,
+                 stem: str = "conv3"):
         super().__init__()
-        self.stem = _conv_bn_act(in_channels, base_width, 3, 1)
+        # Phase A5 retest: the channel-embed stem was validated on the CONV
+        # backbone only; this option tests whether it composes with the
+        # dilated backbone (high-channel inputs: Voxel, Chesseract).
+        if stem == "channel_embed":
+            self.stem = nn.Sequential(
+                _conv_bn_act(in_channels, base_width, 1, 1),
+                _conv_bn_act(base_width, base_width, 3, 1),
+            )
+        else:
+            self.stem = _conv_bn_act(in_channels, base_width, 3, 1)
         max_dil = max(1, min(input_h, input_w) // 2)  # cap to spatial extent
         self.blocks = nn.Sequential(*[
             _TCNBlock2D(base_width, kernel, dilation=min(2 ** i, max_dil))
@@ -603,10 +613,11 @@ class TCN2D(nn.Module):
 
 
 def build_tcn(kind: str, in_channels: int, num_classes: int, input_h: int, input_w: int,
-              base_width: int = 48, n_blocks: int = 0, kernel: int = 0) -> nn.Module:
+              base_width: int = 48, n_blocks: int = 0, kernel: int = 0,
+              stem: str = "conv3") -> nn.Module:
     """Dispatch a TCN probe. kind ∈ {"tcn1d","tcn2d"}. n_blocks/kernel=0 → the
     per-kind defaults (1D: 8 blocks k=7 over the long flattened sequence;
-    2D: 6 blocks k=3 over the spatial grid)."""
+    2D: 6 blocks k=3 over the spatial grid). stem applies to tcn2d only."""
     if kind == "tcn1d":
         nb = n_blocks or 8
         k = kernel or 7
@@ -616,7 +627,7 @@ def build_tcn(kind: str, in_channels: int, num_classes: int, input_h: int, input
         nb = n_blocks or 6
         k = kernel or 3
         return TCN2D(in_channels, num_classes, input_h, input_w,
-                     base_width=base_width, n_blocks=nb, kernel=k)
+                     base_width=base_width, n_blocks=nb, kernel=k, stem=stem)
     raise ValueError(f"unknown TCN kind: {kind!r}")
 
 
