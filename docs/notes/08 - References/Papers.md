@@ -62,6 +62,18 @@ These are not local but are the reference implementations behind [[DARTS Family]
 - **Zero-Cost Proxies for Lightweight NAS** — Abdelfattah, M. S., et al. ICLR 2021. [arXiv:2101.08134](https://arxiv.org/abs/2101.08134).
 - **Neural Architecture Search without Training** — Mellor, J., Turner, J., Storkey, A., Crowley, E. J. ICML 2021. [arXiv:2006.04647](https://arxiv.org/abs/2006.04647). Crowley is also a [[Voxel]] co-author — same Newcastle/Edinburgh axis as the organisers.
 
+## SOTA scan, June 2026 (one note per paper in `papers/`)
+
+Four parallel research agents scanned the literature against our empirical findings (proxy wall, search space beats strategy, train-to-budget, random wins on weird inputs). Synthesis and the three confirmed novelty gaps: [[SOTA Scan - Novel Directions]]. Per-paper notes, each with a "concrete idea to steal" section:
+
+**Budget-aware search and racing:** [[2019 - HyperSched]] (deadline-aware admission arithmetic), [[2023 - PASHA]] (ranking-stability gated budget growth), [[2024 - ATLAS Anytime NAS]] (closed-form budget allocation), [[2023 - Deep Power Laws]] (power-law extrapolation for halting), [[2019 - Tunability]] (gain-over-defaults as a measurable quantity).
+
+**Dataset fingerprints and meta-selection:** [[2025 - L2M Mutual Information Scaling Law]] (data MI scaling dictates the architecture's state size, text only, our pet idea's nearest neighbor), [[2022 - DASH Efficient Architecture Search for Diverse Tasks]] (kernel/dilation is the dominant per-task adaptation axis), [[2021 - MetaD2A Dataset to Architecture]], [[2025 - Transferrable Surrogates in Expressive NAS Spaces]] (uses our exact challenge datasets), [[2025 - EG-ENAS]] (direct competitor on our datasets, AutoML 2025).
+
+**Learning curves and ranking reliability:** [[2023 - LC-PFN Bayesian Learning Curve Extrapolation]], [[2024 - ifBO In-Context Freeze-Thaw BO]], [[2021 - Training Speed Estimation (TSE)]] (sum of training losses out-ranks early val-acc, zero overhead), [[2021 - How Powerful are Performance Predictors]], [[2024 - AdaptSH Hypothesis-Test Successive Halving]] (significance-gated elimination).
+
+**Search-space design and receptive field:** [[2024 - einspace]] (organiser-adjacent expressive space), [[2024 - UniRepLKNet]] (one fixed wide-receptive-field ConvNet across 5 modalities, legitimises our dilated backbone), [[2022 - RF-Next]] (per-task dilation search, offline), [[2024 - Frequency-Adaptive Dilated Convolution]] (dilation from frequency content).
+
 ## Notes on citation hygiene
 
 - When citing EGNAS in our own writeup, prefer the SN Computer Science DOI; fall back to arXiv if a free reference is needed.
