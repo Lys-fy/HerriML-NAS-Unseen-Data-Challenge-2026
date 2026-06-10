@@ -172,6 +172,24 @@ Budget sketch at 2h: 1 + 8 + 15 + (0-25) + (0-15) + 60-90 train. At the real Pha
 ### The sweep
 v10 x 3 seeds x 13 datasets x 2h, decision records on. Deliverables: total vs v9 and vs fixed tcn2d, plus an auto-generated attribution table (which decision fired where, what it cost, what it gained). One extra 1h-budget pass on the final config before Phase 2 packaging.
 
+### The transfer suite (after the v10 sweep): run v10 on datasets we never designed on
+The strongest possible generalization test for an Unseen Data Challenge entry: every design decision so far was validated on the same 13 public datasets, so run the finished v10 on EXTERNAL datasets that played no role in any choice. Two tiers, chosen so BOTH pipeline branches get exercised:
+
+**Tier 1, ordinary images (should take the skip-bake-off path):** CIFAR-10, CIFAR-100, FashionMNIST, SVHN, and especially EMNIST + KMNIST (the datasets the EGNAS paper claims SOTA on, a direct comparison against the 2025 winner's own benchmarks).
+
+**Tier 2, competition-style analogs (should exercise the encoded/specialist branches):**
+- MedMNIST family (PathMNIST etc.): medical microscopy, the Myofibre analog, npy-friendly out of the box
+- EuroSAT: satellite patches, the GeoClassing analog
+- AudioMNIST or SpeechCommands as spectrogram tensors: a modality none of the 13 covers, fingerprint behavior unknown (the interesting case)
+- A synthesized cellular automaton with a DIFFERENT rule than GameOfLife (Day and Night, Seeds): trivially generatable, tests whether the GameOfLife win was rule-specific
+- Isabella, IF obtainable from the organisers' public dataset repo: the one official competition dataset we never trained on, the closest possible Phase-2 proxy (check github.com/Towers-D/NAS-Unseen-Datasets)
+
+What we check, in order of importance:
+1. The decision record: does the fingerprint call them image-like, does the gate route to TCN-2d, do the searched depths land sensibly. A wrong family call on ordinary image data is exactly the failure we want to catch before July.
+2. Raw accuracy vs literature reference bands (no official benchmark exists for adj scoring, so raw + sanity bands is the deliverable).
+3. No crashes/timeouts on data the harness has never seen (Phase-2 dress rehearsal).
+Prep: a small packaging script per dataset (train/valid/test npy in CxHxW + metadata file). Cost: ~1-2h per dataset on spark, so a 4-6 dataset suite is half a day to a day. This is also clean poster material: "the pipeline generalizes to datasets never seen during design".
+
 ### Iteration trick (decision-phase-only loop)
 The probes and gates produce decisions in minutes; the known-best decision per dataset comes from the completed experiments. So the decision machinery iterates WITHOUT training final models: run stages 1-6 only, compare the decision record against best-known, fix, repeat. Full sweeps are reserved for the assembled config.
 
