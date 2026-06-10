@@ -29,6 +29,7 @@ So: not a margin regressor, but a clean, zero-training trigger for the specialis
 | Aug pre-filter (zero-cost shortlist, then the trusted two-arm probe) | compare proxy ranking vs the logged probe decisions, all seeds | agreement on the clear calls, never flips a measured decision |
 | TSE + gate inside the depth search (within-family only) | needs per-epoch loss logging in the search, then search-only runs | matches or beats val-acc ranking on known-best depths |
 | Frequency (FFT) probe for the dilation schedule | same validation as fingerprint | adds signal beyond corr-decay (else drop: one probe is cleaner) |
+| Canonical TCN block variant (LOW priority, only if time allows) | our `_TCNBlock2D` uses BatchNorm and no in-block dropout; the canonical block from the original TCN paper (Bai et al. 2018, as implemented in the unit8co/darts `TCNModel`) uses weight normalization + dropout inside each residual block. A/B the two block styles, fixed arch, 2-3 datasets x half-budget (~half a day) | the canonical block must beat ours beyond noise on >=2 datasets, else keep ours (it already wins; the track record says unnecessary fiddling costs more than it pays) |
 
 ### Rejected, documented negatives (do not revisit without new evidence)
 | Idea | Why it fails |
