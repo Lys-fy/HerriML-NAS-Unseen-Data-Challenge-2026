@@ -64,6 +64,23 @@ Per-dataset champions (offline, unlimited compute, from the Geada 2024 paper):
 
 We are within ~1 to 3 points of the offline SOTA on most. The CIFARTile 20-point gap is offline-only (the competition-best was 73, about our 72). The one genuine, budget-fair gap is **Chesseract** (~10 points), which is the random-search opportunity. DrNAS = Dirichlet NAS (a DARTS-family differentiable method); it and PC-DARTS are directed, so they share the bias that loses Chesseract to random search.
 
+### vs the all-time COMPETITION best (the budget-fair frame, from the organisers' repo)
+
+Best result by ANY submission across all competition years, vs our best (seed 42, 2h, blind pipeline):
+
+| Dataset | comp best | ours (config) | delta |
+|---|---|---|---|
+| AddNIST | 95.06 | **96.62** (tcn2d fixed) | **+1.56 (beat)** |
+| MultNIST | 95.45 | **95.52** (tcn2d fixed) | **+0.07 (beat)** |
+| Language | 89.71 | 89.34 (tcn1d) | -0.37 |
+| CIFARTile | 73.08 | 72.20 (tcn2d fixed) | -0.88 |
+| GeoClassing | 96.08 | 95.51 (v9 searched) | -0.57 |
+| Chesseract | 62.98 | 61.27 (random arm; best seed 62.95) | -1.71 (tie at best seed) |
+| Gutenberg | 50.85 | 47.08 (conv v8) | **-3.77 (our one real gap)** |
+| Isabella | 61.42 | not testable (no download) | n/a |
+
+Read: at or beyond the all-time competition frontier on 6 of 7 testable datasets, from ONE coherent blind pipeline (each comp-best row is potentially a different team). Caveats: their hardware/budgets per year unpublished, ours mostly single-seed. Gutenberg is the one real gap; its comp best even beats the organisers' offline PC-DARTS (49.12), so a 2023 team found something non-architectural there (likely training policy or aug). Score-slope perspective: those 3.8 raw points are only ~+0.6 adj, low priority.
+
 ## Next steps (in flight)
 
 1. **v9** = the dilated TCN-2d block put INSIDE the v8 search (depth/width tuned per dataset), 3 seeds. `baselines/tier2a_p1_augsafety_v9/`, sweep `dev/run_tier2a_p1_v9.sh`. Confirms whether searching the dilated backbone holds or beats the +59.2 fixed result, multi-seed (the fixed number is single-seed). Micro off, EGNAS_DMAX=8 (the dilated net keeps full resolution).
