@@ -163,6 +163,18 @@ Committed-but-pending choices drawn above (flagged so we remember what needs con
 
 Budget sketch at 2h: 1 + 8 + 15 + (0-25) + (0-15) + 60-90 train. At the real Phase-2 1h, fractions halve and the steepness gate earns its keep (most datasets skip straight to training).
 
+### Runtime intel from the 2026 starter kit (2026-06-10, changes the test plan)
+Confirmed from the starter-kit README + `evaluation/main.py` (see [[Phases and Timeline]] for the full rules): Phase 2's 1 hour is explicitly "just testing the code works"; the SCORED Phase-3 run gets "an unknown amount of runtime"; the per-dataset budget arrives via the metadata `time_limit` key (code default 30 MINUTES); a hard termination watchdog (new in 2026) kills overruns; clock manipulation = disqualification. Implications for v10:
+1. **Fractions, never minutes.** Every stage budget (probes, gate, search, random arm) must be a fraction of the clock. The pipeline must produce a sane submission at 30 min AND scale gracefully to 12h. At very small budgets the gates should collapse to: fingerprint (seconds) + default backbone + train-to-budget.
+2. **The sweep plan changes.** Besides the 2h suite: a 1h full-suite crash-safety pass (the literal Phase-2 condition), a 30-min pass on 2-3 datasets (the metadata default, worst case), and a long-budget scaling test (8-12h on 2-3 datasets, the Phase-3 mimic; `run_v8_8h.sh` exists, port to v10).
+3. **Hard-kill robustness:** keep the safety margin generous; predictions must be written before the watchdog fires. Test once with an artificially tight kill.
+4. **Packaging checklist:** `EXTEND_CLOCK_FOR_NAS` and any clock-touching exploration flag must be stripped or default-off in the shipped submission (disqualification risk).
+
+### Isabella search verdict (2026-06-10)
+Searched everywhere: the organisers' `NAS-Unseen-Datasets` repo (README updated 2026-05-31, still "Code Coming Soon"), both organisers' `cvpr-nas-datasets` repos (generators exist for CIFARTile, Gutenberg, Language, MultNIST only, plus `data_packager.py`), the starter kit, GitHub code search. **The Isabella generator is not published anywhere.** Two consequences:
+- **DIY path if we want the analog:** the museum audio is public (`gardnermuseum.org/experience/music`) and the recipe is published (5 s clips, 64-band spectrograms, 1x64x128, 4 era labels, Geada section 4.6). Half a day of work, only worth it if the transfer suite's spectrogram stand-in (AudioMNIST/SpeechCommands) shows something interesting.
+- **Useful find for the transfer suite:** `cvpr-nas-datasets/data_packager.py` is the organisers' own script for packaging datasets into the competition format. Use it (or mirror it) for CIFAR/EMNIST/MedMNIST packaging instead of writing our own from scratch.
+
 ### Overfitting guards (we tune on 13 datasets, the hidden ones are the exam)
 - No hand-tuned constants: thresholds derive from measured noise.
 - Leave-one-out for every design choice; judged by regret, not 13/13 correctness.
