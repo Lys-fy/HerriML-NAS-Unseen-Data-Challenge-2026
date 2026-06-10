@@ -54,9 +54,13 @@ Per dataset, with a budget ledger and fractions that scale to the real time limi
 1. MEASURE  (<1 min, CPU): metadata + corr-decay fingerprint
    -> flags: encoded? long-range? channel count (stem choice)
 2. AUG      (~5-8 min): two-arm probe (optionally zero-cost pre-filter)
-3. BACKBONE GATE (~15 min): conv / tcn1d / tcn2d short-train at matched
-   budget; fingerprint sets the prior arm (encoded -> tcn1d prior,
-   else tcn2d); abstain to the prior when the gap is within noise
+3. BACKBONE BRANCH (the fingerprint decides if the bake-off runs at all):
+   corr1 HIGH (image-like, 9 of 13 public ds) -> SKIP the bake-off
+   entirely, backbone := TCN-2d (it never loses on this family), the
+   ~15 min go to training. corr1 LOW (encoded) -> run the full gate
+   (conv vs tcn1d vs tcn2d short-train); pick the leader only if its
+   margin beats the noise, else abstain to the encoded-prior default
+   (which arm that is = open question, decided by Phase A LOO analysis)
 4. STEEPNESS GATE (free, reuses gate curves): flat landscape ->
    skip the depth/width search entirely
 5. SEARCH   (0-25 min, only if steep): EGNAS depth/width inside the
@@ -74,6 +78,75 @@ Per dataset, with a budget ledger and fractions that scale to the real time limi
 ```
 
 Failure containment: every stage has a timeout and a fallback to the previous default; the worst case degrades to plain v9 behavior, never to a crash.
+
+### Pipeline diagram (draft, renders in Obsidian)
+
+Reading guide: diamonds are the runtime yes/no gates, every branch states what results from it. Dashed = the abstain/default path (the bounded-downside design). Blue = cheap measurement, yellow = gated probes, red = the one expensive stage. Small numbers = the evidence behind each piece.
+
+```mermaid
+flowchart TD
+    classDef measure fill:#e8f3fc,stroke:#1f77b4,color:#000
+    classDef gate fill:#fff3cd,stroke:#b8860b,color:#000
+    classDef train fill:#fdecea,stroke:#b53030,color:#000
+    classDef defpath fill:#f0f0f0,stroke:#888,color:#333,stroke-dasharray: 5 4
+    classDef art fill:#f6f0fa,stroke:#7d5ba6,color:#000
+
+    IN["unseen dataset<br/>metadata + clock"]
+    FP["1 MEASURE: fingerprint<br/>corr-decay on raw tensors<br/>seconds, CPU"]:::measure
+    AUG["2 AUG PROBE: two-arm A/B<br/>~6 min"]:::measure
+    DAUG{"aug arm beats<br/>no-aug arm?"}
+    AUGON["train with aug<br/>(+ mixup variant)"]
+    AUGOFF["aug off<br/>(Language-type win, +4.2)"]:::defpath
+
+    DENC{"corr1 < 0.1 ?<br/>= encoded data?<br/>(4/13 public ds)"}
+    SKIPBO["SKIP bake-off<br/>backbone := TCN-2d<br/>never loses on image-like<br/>saves ~15 min -> training"]:::defpath
+    GATE["3 BACKBONE GATE<br/>conv vs tcn1d vs tcn2d<br/>short-train, ~15 min"]:::gate
+    DLEAD{"leader margin<br/>> measured noise?"}
+    PICK["backbone := leader<br/>(tcn1d on Language +3.8,<br/>conv on Gutenberg)"]
+    PRIOR["backbone := encoded prior<br/>(arm TBD by Phase A LOO)<br/>gate never below default"]:::defpath
+
+    DSTEEP{"4 landscape steep?<br/>early spreads > noise?"}
+    SKIPS["skip depth/width search<br/>whole slice -> training<br/>(search returns default<br/>on most ds anyway)"]:::defpath
+    SEARCH["5 SEARCH depth/width<br/>incumbent = D=6 default<br/>0-25 min"]:::gate
+    DCAND{"candidate beats D=6<br/>significantly + verified?"}
+    ADOPT["adopt searched arch<br/>(CIFARTile D=5 beat fixed)"]
+    KEEPD["keep D=6 default<br/>(blocks the Language<br/>D=4 false-strike)"]:::defpath
+
+    DRAND{"6 encoded AND<br/>budget remains?"}
+    RAND["RANDOM ARM<br/>K wide samples, 0-15 min"]:::gate
+    DRBEST{"random best clearly<br/>> incumbent?"}
+    RADOPT["adopt random arch<br/>(Chesseract +0.9 vs +0.3)"]
+    RDISC["discard, keep incumbent"]:::defpath
+
+    TRAIN["7 TRAIN-TO-BUDGET<br/>cosine to LR=0, EMA<br/>60-90+ min<br/>(5 wins / 0 regressions)"]:::train
+    OUT["predictions"]
+    REC[("decision record JSON<br/>every gate: measurement,<br/>margin, choice, time spent")]:::art
+
+    IN --> FP --> AUG
+    AUG --> DAUG
+    DAUG -->|yes| AUGON --> DENC
+    DAUG -.->|no| AUGOFF -.-> DENC
+    DENC -.->|"no: image-like"| SKIPBO -.-> DSTEEP
+    DENC -->|"yes: encoded"| GATE --> DLEAD
+    DLEAD -->|yes| PICK --> DSTEEP
+    DLEAD -.->|no| PRIOR -.-> DSTEEP
+    DSTEEP -.->|"no: flat"| SKIPS -.-> DRAND
+    DSTEEP -->|"yes"| SEARCH --> DCAND
+    DCAND -->|yes| ADOPT --> DRAND
+    DCAND -.->|no| KEEPD -.-> DRAND
+    DRAND -->|yes| RAND --> DRBEST
+    DRAND -.->|no| TRAIN
+    DRBEST -->|yes| RADOPT --> TRAIN
+    DRBEST -.->|no| RDISC -.-> TRAIN
+    TRAIN --> OUT
+    FP -.-> REC
+    GATE -.-> REC
+    SEARCH -.-> REC
+    RAND -.-> REC
+    TRAIN -.-> REC
+```
+
+Open layout/content questions for the polished (matplotlib or Excalidraw) version: budget bar under the flow (2h vs the real 1h allocations), and whether the aug probe should be drawn before or after the backbone branch (it runs before, but visually it is a side decision).
 
 Budget sketch at 2h: 1 + 8 + 15 + (0-25) + (0-15) + 60-90 train. At the real Phase-2 1h, fractions halve and the steepness gate earns its keep (most datasets skip straight to training).
 
