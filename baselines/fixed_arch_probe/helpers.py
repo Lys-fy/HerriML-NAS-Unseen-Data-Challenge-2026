@@ -586,10 +586,63 @@ class _TCNBlock2D(nn.Module):
         return self.act(self.net(x) + x)
 
 
+def _wn_conv2d(ch: int, kernel: int, pad: int, dilation: int) -> nn.Module:
+    """Weight-normalized conv, canonical-TCN style (Bai et al. 2018)."""
+    conv = nn.Conv2d(ch, ch, kernel, padding=pad, dilation=dilation)
+    try:
+        from torch.nn.utils.parametrizations import weight_norm
+        return weight_norm(conv)
+    except Exception:
+        return nn.utils.weight_norm(conv)
+
+
+class _TCNBlock2DCanonical(nn.Module):
+    """The canonical TCN residual block (Bai et al. 2018, as in the darts
+    library's TCNModel), adapted to 2-D: weight-normalized convs + ReLU +
+    dropout inside the block, NO BatchNorm. A/B candidate vs _TCNBlock2D
+    (low-priority ledger item)."""
+
+    def __init__(self, ch: int, kernel: int, dilation: int, p_drop: float = 0.1):
+        super().__init__()
+        pad = (kernel - 1) * dilation // 2
+        self.net = nn.Sequential(
+            _wn_conv2d(ch, kernel, pad, dilation),
+            nn.ReLU(inplace=True), nn.Dropout2d(p_drop),
+            _wn_conv2d(ch, kernel, pad, dilation),
+            nn.ReLU(inplace=True), nn.Dropout2d(p_drop),
+        )
+
+    def forward(self, x):
+        return self.net(x) + x
+
+
+class _TCNBlock2DGELU(nn.Module):
+    """Our block with GELU instead of ReLU (the modern-activation A/B arm,
+    ConvNeXt-style). Everything else identical to _TCNBlock2D."""
+
+    def __init__(self, ch: int, kernel: int, dilation: int):
+        super().__init__()
+        pad = (kernel - 1) * dilation // 2
+        self.net = nn.Sequential(
+            nn.Conv2d(ch, ch, kernel, padding=pad, dilation=dilation, bias=False),
+            nn.BatchNorm2d(ch), nn.GELU(),
+            nn.Conv2d(ch, ch, kernel, padding=pad, dilation=dilation, bias=False),
+            nn.BatchNorm2d(ch),
+        )
+        self.act = nn.GELU()
+
+    def forward(self, x):
+        return self.act(self.net(x) + x)
+
+
+_TCN_BLOCKS = {"bn": _TCNBlock2D, "canonical": _TCNBlock2DCanonical,
+               "gelu": _TCNBlock2DGELU}
+
+
 class TCN2D(nn.Module):
     def __init__(self, in_channels: int, num_classes: int, input_h: int, input_w: int,
                  base_width: int = 48, n_blocks: int = 6, kernel: int = 3,
-                 stem: str = "conv3"):
+                 stem: str = "conv3", block: str = "bn"):
         super().__init__()
         # Phase A5 retest: the channel-embed stem was validated on the CONV
         # backbone only; this option tests whether it composes with the
@@ -602,8 +655,9 @@ class TCN2D(nn.Module):
         else:
             self.stem = _conv_bn_act(in_channels, base_width, 3, 1)
         max_dil = max(1, min(input_h, input_w) // 2)  # cap to spatial extent
+        blk = _TCN_BLOCKS[block]
         self.blocks = nn.Sequential(*[
-            _TCNBlock2D(base_width, kernel, dilation=min(2 ** i, max_dil))
+            blk(base_width, kernel, dilation=min(2 ** i, max_dil))
             for i in range(n_blocks)])
         self.head = nn.Sequential(nn.AdaptiveAvgPool2d(1), nn.Flatten(),
                                   nn.Linear(base_width, num_classes))
@@ -614,7 +668,7 @@ class TCN2D(nn.Module):
 
 def build_tcn(kind: str, in_channels: int, num_classes: int, input_h: int, input_w: int,
               base_width: int = 48, n_blocks: int = 0, kernel: int = 0,
-              stem: str = "conv3") -> nn.Module:
+              stem: str = "conv3", block: str = "bn") -> nn.Module:
     """Dispatch a TCN probe. kind ∈ {"tcn1d","tcn2d"}. n_blocks/kernel=0 → the
     per-kind defaults (1D: 8 blocks k=7 over the long flattened sequence;
     2D: 6 blocks k=3 over the spatial grid). stem applies to tcn2d only."""
@@ -627,7 +681,8 @@ def build_tcn(kind: str, in_channels: int, num_classes: int, input_h: int, input
         nb = n_blocks or 6
         k = kernel or 3
         return TCN2D(in_channels, num_classes, input_h, input_w,
-                     base_width=base_width, n_blocks=nb, kernel=k, stem=stem)
+                     base_width=base_width, n_blocks=nb, kernel=k, stem=stem,
+                     block=block)
     raise ValueError(f"unknown TCN kind: {kind!r}")
 
 

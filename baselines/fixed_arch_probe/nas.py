@@ -280,11 +280,13 @@ class NAS:
             nb = int(os.environ.get("PROBE_TCN_BLOCKS", "0"))
             k = int(os.environ.get("PROBE_TCN_KERNEL", "0"))
             tstem = os.environ.get("PROBE_TCN_STEM", "conv3")
+            tblock = os.environ.get("PROBE_TCN_BLOCK", "bn")
             print(f"  PROBE_ARCH={probe_arch}: building TCN @ W={fw} "
                   f"blocks={nb or 'default'} kernel={k or 'default'} "
-                  f"stem={tstem} (in={in_ch}x{h}x{w}, classes={nc})")
+                  f"stem={tstem} block={tblock} (in={in_ch}x{h}x{w}, classes={nc})")
             model = build_tcn(probe_arch, in_ch, nc, h, w,
-                              base_width=fw, n_blocks=nb, kernel=k, stem=tstem)
+                              base_width=fw, n_blocks=nb, kernel=k, stem=tstem,
+                              block=tblock)
             self._refund_clock(nas_start)
             return model
 
