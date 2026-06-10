@@ -182,7 +182,7 @@ The strongest possible generalization test for an Unseen Data Challenge entry: e
 - EuroSAT: satellite patches, the GeoClassing analog
 - AudioMNIST or SpeechCommands as spectrogram tensors: a modality none of the 13 covers, fingerprint behavior unknown (the interesting case)
 - A synthesized cellular automaton with a DIFFERENT rule than GameOfLife (Day and Night, Seeds): trivially generatable, tests whether the GameOfLife win was rule-specific
-- Isabella, IF obtainable from the organisers' public dataset repo: the one official competition dataset we never trained on, the closest possible Phase-2 proxy (check github.com/Towers-D/NAS-Unseen-Datasets)
+- Isabella: NOT downloadable (checked 2026-06-10: license issues, the organisers' repo promises "Isabella-like dataset generation code coming soon", worth re-checking before July). Isabella is the audio-spectrogram member of the family, so the AudioMNIST/SpeechCommands spectrogram analog above is its stand-in
 
 What we check, in order of importance:
 1. The decision record: does the fingerprint call them image-like, does the gate route to TCN-2d, do the searched depths land sensibly. A wrong family call on ordinary image data is exactly the failure we want to catch before July.
