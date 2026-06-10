@@ -72,6 +72,8 @@ Four parallel research agents scanned the literature against our empirical findi
 
 **Learning curves and ranking reliability:** [[2023 - LC-PFN Bayesian Learning Curve Extrapolation]], [[2024 - ifBO In-Context Freeze-Thaw BO]], [[2021 - Training Speed Estimation (TSE)]] (sum of training losses out-ranks early val-acc, zero overhead), [[2021 - How Powerful are Performance Predictors]], [[2024 - AdaptSH Hypothesis-Test Successive Halving]] (significance-gated elimination).
 
+**Block design and activations:** [[2016 - GELU]] (the modern activation, the gelu arm of the queued TCN block A/B).
+
 **Search-space design and receptive field:** [[2024 - einspace]] (organiser-adjacent expressive space), [[2024 - UniRepLKNet]] (one fixed wide-receptive-field ConvNet across 5 modalities, legitimises our dilated backbone), [[2022 - RF-Next]] (per-task dilation search, offline), [[2024 - Frequency-Adaptive Dilated Convolution]] (dilation from frequency content).
 
 ## Notes on citation hygiene
