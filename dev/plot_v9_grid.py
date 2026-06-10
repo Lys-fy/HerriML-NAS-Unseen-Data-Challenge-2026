@@ -19,21 +19,22 @@ OUT.mkdir(parents=True, exist_ok=True)
 
 CONV = "#1f77b4"; T2 = "#ff7f0e"; V9 = "#2c8a3a"; BENCHC = "#b53030"
 
-# name, codename, benchmark, conv test raw, tcn2d-fixed test raw, v9 arch
+# name, codename, benchmark, conv test raw, tcn2d-fixed test raw, v9 arch,
+# v9 FINAL test raw (seed-42 run complete, total +52.4)
 DATASETS = [
-    ("Language",    "LaMelo",    85.200, 83.68, 88.24, "D7 W48"),
-    ("Cryptic",     "Cryptic",    0.000, 70.27, 71.18, "D6 W48"),
-    ("AddNIST",     "Adaline",   89.850, 95.82, 96.62, "D8 W48"),
-    ("CIFARTile",   "Caitie",    47.008, 48.30, 72.20, "D5 W48"),
-    ("Chesseract",  "Chester",   57.826, 59.10, 57.08, "D7 W48"),
-    ("GameOfLife",  "conway",    47.530, 99.96, 99.99, "D6 W48"),
-    ("GeoClassing", "Sadie",     80.330, 95.38, 95.49, "D4 W48"),
-    ("Gutenberg",   "Gutenberg", 40.980, 47.08, 40.62, "D4 W48"),
-    ("MultNIST",    "Mateo",     90.870, 94.76, 95.52, "D8 W32"),
-    ("Myofibre",    "Myopia",    87.928, 88.33, 91.96, "D5 W48"),
-    ("Sudoku",      "Sokoto",     0.000, 94.46, 88.14, "D8 W48"),
-    ("Voxel",       "Volga",     71.350, 78.16, 80.33, "D8 W48"),
-    ("Windspeed",   "windspeed", 13.492, 19.74, 19.74, "D7 W48"),
+    ("Language",    "LaMelo",    85.200, 83.68, 88.24, "D7 W48", 85.21),
+    ("Cryptic",     "Cryptic",    0.000, 70.27, 71.18, "D6 W48", 73.70),
+    ("AddNIST",     "Adaline",   89.850, 95.82, 96.62, "D8 W48", 96.56),
+    ("CIFARTile",   "Caitie",    47.008, 48.30, 72.20, "D5 W48", 70.65),
+    ("Chesseract",  "Chester",   57.826, 59.10, 57.08, "D7 W48", 57.42),
+    ("GameOfLife",  "conway",    47.530, 99.96, 99.99, "D6 W48", 99.99),
+    ("GeoClassing", "Sadie",     80.330, 95.38, 95.49, "D4 W48", 95.51),
+    ("Gutenberg",   "Gutenberg", 40.980, 47.08, 40.62, "D4 W48", 40.03),
+    ("MultNIST",    "Mateo",     90.870, 94.76, 95.52, "D8 W32", 94.80),
+    ("Myofibre",    "Myopia",    87.928, 88.33, 91.96, "D5 W48", 88.78),
+    ("Sudoku",      "Sokoto",     0.000, 94.46, 88.14, "D8 W48", 75.44),
+    ("Voxel",       "Volga",     71.350, 78.16, 80.33, "D8 W48", 80.14),
+    ("Windspeed",   "windspeed", 13.492, 19.74, 19.74, "D7 W48", 20.73),
 ]
 
 
@@ -50,22 +51,20 @@ def load(p):
 fig, axes = plt.subplots(4, 4, figsize=(19, 17), squeeze=False)
 flat = axes.flatten()
 
-for ax, (name, code, bench, conv_raw, t2_raw, arch) in zip(flat, DATASETS):
+for ax, (name, code, bench, conv_raw, t2_raw, arch, v9_raw) in zip(flat, DATASETS):
     series = [
         ("conv (v8)", REPO / f"dev/logs/tier2a_p1_v8/p1v8_s42/{code}.csv",
          CONV, f"conv  {conv_raw:.1f}%", 1.6),
         ("tcn2d fixed", REPO / f"dev/logs/tcn_probe/tcn2d_{name}_s42/{code}.csv",
          T2, f"tcn2d-fix {t2_raw:.1f}%", 1.6),
         ("v9", REPO / f"dev/logs/tier2a_p1_v9/p1v9_s42/{code}.csv",
-         V9, None, 2.4),
+         V9, f"v9 search {arch}  {v9_raw:.1f}%", 2.4),
     ]
     lo, hi = 100.0, 0.0
     for key, path, c, lab, lw in series:
         if not path.exists():
             continue
         ep, val, best = load(path)
-        if key == "v9":
-            lab = f"v9 search {arch}  bv={best.max():.1f}%"
         ax.plot(ep, val, color=c, alpha=0.16, linewidth=0.9)
         ax.plot(ep, best, color=c, linewidth=lw, label=lab)
         lo, hi = min(lo, float(best.min())), max(hi, float(best.max()))
@@ -85,19 +84,19 @@ ax = flat[len(DATASETS)]; ax.axis("off")
 ax.text(0.02, 0.98,
         "v9 = dilated TCN-2d backbone,\n"
         "depth/width SEARCHED (seed 42, 2h)\n"
-        "vs conv (v8) and fixed tcn2d refs\n"
-        "(v9 = best-val; refs = final test)\n\n"
-        "search helps / ties (image-like):\n"
-        "  CIFARTile D5, MultNIST D8 W32,\n"
-        "  GameOfLife, GeoClassing D4,\n"
-        "  Cryptic, Voxel, Windspeed\n\n"
-        "search HURTS (encoded data):\n"
-        "  Sudoku D8  75.8 vs fixed 88.1\n"
-        "  Language D7  85.3 vs fixed 88.2\n"
-        "  -> depth mis-ranked in BOTH\n"
-        "     directions on encoded data;\n"
-        "     v10: default-incumbent D=6\n"
-        "     + gate to conv/tcn1d there",
+        "all numbers = FINAL TEST raw\n\n"
+        "TOTAL adj (13 datasets, seed 42):\n"
+        "  conv searched (v8)   +48.2\n"
+        "  v9 dilated searched  +52.4\n"
+        "  dilated FIXED D=6    +59.2\n"
+        "-> the search gives back 7 of the\n"
+        "   fixed backbone's 11 points\n\n"
+        "search HURTS on encoded data:\n"
+        "  Sudoku D8  75.4 vs fixed 88.1\n"
+        "  Language D7  85.2 vs fixed 88.2\n"
+        "  depth mis-ranked BOTH directions\n"
+        "v10 fix: default-incumbent D=6 +\n"
+        "  route encoded data to the gate",
         transform=ax.transAxes, fontsize=10.5, va="top", family="monospace")
 for j in range(len(DATASETS) + 1, len(flat)):
     flat[j].axis("off")
