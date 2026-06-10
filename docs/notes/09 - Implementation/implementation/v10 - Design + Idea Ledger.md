@@ -60,7 +60,14 @@ Per dataset, with a budget ledger and fractions that scale to the real time limi
 4. STEEPNESS GATE (free, reuses gate curves): flat landscape ->
    skip the depth/width search entirely
 5. SEARCH   (0-25 min, only if steep): EGNAS depth/width inside the
-   winning family + verification (+ TSE gating if Phase A passes)
+   winning family + verification (+ TSE gating if Phase A passes).
+   v10 change (from the v9 s42 Language observation): the search INCUMBENT
+   starts at the validated default (D=6 dilated, the +59.2 config), and any
+   deviation, shallower or deeper, must beat it significantly. Plus depth
+   floor D_MIN=5 for the dilated family. Rationale: v9's grow-from-minimum
+   stopped at D=4 on Language (85.3 vs fixed D=6's 88.2), the depth
+   false-strike again; meanwhile D=5 BEAT the fixed D=6 on CIFARTile, so
+   the fix is a stronger incumbent, not banning shallow outright.
 6. RANDOM ARM (0-15 min, only if fingerprint says encoded AND budget
    remains): K wide samples, keep only if significantly better
 7. TRAIN-TO-BUDGET the winner (cosine to LR 0, EMA, best-checkpoint)
