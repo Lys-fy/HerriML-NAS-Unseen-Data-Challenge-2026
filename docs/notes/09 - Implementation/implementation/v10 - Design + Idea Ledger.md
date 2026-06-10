@@ -60,7 +60,7 @@ Per dataset, with a budget ledger and fractions that scale to the real time limi
    ~15 min go to training. corr1 LOW (encoded) -> run the full gate
    (conv vs tcn1d vs tcn2d short-train); pick the leader only if its
    margin beats the noise, else abstain to the encoded-prior default
-   (which arm that is = open question, decided by Phase A LOO analysis)
+   (current best: conv, the most robust arm on the encoded family; Phase A LOO may revise)
 4. STEEPNESS GATE (free, reuses gate curves): flat landscape ->
    skip the depth/width search entirely
 5. SEARCH   (0-25 min, only if steep): EGNAS depth/width inside the
@@ -79,9 +79,9 @@ Per dataset, with a budget ledger and fractions that scale to the real time limi
 
 Failure containment: every stage has a timeout and a fallback to the previous default; the worst case degrades to plain v9 behavior, never to a crash.
 
-### Pipeline diagram (draft, renders in Obsidian)
+### Pipeline diagram (current-best design, renders in Obsidian)
 
-Reading guide: diamonds are the runtime yes/no gates, every branch states what results from it. Dashed = the abstain/default path (the bounded-downside design). Blue = cheap measurement, yellow = gated probes, red = the one expensive stage. Small numbers = the evidence behind each piece.
+Reading guide: diamonds are the runtime yes/no gates; every branch states what results from it. Dashed = the abstain/default path (bounded downside by construction). Blue = cheap measurement, yellow = gated probes, red = the one expensive stage. This is the design we currently believe is optimal; pieces still pending their Phase A test are drawn as decided.
 
 ```mermaid
 flowchart TD
@@ -92,33 +92,33 @@ flowchart TD
     classDef art fill:#f6f0fa,stroke:#7d5ba6,color:#000
 
     IN["unseen dataset<br/>metadata + clock"]
-    FP["1 MEASURE: fingerprint<br/>corr-decay on raw tensors<br/>seconds, CPU"]:::measure
-    AUG["2 AUG PROBE: two-arm A/B<br/>~6 min"]:::measure
+    FP["1 MEASURE<br/>fingerprint: corr-decay<br/>on raw tensors (CPU)"]:::measure
+    AUG["2 AUG PROBE<br/>two-arm A/B"]:::measure
     DAUG{"aug arm beats<br/>no-aug arm?"}
-    AUGON["train with aug<br/>(+ mixup variant)"]
-    AUGOFF["aug off<br/>(Language-type win, +4.2)"]:::defpath
+    AUGON["aug on<br/>+ mixup variant"]
+    AUGOFF["aug off"]:::defpath
 
-    DENC{"corr1 < 0.1 ?<br/>= encoded data?<br/>(4/13 public ds)"}
-    SKIPBO["SKIP bake-off<br/>backbone := TCN-2d<br/>never loses on image-like<br/>saves ~15 min -> training"]:::defpath
-    GATE["3 BACKBONE GATE<br/>conv vs tcn1d vs tcn2d<br/>short-train, ~15 min"]:::gate
+    DENC{"encoded data?<br/>(near-zero local<br/>correlation)"}
+    SKIPBO["skip the bake-off<br/>backbone := TCN-2d<br/>saved time -> training"]:::defpath
+    GATE["3 BACKBONE GATE<br/>conv vs tcn1d vs tcn2d<br/>short-train, matched budget"]:::gate
     DLEAD{"leader margin<br/>> measured noise?"}
-    PICK["backbone := leader<br/>(tcn1d on Language +3.8,<br/>conv on Gutenberg)"]
-    PRIOR["backbone := encoded prior<br/>(arm TBD by Phase A LOO)<br/>gate never below default"]:::defpath
+    PICK["backbone := leader"]
+    PRIOR["backbone := conv<br/>(robust encoded default)"]:::defpath
 
     DSTEEP{"4 landscape steep?<br/>early spreads > noise?"}
-    SKIPS["skip depth/width search<br/>whole slice -> training<br/>(search returns default<br/>on most ds anyway)"]:::defpath
-    SEARCH["5 SEARCH depth/width<br/>incumbent = D=6 default<br/>0-25 min"]:::gate
-    DCAND{"candidate beats D=6<br/>significantly + verified?"}
-    ADOPT["adopt searched arch<br/>(CIFARTile D=5 beat fixed)"]
-    KEEPD["keep D=6 default<br/>(blocks the Language<br/>D=4 false-strike)"]:::defpath
+    SKIPS["skip depth/width search<br/>whole slice -> training"]:::defpath
+    SEARCH["5 SEARCH depth/width<br/>incumbent = default D=6"]:::gate
+    DCAND{"candidate beats incumbent<br/>significantly + verified?"}
+    ADOPT["adopt searched arch"]
+    KEEPD["keep default D=6"]:::defpath
 
     DRAND{"6 encoded AND<br/>budget remains?"}
-    RAND["RANDOM ARM<br/>K wide samples, 0-15 min"]:::gate
+    RAND["RANDOM ARM<br/>K wide samples"]:::gate
     DRBEST{"random best clearly<br/>> incumbent?"}
-    RADOPT["adopt random arch<br/>(Chesseract +0.9 vs +0.3)"]
-    RDISC["discard, keep incumbent"]:::defpath
+    RADOPT["adopt random arch"]
+    RDISC["discard,<br/>keep incumbent"]:::defpath
 
-    TRAIN["7 TRAIN-TO-BUDGET<br/>cosine to LR=0, EMA<br/>60-90+ min<br/>(5 wins / 0 regressions)"]:::train
+    TRAIN["7 TRAIN-TO-BUDGET<br/>cosine to LR=0, EMA,<br/>best checkpoint"]:::train
     OUT["predictions"]
     REC[("decision record JSON<br/>every gate: measurement,<br/>margin, choice, time spent")]:::art
 
@@ -146,7 +146,7 @@ flowchart TD
     TRAIN -.-> REC
 ```
 
-Open layout/content questions for the polished (matplotlib or Excalidraw) version: budget bar under the flow (2h vs the real 1h allocations), and whether the aug probe should be drawn before or after the backbone branch (it runs before, but visually it is a side decision).
+Committed-but-pending choices drawn above (flagged so we remember what needs confirming): the encoded abstain-default = conv (most robust across the encoded family so far; Phase A LOO may revise), the steepness gate itself (A2), and the exact noise thresholds (derived, not tuned). Open for the polished matplotlib/Excalidraw version: a budget bar under the flow with the 2h and 1h allocations.
 
 Budget sketch at 2h: 1 + 8 + 15 + (0-25) + (0-15) + 60-90 train. At the real Phase-2 1h, fractions halve and the steepness gate earns its keep (most datasets skip straight to training).
 
