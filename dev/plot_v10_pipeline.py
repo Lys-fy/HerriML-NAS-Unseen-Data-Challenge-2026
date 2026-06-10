@@ -109,7 +109,7 @@ arrow([(11.5, 18.2), (9.7, 17.9)], label="yes", lab_dx=-0.75, lab_dy=0.35)
 arrow([(15.3, 18.2), (16.0, 17.9)], dashed=True, label="no", lab_dx=-0.15, lab_dy=0.4)
 
 # ---- MICRO container -------------------------------------------------------
-container(0.8, 9.7, 17.6, 16.0, "MICRO SEARCH      within family:  D in {5..8},   W in {16, 24, 32, 48}")
+container(0.8, 9.7, 17.6, 16.0, "MICRO SEARCH      within family:  D in {4..8},   W in {16, 24, 32, 48}")
 diamond(9, 14.5, 4.6, 1.5, "landscape steep?\nearly spreads\n> noise?")
 box(3.7, 12.4, 4.2, 1.35, "skip micro search\narch := default D=6\nslice -> training", C_DEF, dashed=True)
 box(13.4, 12.9, 5.4, 1.55, "depth-grow / width-prune\nincumbent = default D=6\ncandidates ranked by TSE\n(within-family only)", C_GATE, fs=9)

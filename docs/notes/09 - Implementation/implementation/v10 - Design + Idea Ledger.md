@@ -65,13 +65,17 @@ Per dataset, with a budget ledger and fractions that scale to the real time limi
    skip the depth/width search entirely
 5. SEARCH   (0-25 min, only if steep): EGNAS depth/width inside the
    winning family + verification (+ TSE gating if Phase A passes).
-   v10 change (from the v9 s42 Language observation): the search INCUMBENT
-   starts at the validated default (D=6 dilated, the +59.2 config), and any
-   deviation, shallower or deeper, must beat it significantly. Plus depth
-   floor D_MIN=5 for the dilated family. Rationale: v9's grow-from-minimum
-   stopped at D=4 on Language (85.3 vs fixed D=6's 88.2), the depth
-   false-strike again; meanwhile D=5 BEAT the fixed D=6 on CIFARTile, so
-   the fix is a stronger incumbent, not banning shallow outright.
+   v10 change (CORRECTED 2026-06-10 after the full v9 s42 arch map): the
+   search INCUMBENT starts at the validated default (D=6 dilated, the +59.2
+   config), and any deviation, shallower or deeper, must beat it
+   significantly. Rationale: on the ENCODED datasets the search mis-picks
+   depth in BOTH directions (Language D=7 -> 85.3 vs fixed D=6 88.2;
+   Sudoku D=8 -> 75.8 vs fixed D=6 88.1), while its shallow picks on
+   image-like data were harmless or good (GeoClassing D=4 tied the fixed
+   D=6; CIFARTile D=5 beat it). So: no depth floor needed (an earlier
+   draft said D_MIN=5 based on a misread arch log, the D=4 picks were NOT
+   the problem); the default-incumbent rule alone is the fix, and on
+   encoded data the macro gate routes away from the dilated family anyway.
 6. RANDOM ARM (0-15 min, only if fingerprint says encoded AND budget
    remains): K wide samples, keep only if significantly better
 7. TRAIN-TO-BUDGET the winner (cosine to LR 0, EMA, best-checkpoint)
@@ -107,7 +111,7 @@ flowchart TD
         PRIOR["backbone := conv<br/>(robust encoded default)"]:::defpath
     end
 
-    subgraph MICRO["MICRO SEARCH: within family, D in {5..8}, W in {16,24,32,48}"]
+    subgraph MICRO["MICRO SEARCH: within family, D in {4..8}, W in {16,24,32,48}"]
         DSTEEP{"landscape steep?<br/>early spreads > noise?"}
         SKIPS["skip micro search<br/>arch := default D=6<br/>whole slice -> training"]:::defpath
         SEARCH["depth-grow / width-prune<br/>incumbent = default D=6<br/>candidates ranked by TSE<br/>(within-family only)"]:::gate
