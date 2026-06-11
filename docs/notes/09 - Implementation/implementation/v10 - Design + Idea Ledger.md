@@ -1,7 +1,23 @@
 ^# v10 - Design + Idea Ledger
 
-> **Status:** 🟡 design phase (2026-06-10). v9 reduced to seed 42 only (watcher auto-cancels seeds 1337/2024); Phase A fully scripted and AUTO-QUEUED behind it. v10 is an EXPERIMENT, not the submission. | **Topic:** The consolidated verdict on every idea discussed, the v10 design that ships the survivors, and the v11 shortlist.
+> **Status:** 🟢 BUILT (2026-06-11): `baselines/v10/` implements the measure-gate-train pipeline with every Phase-A-validated piece; smoke queued behind A6 on spark. Phase A COMPLETE, verdicts below. v10 is an EXPERIMENT, not the submission. | **Topic:** The consolidated verdict on every idea discussed, the v10 design that ships the survivors, and the v11 shortlist.
 > **Related:** [[SOTA Scan - Novel Directions]], [[Tier 2a - TCN Excursion]], [[Key Learnings]], [[Run State + Handoff]], [[Probe-Driven Self-Configuration]]
+
+## Phase A verdicts (COMPLETE 2026-06-11, figures: `images/phaseA/`)
+
+What each test was and what it showed. Analysis: `dev/analyze_phaseA.py`; figures: `phaseA_gate_grid.png` (the 39 live bake-off curves, x-axis = wall-clock minutes since epoch TIME varies 1.5s to 268s across datasets/arms, so epoch counts 1..244 at matched ~6 min are expected) and `phaseA_verdicts.png` (the verdict bars).
+
+| Test | What it was | Verdict |
+|---|---|---|
+| **A1 backbone gate (live)** | 13 datasets x 3 family arms, ~6 min matched short-train, aug off | **VALIDATED with a structure correction.** Routing totals (final adj of picks): fixed tcn2d +59.2, gate-EVERYWHERE +58.5 (NET NEGATIVE: falls into the Myofibre/GeoClassing early-leader traps), **fingerprint+gate +61.2**, oracle +63.2. The fingerprint SKIP is load-bearing. Both conv stress cases passed (Gutenberg, Sudoku: conv leads early where conv truly wins). Language is the one delicate call (early board says tcn2d, truth tcn1d; cost 0.75, bounded). |
+| **A2 steepness gate** | analysis from v9: does depth/width search pay? | **Superseded by the stronger finding:** v9's searched-depth NET HURTS vs fixed D=6 (only Cryptic clearly gained). v10 therefore replaces grow-from-minimum with the default-incumbent rule (D=6 incumbent, candidates {4,8} need significant verified wins). Width search DROPPED entirely (v9's one width-prune, MultNIST W=32, scored below the fixed W=48). |
+| **A3 aug pre-filter** | zero-cost proxies (naswot+snip) vs the probe's logged decisions | **REJECTED.** 4/7 agreement on unanimous-probe datasets, flips clear calls (CIFARTile, MultNIST, Gutenberg). The proxy wall again; the two-arm probe stays. |
+| **A4 TSE in the depth search** | per-candidate loss logging, TSE vs val ranking, 4 datasets | **REJECTED in-family too.** Spearman 0.4-0.6 but top-1 pick DIFFERS from val's on all 4 datasets (Language negative). Val + verification stays. |
+| **A5a stem x dilated** | channel-embed vs conv3 stem on the tcn2d backbone | **SHIPS.** Voxel 80.75 vs 79.66, Chesseract 60.17 vs 58.81: wins both (stronger than on conv). Gate stays in_ch >= 8. |
+| **A5b aug x family** | Language, tcn1d arms, aug on vs off | **THE BIG ONE: aug decisions do NOT transfer across families.** ON 89.34 vs the conv-derived probe's OFF 86.61 (+2.7). v10 relocates the aug probe AFTER the backbone choice with family-matched arms. |
+| **A6 aug-transfer sweep** (running) | tcn2d aug on/off on the 6 tcn2d-routed aug datasets | results pending; informs how many conv-derived decisions flip under the relocated probe |
+| **Block A/B** | ours (BN+ReLU) vs canonical TCN (WN+dropout) vs GELU | **Both challengers REJECTED** by the predeclared bar. Canonical collapses (CIFARTile 44.9 vs 68.3: BatchNorm is load-bearing in 2D). GELU wins only Language (+1.5, parked as an encoded-conditional observation). |
+| **v9 free retests** | verification fire-rate, width/depth caps, from logs | **Verification KEEPS ITS JOB:** 13 fires in v9 s42 with real depth-false-strike rescues and a width-mirage rejection. Depth cap D=8 was hit (AddNIST, MultNIST, Sudoku, Voxel). |
 
 ## Idea Ledger: what is good, what is rejected, what will not work
 
@@ -43,7 +59,15 @@ So: not a margin regressor, but a clean, zero-training trigger for the specialis
 | Zero-shot proxies for architecture ranking | degenerate to parameter counting on this suite |
 | LSTM ops inside the search | unsearchable under short-train SGD; superseded by tcn1d as a gated arm |
 
-## v10 design: the best-we-can-do pipeline
+## v10 AS BUILT (`baselines/v10/`, 2026-06-11)
+
+The implementation differs from the draft below where Phase A said so:
+- `data_processor.py`: corr1 fingerprint (numpy, seconds) -> `fp_corr1`/`fp_encoded` in metadata; the P1 probe REMOVED from here; train dataset always built on a MUTABLE AugPolicy.
+- `nas.py` (fresh file): fingerprint routing (encoded -> 3-arm gate with abstain-to-conv; image-like -> tcn2d, no bake-off); **aug probe relocated here, after the backbone choice, arms of the chosen family** (A5b); default-incumbent depth (D=6 vs {4,8}, significant + verified wins only); NO width search (v9 evidence); random arm encoded-only, budget-gated; decision record `<codename>_decisions.json` per dataset; budget fractions of the clock (gate 18% encoded-only, aug 8%, depth 14%, random 12%) with low-budget collapse (<35 min: no gate/search/random, encoded defaults to conv; <15 min: no aug probe either).
+- `trainer.py`: train-to-budget defaults (PATIENCE 999, MAX_EPOCHS 600).
+- Smoke: Language (encoded full path), Voxel (image path + embed stem), Sudoku at 0.15h (the collapse path), queued behind A6.
+
+## v10 design: the best-we-can-do pipeline (original draft, kept for context)
 
 Principle (the whole project in one line): measure first, decide only when the evidence beats the noise, otherwise keep the strong default, and spend every saved minute on training.
 

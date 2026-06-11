@@ -75,6 +75,8 @@ Local pixel correlation (corr1) on raw tensors, seconds of CPU, no training: **c
 ### 14. Verdicts go stale when the regime changes
 The stem, the aug decisions, and the verification machinery were all validated on the CONV backbone with early-stop training. After switching to the dilated backbone + train-to-budget, those verdicts are conjectures again. Phase A re-checks them (stem x dilated, aug x tcn1d, does verification ever fire usefully for the dilated family). Rule: a component verdict is only as durable as the regime it was measured in.
 
+**Phase A confirmed it live (2026-06-11):** the aug decision does NOT transfer across families (Language tcn1d: aug ON 89.3 vs the conv-derived probe's OFF 86.6), so v10 relocates the aug probe after the backbone choice with family-matched arms. The stem verdict DID transfer and got stronger (channel-embed wins on the dilated family too). And verification kept its job in the new regime (13 fires in v9, real rescues). Three components, three different answers: regime re-checks are not optional. The same phase also confirmed Learning 12 live: gating EVERY dataset scores +58.5 (below the +59.2 fixed default), while fingerprint-routed gating scores +61.2: a gate is only as good as the routing that decides when it may run.
+
 ---
 
 ## Where this leaves us — the path forward (updated 2026-06-10)
