@@ -265,7 +265,13 @@ class NAS:
                 except Exception:
                     results[arm] = 0.0
                 del model
-            use_aug = results["on"] >= results["off"]
+            # Asymmetric, conservative rule (the validated P1 shape): aug is
+            # regularization, so at probe horizons OFF leads even where ON
+            # pays at full budget (A6: full-size tcn2d arms at 0.3h voted OFF
+            # broadly, contradicting known-good 2h ON results). Deviate from
+            # the metadata default (ON) only on a CLEAR off-margin.
+            off_margin = float(os.environ.get("AUG_OFF_MARGIN", "0.02"))
+            use_aug = results["off"] - results["on"] < off_margin
             if use_aug:
                 (policy.flip, policy.crop_pad, policy.cutout_size) = saved
                 self.metadata["mixup_alpha"] = 0.0
