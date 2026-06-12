@@ -125,11 +125,9 @@ covered regions, encoded board games) as a further generalisation test.
 \onecolumn
 \begin{figure}[p]
 \centering
-\includegraphics[width=0.96\textwidth,height=0.9\textheight,keepaspectratio]{pipeline_block.pdf}
-\caption{The decision pipeline, run once per unseen dataset (stages 1
-to 6, read column-wise). Each stage adopts a deviation from its default
-only on clear evidence; the dashed chips are the defaults the pipeline
-falls back to.}
+\includegraphics[width=\textwidth,height=0.92\textheight,keepaspectratio]{pipeline.png}
+\caption{The decision pipeline, run once per unseen dataset. Diamonds
+are runtime decisions, dashed paths are the abstain-to-default routes.}
 \label{fig:pipe}
 \end{figure}
 
