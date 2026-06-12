@@ -237,6 +237,26 @@ Chain on spark: v9 s42 finishes → `v9_s42_only` watcher kills seeds 1337/2024 
 
 All A5-style retests are seed-42 half-budget direction checks, not precision measurements; anything that flips gets the full treatment.
 
+## Budget-scaled extensions (team decision 2026-06-12)
+
+The budget-ladder idea extended from "stage budgets scale with the clock" to "the pipeline's AMBITION scales with the clock". Three pieces, with the lessons from the rich-vocab failures baked in (the v6-era verdict, precisely stated: per-layer op mixing selected by short-train ranking fails, twice proven; whole fixed architectures evaluated properly succeed: the dilated conv sat unused in the failed vocabulary and was later worth +11 as a fixed backbone).
+
+### 1. Tiered architecture roster + the FAMILY ADMISSION PROTOCOL
+New architectures enter ONLY as fixed family arms in the gate (never as vocab ops, never as new search dimensions). The fixed core {conv, tcn1d, tcn2d} is untouchable; arms are additive and reversible. Roster tiers: base arms always; at >=4h budgets add admitted tier-2 families (candidates: row-GRU, MLP-Mixer); at >=8h tier-3 (state-space). A candidate family must pass the gauntlet (~1.5-2 GPU days each) before going live:
+1. Full-budget fixed-arch sweep across all 13 (the TCN-excursion recipe). Beats existing arms nowhere -> not admitted (every arm costs gate budget).
+2. Rankability check: does the family show its strength within a gate-arm horizon? Determines the budget TIER at which the arm is admissible (recurrent nets thrash in short arms: the BiLSTM evidence; a GRU may only be rankable at 15+ minute arms).
+3. Family-matched aug probe (the aug-transfer lesson).
+4. Gate replay on recorded curves: confirm routing quality does not degrade (no new Myofibre-style traps).
+
+### 2. Heterogeneous ensemble at long budgets
+At >=4h, if >=2 gate arms land within the noise margin, train the top two fully and logit-average; KEEP the ensemble only if it beats the best single on validation (abstain-to-default discipline). Motivation: train-to-budget saturates past ~2h on most datasets; surplus hours convert to accuracy only through diversity. Honest history: same-architecture ensembling was tested before and was MIXED; the new element is cross-family diversity, exactly what that experiment lacked. Validation: an ensemble rung in the budget-ladder study (4h/8h, 3-4 datasets, single-best vs top-2 ensemble).
+
+### 3. Self-generated competition-style datasets (teammates' track)
+Candidates: QR codes with ~10% corruption (occlusions / inserted mistakes; the corruption rate is the difficulty dial, and QR is a fingerprint edge case: error correction spreads information, locality means little), tic-tac-toe encoded, minesweeper, time-series-as-image, dominos-with-mistakes. Strongest possible RQ2 test: family expectations are known in advance and the datasets are built blind to the pipeline. Tooling: the organisers' `Towers-D/cvpr-nas-datasets` (`gen_*.py` templates + `data_packager.py` for the exact format); each dataset needs a ResNet-18 benchmark run; SPECS MUST BE FIXED before observing pipeline behavior on them (no design leakage).
+
+### Proposal candidates (drafted, pending user decision)
+One budget-scaling sentence in Approach/Required Steps (roster + ensemble) and the self-generated datasets in Evaluation Strategy.
+
 ## v11 shortlist (parked until v10 lands)
 
 The TCN excursion's meta-lesson: one different architecture family was worth +11, so screening more families is high-prior. The fingerprint tells us where to aim: the encoded datasets (Language, Sudoku, Chesseract, Gutenberg) are where the image prior fails and our wins are thinnest. Candidates, all SGD-trainable and budget-friendly, screenable in half a day each with the existing PROBE_ARCH harness:
