@@ -1,0 +1,143 @@
+\documentclass[10pt,twocolumn]{article}
+\usepackage[a4paper,margin=1.6cm,bottom=1.6cm]{geometry}
+\usepackage{titlesec}
+\titlespacing*{\section}{0pt}{0.45em}{0.25em}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue]{hyperref}
+\setlength{\columnsep}{0.8cm}
+\pagenumbering{gobble}
+
+\title{\vspace{-0.9cm}\textbf{Measure, Gate, Train: Budget-Aware Self-Configuring\\Neural Architecture Search for Unseen Data}\vspace{-0.15cm}}
+\author{Sebastian Seifert, Luis Melzer \& Leander von Gottberg}
+\date{\vspace{-0.65cm}}
+
+\begin{document}
+\maketitle
+
+\section{Motivation}
+The NAS Unseen-Data Challenge (AutoML 2026) evaluates a fully automated
+pipeline on \emph{hidden} classification datasets under a strict
+wall-clock budget per dataset. All inputs arrive as image-shaped tensors,
+but they are semantically heterogeneous: besides natural and satellite
+images, several datasets are \emph{encoded} data, such as rendered text,
+Sudoku boards, or chess positions, where the spatial prior of a CNN is
+misleading. All decisions must be made at runtime, blind.
+
+Our starting point is the winning method of the 2025 edition, EGNAS
+\cite{egnas}, a macro--micro search (depth, width, per-layer operation)
+over convolutional blocks. Reproducing it surfaced two systematic
+weaknesses. First, rankings from short training runs are unreliable:
+operations that lead after a few epochs often lose after full training,
+so fine-grained (micro) operation search tends to \emph{harm} final
+accuracy. Second, the space is confined to one architecture family: in
+our preliminary experiments a \emph{fixed} 2-D dilated-convolution
+backbone in the style of temporal convolutional networks \cite{tcn}
+clearly outperformed the fully searched CNN baseline on most datasets,
+while plain CNNs and randomly sampled wide-vocabulary architectures won
+precisely on the encoded datasets, mirroring the organisers' observation
+that random search can beat directed NAS there \cite{geada}. The leverage
+lies in choosing the right architecture \emph{family} per dataset, not in
+fine-grained operation search.
+
+\section{Research Questions}
+\textbf{RQ1.} Can macro--micro NAS \cite{egnas} be generalised across
+heterogeneous architecture families (plain CNNs, 2-D dilated and 1-D
+temporal convolution networks), making families \emph{comparable} within a
+single time-budgeted search stage despite unreliable short-training
+rankings?
+\textbf{RQ2.} Can cheap, training-free measurements of the raw data decide
+at runtime which architectural prior fits an unseen dataset?
+\textbf{RQ3.} How can harmful data augmentation be detected at runtime,
+given that augmentation acts as regularisation (it costs accuracy early
+and pays late) and that, as we observe, augmentation decisions do not
+transfer between architecture families?
+
+\section{Approach}
+We propose a \emph{measure--gate--train} pipeline (figure on page~2).
+(1)~\emph{Measure}: a training-free fingerprint of the raw tensors; the
+mean correlation of neighbouring pixels separates encoded from image-like
+data with a wide margin (Table~\ref{tab:fp}). (2)~\emph{Macro stage}: for
+image-like data the dilated backbone is selected directly; only encoded
+data pays for a bake-off in which all families are trained briefly at
+matched wall-clock, and the leader is adopted only if it beats the robust
+default by more than the measured ranking noise, otherwise the pipeline
+\emph{abstains} to the default, making every decision bounded-downside. (3)~\emph{Augmentation probe}: a
+two-arm A/B test run \emph{after} the family choice, with arms of the
+chosen family, using an asymmetric rule that deviates from the default
+only on a clear margin (RQ3). (4)~\emph{Micro stage}: depth search
+anchored on an incumbent default; a deviation must win significantly
+\emph{and} survive verification by re-training at a longer horizon.
+(5)~A \emph{random-search arm} over a wide operation vocabulary runs only
+on encoded data and only if budget remains \cite{geada}. (6)~\emph{Train
+to budget}: the winner trains on the full remaining budget with a cosine
+schedule annealed to zero; all stage budgets are fractions of the clock,
+so the pipeline degrades gracefully from many hours down to minutes (the
+evaluation budget is unknown).
+
+\begin{table}[h]
+\centering\footnotesize
+\caption{Training-free fingerprint on the 13 public datasets:
+neighbouring-pixel correlation separates the data families by 5x.}
+\label{tab:fp}
+\begin{tabular}{lcc}
+\toprule
+ & corr$_1$ range & family \\
+\midrule
+text / boards / puzzles (4) & $-0.05$ to $0.07$ & encoded \\
+all remaining datasets (9) & $0.38$ to $1.00$ & image-like \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Required Steps}
+(1)~Reproduce the EGNAS baseline and probe candidate architecture
+families at full budget (done, preliminary). (2)~Validate each decision
+mechanism in isolation by replaying it against known full-budget outcomes
+(gate reliability, fingerprint separation, augmentation transfer).
+(3)~Integrate the pipeline and verify all execution paths, including the
+low-budget collapse behaviour. (4)~Full multi-seed evaluation.
+(5)~A budget-ladder study (0.5h to 8h) measuring which decision stages pay
+at which budget. (6)~A generalisation test on external datasets that
+played no role in any design choice (CIFAR-10/100, EMNIST, MedMNIST,
+spectrograms). (7)~Submission packaging and stress tests.
+
+\section{Evaluation Strategy}
+Primary evaluation uses the 13 public competition datasets with the
+official adjusted score (accuracy versus a per-dataset benchmark, capped),
+at least three seeds for final configurations. Baselines: the reproduced
+EGNAS search, each fixed architecture family, and an oracle that always
+picks the best family, bounding the achievable gain of the routing. Every
+stage writes its measurements, margins, and choices to a per-dataset
+decision record, so gains and losses are attributable to individual
+decisions. Robustness is evaluated across budgets (30 minutes to 12 hours) and on
+the external suite, and results are compared against published
+per-dataset competition bests \cite{geada}.
+
+
+
+\clearpage
+\onecolumn
+\begin{figure}[p]
+\centering
+\includegraphics[height=0.96\textheight]{pipeline.png}
+\end{figure}
+
+\clearpage
+\begin{thebibliography}{9}\footnotesize\setlength{\itemsep}{1pt}\setlength{\parskip}{0pt}
+\bibitem{egnas} S.~Siddiqui, C.~Kyrkou, T.~Theocharides.
+\emph{Efficient Global Neural Architecture Search}. SN Computer Science
+6:282, 2025.
+\bibitem{geada} R.~Geada, D.~Towers, M.~Forshaw, A.~Atapour-Abarghouei,
+A.~S.~McGough. \emph{Insights from the Use of Previously Unseen Neural
+Architecture Search Datasets}. CVPR 2024.
+\bibitem{tcn} S.~Bai, J.~Z.~Kolter, V.~Koltun. \emph{An Empirical
+Evaluation of Generic Convolutional and Recurrent Networks for Sequence
+Modeling}. arXiv:1803.01271, 2018.
+\end{thebibliography}
+
+\end{document}
