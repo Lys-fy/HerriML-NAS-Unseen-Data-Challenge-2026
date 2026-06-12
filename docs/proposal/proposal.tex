@@ -59,25 +59,27 @@ transfer between architecture families?
 
 \section{Approach}
 We propose a \emph{measure--gate--train} pipeline (figure on page~2).
-(1)~\emph{Measure}: a training-free fingerprint of the raw tensors; the
-mean correlation of neighbouring pixels separates encoded from image-like
-data with a wide margin (Table~\ref{tab:fp}). (2)~\emph{Macro stage}: for
-image-like data the dilated backbone is selected directly; only encoded
-data pays for a bake-off in which all families are trained briefly at
-matched wall-clock, and the leader is adopted only if it beats the robust
-default by more than the measured ranking noise, otherwise the pipeline
-\emph{abstains} to the default, making every decision bounded-downside. (3)~\emph{Augmentation probe}: a
-two-arm A/B test run \emph{after} the family choice, with arms of the
-chosen family, using an asymmetric rule that deviates from the default
-only on a clear margin (RQ3). (4)~\emph{Micro stage}: depth search
-anchored on an incumbent default; a deviation must win significantly
-\emph{and} survive verification by re-training at a longer horizon.
-(5)~A \emph{random-search arm} over a wide operation vocabulary runs only
-on encoded data and only if budget remains \cite{geada}. (6)~\emph{Train
-to budget}: the winner trains on the full remaining budget with a cosine
-schedule annealed to zero; all stage budgets are fractions of the clock,
-so the pipeline degrades gracefully from many hours down to minutes (the
-evaluation budget is unknown).
+(1)~\emph{Measure}: a fingerprint computed directly from the raw input
+tensors, with no training involved. The mean correlation of neighbouring
+pixels separates encoded from image-like data with a wide margin
+(Table~\ref{tab:fp}). (2)~\emph{Macro stage}: for image-like data the
+dilated backbone is selected directly. Only encoded data pays for a
+bake-off in which all families are trained briefly at matched wall-clock.
+The leader is adopted only if it beats the robust default by more than
+the measured ranking noise, otherwise the pipeline \emph{abstains} to the
+default, which makes every decision bounded-downside.
+(3)~\emph{Augmentation probe}: a two-arm A/B test run \emph{after} the
+family choice, with arms of the chosen family, using an asymmetric rule
+that deviates from the default only on a clear margin (RQ3).
+(4)~\emph{Micro stage}: depth search anchored on an incumbent default. A
+deviation must win significantly \emph{and} survive verification by
+re-training at a longer horizon. (5)~A \emph{random-search arm} over a
+wide operation vocabulary runs only on encoded data and only if budget
+remains \cite{geada}. (6)~\emph{Train to budget}: the winner trains on
+the full remaining time with a cosine learning-rate schedule sized to
+reach zero exactly when the budget ends. All stage budgets are fractions
+of the clock, so the pipeline degrades gracefully from many hours down to
+minutes (the evaluation budget is unknown).
 
 \begin{table}[h]
 \centering\footnotesize
@@ -96,7 +98,7 @@ all remaining datasets (9) & $0.38$ to $1.00$ & image-like \\
 
 \section{Required Steps}
 (1)~Reproduce the EGNAS baseline and probe candidate architecture
-families at full budget (done, preliminary). (2)~Validate each decision
+families at full budget (done). (2)~Validate each decision
 mechanism in isolation by replaying it against known full-budget outcomes
 (gate reliability, fingerprint separation, augmentation transfer).
 (3)~Integrate the pipeline and verify all execution paths, including the
@@ -114,9 +116,9 @@ EGNAS search, each fixed architecture family, and an oracle that always
 picks the best family, bounding the achievable gain of the routing. Every
 stage writes its measurements, margins, and choices to a per-dataset
 decision record, so gains and losses are attributable to individual
-decisions. Robustness is evaluated across budgets (30 minutes to 12 hours) and on
-the external suite, and results are compared against published
-per-dataset competition bests \cite{geada}.
+decisions. Robustness is evaluated across budgets (30 minutes to 12 hours), on the
+external suite, and against published per-dataset competition bests
+\cite{geada}.
 
 
 
