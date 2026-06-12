@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-"""v10 decision-pipeline figure (standalone image version of the mermaid
-draft in [[v10 - Design + Idea Ledger]]).
+"""v10 decision-pipeline figure, AS BUILT in baselines/v10 (2026-06-11).
 
-Structure: vertical flow with three big container blocks (MACRO backbone
-search, MICRO within-family search, RANDOM ARM), every yes/no gate drawn as
-a diamond with both outcomes, dashed = abstain/default path, search spaces
-in {} notation. No evidence numbers (clean structural version).
-Layout uses a large canvas with generous spacing; the decision-record rail
-sits fully outside the containers to avoid any overlap.
+Matches the implementation: aug probe AFTER the backbone choice with
+family-matched arms and the asymmetric off-margin rule (A5b + A6); micro =
+depth only with the D=6 incumbent (width search and TSE dropped per
+Phase A); random arm encoded-only; low-budget collapse note; decision-record
+rail outside the containers. No evidence numbers (clean structural version).
 """
 from pathlib import Path
 
@@ -19,16 +17,16 @@ from matplotlib.patches import FancyBboxPatch, Polygon, Rectangle
 REPO = Path(__file__).resolve().parent.parent
 OUT = REPO / "docs/notes/09 - Implementation/implementation/images/v10_pipeline.png"
 
-C_MEAS = ("#e8f3fc", "#1f77b4")   # measurement (cheap)
-C_GATE = ("#fff3cd", "#b8860b")   # gated probe / search
-C_TRAIN = ("#fdecea", "#b53030")  # the expensive stage
-C_DEF = ("#f2f2f2", "#888888")    # abstain / default path
-C_ART = ("#f6f0fa", "#7d5ba6")    # artifact
+C_MEAS = ("#e8f3fc", "#1f77b4")
+C_GATE = ("#fff3cd", "#b8860b")
+C_TRAIN = ("#fdecea", "#b53030")
+C_DEF = ("#f2f2f2", "#888888")
+C_ART = ("#f6f0fa", "#7d5ba6")
 C_PLAIN = ("#ffffff", "#444444")
 
-fig, ax = plt.subplots(figsize=(15, 21))
+fig, ax = plt.subplots(figsize=(15, 22))
 ax.set_xlim(0, 21)
-ax.set_ylim(0, 30.6)
+ax.set_ylim(3.8, 32.4)
 ax.axis("off")
 
 
@@ -76,104 +74,104 @@ def arrow(pts, dashed=False, label=None, lab_dx=0.15, lab_dy=0.0, color=None):
                 style="italic")
 
 
-# ---- top flow (spine at x=9) ----------------------------------------------
-box(9, 29.6, 4.0, 0.9, "unseen dataset\nmetadata + clock", bold=True)
-box(9, 28.2, 6.6, 1.0, "1  MEASURE\nfingerprint: corr-decay on raw tensors (CPU)", C_MEAS)
-box(9, 26.8, 6.6, 1.0, "2  AUG PROBE  two-arm A/B\naug in {on + mixup, off}", C_MEAS)
-diamond(9, 25.2, 4.2, 1.4, "aug arm beats\nno-aug arm?")
-box(5.0, 23.9, 3.2, 0.75, "aug := on + mixup")
-box(13.0, 23.9, 2.9, 0.75, "aug := off", C_DEF, dashed=True)
+# ---- top ---------------------------------------------------------------------
+box(9, 31.6, 4.0, 0.9, "unseen dataset\nmetadata + clock", bold=True)
+box(9, 30.3, 6.8, 1.0, "1  MEASURE (DataProcessor)\nfingerprint: corr1 on raw tensors, CPU seconds", C_MEAS)
+box(3.0, 30.3, 4.4, 1.45, "low-budget collapse:\n< 35 min: no gate / depth /\nrandom (encoded -> conv);\n< 15 min: no aug probe", C_DEF, dashed=True, fs=8.5)
+arrow([(9, 31.15), (9, 30.8)])
 
-arrow([(9, 29.15), (9, 28.7)])
-arrow([(9, 27.7), (9, 27.3)])
-arrow([(9, 26.3), (9, 25.9)])
-arrow([(6.9, 25.2), (5.0, 24.28)], label="yes", lab_dx=-0.85, lab_dy=0.3)
-arrow([(11.1, 25.2), (13.0, 24.28)], dashed=True, label="no", lab_dx=0.35, lab_dy=0.3)
+# ---- MACRO -------------------------------------------------------------------
+container(0.8, 23.7, 17.6, 29.4, "2  MACRO      backbone in {conv, tcn1d, tcn2d}")
+diamond(9, 28.0, 4.4, 1.5, "encoded data?\ncorr1 < 0.2")
+box(3.7, 26.0, 4.2, 1.5, "skip the bake-off\nbackbone := TCN-2d\n+ channel-embed stem (ch >= 8)\nsaved time -> training", C_DEF, dashed=True, fs=8.8)
+box(13.4, 26.3, 5.2, 1.1, "BACKBONE GATE\nshort-train {conv, tcn1d, tcn2d}", C_GATE)
+diamond(13.4, 24.95, 4.0, 1.25, "leader CLEARLY beats\nthe conv arm?\n(margin > noise)", fs=8.4)
+box(9.6, 24.25, 3.1, 0.75, "backbone := leader")
+box(16.2, 24.2, 2.9, 0.95, "backbone := conv\n(encoded default)", C_DEF, dashed=True, fs=9)
 
-# ---- MACRO container -------------------------------------------------------
-container(0.8, 16.7, 17.6, 22.9, "MACRO SEARCH      backbone in {conv, tcn1d, tcn2d}")
-diamond(9, 21.3, 4.6, 1.6, "encoded data?\n(near-zero local\ncorrelation)")
-box(3.7, 19.3, 4.2, 1.35, "skip the bake-off\nbackbone := TCN-2d\nsaved time -> training", C_DEF, dashed=True)
-box(13.4, 19.6, 5.2, 1.1, "BACKBONE GATE\nshort-train {conv, tcn1d, tcn2d}", C_GATE)
-diamond(13.4, 18.2, 3.8, 1.25, "leader margin\n> noise?")
-box(9.7, 17.5, 3.1, 0.75, "backbone := leader")
-box(16.0, 17.4, 3.1, 0.95, "backbone := conv\n(encoded default)", C_DEF, dashed=True)
+arrow([(9, 29.8), (9, 28.75)])
+arrow([(6.8, 28.0), (3.7, 26.78)], dashed=True, label="no: image-like",
+      lab_dx=-2.7, lab_dy=0.45)
+arrow([(11.2, 28.0), (13.4, 26.87)], label="yes: encoded", lab_dx=0.3, lab_dy=0.4)
+arrow([(13.4, 25.75), (13.4, 25.57)])
+arrow([(11.4, 24.95), (9.6, 24.62)], label="yes", lab_dx=-0.75, lab_dy=0.35)
+arrow([(15.4, 24.95), (16.2, 24.7)], dashed=True, label="no", lab_dx=-0.15, lab_dy=0.4)
 
-arrow([(5.0, 23.5), (5.0, 22.6), (7.5, 21.9)])                 # aug-on -> DENC
-arrow([(13.0, 23.5), (13.0, 22.6), (10.5, 21.9)], dashed=True)  # aug-off -> DENC
-arrow([(6.7, 21.3), (3.7, 20.0)], dashed=True, label="no: image-like",
-      lab_dx=-2.6, lab_dy=0.45)
-arrow([(11.3, 21.3), (13.4, 20.17)], label="yes: encoded", lab_dx=0.3, lab_dy=0.4)
-arrow([(13.4, 19.05), (13.4, 18.85)])
-arrow([(11.5, 18.2), (9.7, 17.9)], label="yes", lab_dx=-0.75, lab_dy=0.35)
-arrow([(15.3, 18.2), (16.0, 17.9)], dashed=True, label="no", lab_dx=-0.15, lab_dy=0.4)
+# ---- AUG ---------------------------------------------------------------------
+container(0.8, 19.0, 17.6, 23.1, "3  AUG PROBE      family-matched arms, AFTER the backbone choice")
+box(9, 22.0, 6.4, 1.0, "two small arms OF THE CHOSEN FAMILY\naug-on vs aug-off", C_MEAS)
+diamond(9, 20.55, 5.0, 1.4, "off wins by a CLEAR margin?\n(asymmetric: aug = regularization,\noff leads at probe horizons)", fs=8.3)
+box(5.0, 19.55, 3.0, 0.7, "aug := off + mixup")
+box(13.2, 19.55, 3.2, 0.7, "aug := on (metadata default)", C_DEF, dashed=True, fs=8.7)
 
-# ---- MICRO container -------------------------------------------------------
-container(0.8, 9.7, 17.6, 16.0, "MICRO SEARCH      within family:  D in {4..8},   W in {16, 24, 32, 48}")
-diamond(9, 14.5, 4.6, 1.5, "landscape steep?\nearly spreads\n> noise?")
-box(3.7, 12.4, 4.2, 1.35, "skip micro search\narch := default D=6\nslice -> training", C_DEF, dashed=True)
-box(13.4, 12.9, 5.4, 1.55, "depth-grow / width-prune\nincumbent = default D=6\ncandidates ranked by TSE\n(within-family only)", C_GATE, fs=9)
-diamond(13.4, 11.3, 4.3, 1.4, "TSE + GATE\nbeats incumbent\n> noise AND verified?", fs=8.6)
-box(9.5, 10.5, 3.1, 0.75, "adopt searched arch")
-box(16.2, 10.45, 2.7, 0.75, "keep default D=6", C_DEF, dashed=True, fs=9)
+arrow([(3.7, 25.25), (3.7, 23.6), (5.9, 22.35)], dashed=True)   # skip -> arms
+arrow([(9.6, 23.87), (9.2, 22.5)])                              # leader -> arms
+arrow([(16.2, 23.72), (16.2, 23.3), (12.1, 22.4)], dashed=True)  # conv default -> arms
+arrow([(9, 21.5), (9, 21.25)])
+arrow([(6.5, 20.55), (5.0, 19.9)], label="yes", lab_dx=-0.7, lab_dy=0.3)
+arrow([(11.5, 20.55), (13.2, 19.9)], dashed=True, label="no", lab_dx=0.2, lab_dy=0.35)
 
-arrow([(3.7, 18.6), (3.7, 17.2), (3.7, 15.6), (7.0, 14.9)], dashed=True)
-arrow([(9.7, 17.1), (9.2, 15.27)])
-arrow([(16.0, 16.9), (16.0, 15.8), (11.0, 14.95)], dashed=True)
-arrow([(6.7, 14.5), (3.7, 13.1)], dashed=True, label="no: flat", lab_dx=-1.9, lab_dy=0.45)
-arrow([(11.3, 14.5), (13.4, 13.7)], label="yes", lab_dx=0.25, lab_dy=0.4)
-arrow([(13.4, 12.12), (13.4, 12.0)])
-arrow([(11.3, 11.3), (9.5, 10.9)], label="yes", lab_dx=-0.8, lab_dy=0.35)
-arrow([(15.5, 11.3), (16.2, 10.85)], dashed=True, label="no", lab_dx=-0.1, lab_dy=0.4)
+# ---- MICRO -------------------------------------------------------------------
+container(0.8, 13.9, 17.6, 18.6, "4  MICRO      depth only:  D in {4, 6, 8}   (no width search, no TSE)")
+box(9, 17.4, 7.0, 1.2, "short-train candidates {4, 8} vs the INCUMBENT default D=6\n(skipped for tcn1d / low budget)", C_GATE, fs=9)
+diamond(9, 15.8, 4.8, 1.4, "candidate beats incumbent\n> noise AND verified\nat a longer horizon?", fs=8.5)
+box(5.0, 14.7, 3.2, 0.7, "adopt searched depth")
+box(13.2, 14.7, 3.0, 0.7, "keep default D=6", C_DEF, dashed=True, fs=9)
 
-# ---- RANDOM ARM container ---------------------------------------------------
-container(0.8, 2.9, 17.6, 9.0, "RANDOM ARM      arch ~ {11-op wide vocab}  x  D in {3..12}  x  W in {16, 24, 32, 48}")
-diamond(9, 7.6, 4.6, 1.4, "encoded AND\nbudget remains?")
-box(13.4, 6.2, 4.8, 1.0, "sample K wide archs,\nshort-train each", C_GATE)
-diamond(13.4, 4.9, 3.7, 1.2, "clearly >\nincumbent?")
-box(9.5, 4.1, 3.3, 0.75, "adopt random arch")
-box(16.2, 4.05, 2.7, 0.95, "discard, keep\nincumbent", C_DEF, dashed=True, fs=9)
+arrow([(5.0, 19.2), (5.0, 18.9), (7.4, 18.05)])
+arrow([(13.2, 19.2), (13.2, 18.9), (10.7, 18.05)], dashed=True)
+arrow([(9, 16.8), (9, 16.5)])
+arrow([(6.6, 15.8), (5.0, 15.05)], label="yes", lab_dx=-0.7, lab_dy=0.3)
+arrow([(11.4, 15.8), (13.2, 15.05)], dashed=True, label="no", lab_dx=0.2, lab_dy=0.35)
 
-arrow([(3.7, 11.7), (3.7, 9.4), (3.7, 8.6), (6.9, 7.95)], dashed=True)
-arrow([(9.5, 10.1), (9.1, 8.32)])
-arrow([(16.2, 10.05), (16.2, 9.3), (11.1, 7.95)], dashed=True)
-arrow([(11.3, 7.6), (13.4, 6.72)], label="yes", lab_dx=0.25, lab_dy=0.4)
-arrow([(6.7, 7.6), (1.9, 6.6), (1.9, 1.7), (6.1, 1.45)], dashed=True,
+# ---- RANDOM ------------------------------------------------------------------
+container(0.8, 7.7, 17.6, 13.5, "5  RANDOM ARM      arch ~ {11-op vocab}  x  D in {3..12}  x  W in {16, 24, 32, 48}")
+diamond(9, 12.1, 4.6, 1.4, "encoded AND\nbudget remains?")
+box(13.4, 10.7, 4.8, 1.0, "sample K=6 wide archs,\nshort-train each", C_GATE)
+diamond(13.4, 9.4, 3.9, 1.2, "clearly > incumbent?\n(margin > 2x noise)", fs=8.5)
+box(9.5, 8.6, 3.3, 0.75, "adopt random arch")
+box(16.2, 8.55, 2.7, 0.95, "discard, keep\nincumbent", C_DEF, dashed=True, fs=9)
+
+arrow([(5.0, 14.35), (5.0, 13.7), (7.2, 12.55)])
+arrow([(13.2, 14.35), (13.2, 13.7), (10.9, 12.6)], dashed=True)
+arrow([(11.3, 12.1), (13.4, 11.22)], label="yes", lab_dx=0.25, lab_dy=0.4)
+arrow([(6.7, 12.1), (1.9, 11.0), (1.9, 6.2), (6.1, 5.85)], dashed=True,
       label="no", lab_dx=-1.1, lab_dy=0.4)
-arrow([(13.4, 5.7), (13.4, 5.52)])
-arrow([(11.6, 4.9), (9.5, 4.48)], label="yes", lab_dx=-0.85, lab_dy=0.35)
-arrow([(15.2, 4.9), (16.2, 4.55)], dashed=True, label="no", lab_dx=-0.15, lab_dy=0.4)
+arrow([(13.4, 10.2), (13.4, 10.02)])
+arrow([(11.6, 9.4), (9.5, 8.98)], label="yes", lab_dx=-0.85, lab_dy=0.35)
+arrow([(15.3, 9.4), (16.2, 9.05)], dashed=True, label="no", lab_dx=-0.15, lab_dy=0.4)
 
-# ---- bottom -----------------------------------------------------------------
-box(9, 1.3, 5.8, 1.0, "TRAIN-TO-BUDGET\ncosine to LR=0, EMA, best checkpoint", C_TRAIN, bold=True)
-box(9, 0.25, 2.8, 0.55, "predictions", bold=True)
-arrow([(9.5, 3.7), (9.2, 1.85)])
-arrow([(16.2, 3.55), (16.2, 2.4), (11.95, 1.5)], dashed=True)
-arrow([(9, 0.78), (9, 0.55)])
+# ---- bottom ------------------------------------------------------------------
+box(9, 5.7, 5.8, 1.0, "6  TRAIN-TO-BUDGET\ncosine to LR=0, EMA, best checkpoint", C_TRAIN, bold=True)
+box(9, 4.45, 2.8, 0.6, "predictions", bold=True)
+arrow([(9.5, 8.2), (9.2, 6.25)])
+arrow([(16.2, 8.05), (16.2, 7.0), (11.95, 5.9)], dashed=True)
+arrow([(9, 5.18), (9, 4.78)])
 
-# ---- decision record (rail fully OUTSIDE the containers) ---------------------
+# ---- decision record rail ------------------------------------------------------
 RAILX = 18.6
-box(19.5, 1.3, 2.7, 1.7, "decision record\nJSON\n(every gate:\nmeasure, margin,\nchoice, time)", C_ART, fs=8.8)
-arrow([(12.3, 28.2), (RAILX, 28.2)], dashed=True, color=C_ART[1])     # measure stub
-arrow([(17.6, 19.6), (RAILX, 19.6)], dashed=True, color=C_ART[1])     # macro stub
-arrow([(17.6, 12.9), (RAILX, 12.9)], dashed=True, color=C_ART[1])     # micro stub
-arrow([(17.6, 6.2), (RAILX, 6.2)], dashed=True, color=C_ART[1])       # random stub
-arrow([(11.9, 1.3), (18.15, 1.3)], dashed=True, color=C_ART[1])       # train stub
-ax.plot([RAILX, RAILX], [28.2, 1.3], linestyle=(0, (5, 3)),
+box(19.5, 5.7, 2.7, 1.7, "decision record\nJSON\n(every stage:\nmeasure, margin,\nchoice, time)", C_ART, fs=8.8)
+arrow([(12.45, 30.3), (RAILX, 30.3)], dashed=True, color=C_ART[1])
+arrow([(17.6, 26.3), (RAILX, 26.3)], dashed=True, color=C_ART[1])
+arrow([(12.25, 22.0), (RAILX, 22.0)], dashed=True, color=C_ART[1])
+arrow([(12.55, 17.4), (RAILX, 17.4)], dashed=True, color=C_ART[1])
+arrow([(15.85, 10.7), (RAILX, 10.7)], dashed=True, color=C_ART[1])
+arrow([(11.95, 5.7), (18.1, 5.7)], dashed=True, color=C_ART[1])
+ax.plot([RAILX, RAILX], [30.3, 5.7], linestyle=(0, (5, 3)),
         color=C_ART[1], lw=1.6, zorder=2)
 
-# ---- legend (top left, clear of everything) ----------------------------------
-lx, ly = 1.4, 29.9
+# ---- legend ------------------------------------------------------------------
+lx, ly = 14.6, 31.9
 for dy, (colors, lab, dash) in enumerate([
         (C_MEAS, "cheap measurement", False),
         (C_GATE, "gated probe / search", False),
         (C_TRAIN, "the expensive stage", False),
         (C_DEF, "abstain / default path", True)]):
-    box(lx + 0.4, ly - dy * 0.62, 0.7, 0.4, "", colors, dashed=dash)
-    ax.text(lx + 0.95, ly - dy * 0.62, lab, fontsize=9.5, va="center")
+    box(lx + 0.4, ly - dy * 0.58, 0.7, 0.38, "", colors, dashed=dash)
+    ax.text(lx + 0.95, ly - dy * 0.58, lab, fontsize=9.5, va="center")
 
-fig.suptitle("v10: the measure-gate-train decision pipeline (per unseen dataset)",
-             fontsize=17, y=0.988)
+fig.suptitle("v10 as built: the measure-gate-train decision pipeline (per unseen dataset)",
+             fontsize=16, y=0.988)
 fig.tight_layout(rect=[0, 0, 1, 0.978])
 OUT.parent.mkdir(parents=True, exist_ok=True)
 fig.savefig(OUT, dpi=150)

@@ -110,7 +110,7 @@ Failure containment: every stage has a timeout and a fallback to the previous de
 
 ### Pipeline diagram (current-best design, renders in Obsidian)
 
-Reading guide: diamonds are the runtime yes/no gates; every branch states what results from it. Dashed = the abstain/default path (bounded downside by construction). Blue = cheap measurement, yellow = gated probes, red = the one expensive stage. This is the design we currently believe is optimal; pieces still pending their Phase A test are drawn as decided.
+Reading guide: diamonds are the runtime yes/no gates; every branch states what results from it. Dashed = the abstain/default path (bounded downside by construction). Blue = cheap measurement, yellow = gated probes, red = the one expensive stage. AS BUILT in `baselines/v10/` (2026-06-11): aug probe AFTER the backbone choice with family-matched arms and the asymmetric off-margin rule (A5b + A6); micro = depth only with the D=6 incumbent (width search and TSE dropped per Phase A); low-budget collapse included.
 
 ```mermaid
 flowchart TD
@@ -121,52 +121,53 @@ flowchart TD
     classDef art fill:#f6f0fa,stroke:#7d5ba6,color:#000
 
     IN["unseen dataset<br/>metadata + clock"]
-    FP["1 MEASURE<br/>fingerprint: corr-decay<br/>on raw tensors (CPU)"]:::measure
-    AUG["2 AUG PROBE<br/>two-arm A/B<br/>aug in {on+mixup, off}"]:::measure
-    DAUG{"aug arm beats<br/>no-aug arm?"}
-    AUGON["aug := on + mixup"]
-    AUGOFF["aug := off"]:::defpath
+    FP["1 MEASURE (DataProcessor)<br/>fingerprint: corr1 on raw tensors<br/>CPU, seconds"]:::measure
 
-    subgraph MACRO["MACRO SEARCH: backbone family in {conv, tcn1d, tcn2d}"]
-        DENC{"encoded data?<br/>(near-zero local<br/>correlation)"}
-        SKIPBO["skip the bake-off<br/>backbone := TCN-2d<br/>saved time -> training"]:::defpath
-        GATE["BACKBONE GATE<br/>short-train all of<br/>{conv, tcn1d, tcn2d}<br/>matched budget"]:::gate
-        DLEAD{"leader margin<br/>> measured noise?"}
+    subgraph MACRO["2 MACRO: backbone in {conv, tcn1d, tcn2d}"]
+        DENC{"encoded data?<br/>corr1 < 0.2"}
+        SKIPBO["skip the bake-off<br/>backbone := TCN-2d<br/>(+ channel-embed stem if ch >= 8)<br/>saved time -> training"]:::defpath
+        GATE["BACKBONE GATE<br/>short-train {conv, tcn1d, tcn2d}<br/>matched wall-clock"]:::gate
+        DLEAD{"leader clearly beats<br/>the conv arm?<br/>(margin > noise)"}
         PICK["backbone := leader"]
-        PRIOR["backbone := conv<br/>(robust encoded default)"]:::defpath
+        PRIOR["backbone := conv<br/>(encoded default)"]:::defpath
     end
 
-    subgraph MICRO["MICRO SEARCH: within family, D in {4..8}, W in {16,24,32,48}"]
-        DSTEEP{"landscape steep?<br/>early spreads > noise?"}
-        SKIPS["skip micro search<br/>arch := default D=6<br/>whole slice -> training"]:::defpath
-        SEARCH["depth-grow / width-prune<br/>incumbent = default D=6<br/>candidates ranked by TSE<br/>(within-family only)"]:::gate
-        DCAND{"TSE + GATE:<br/>candidate beats incumbent<br/>> noise AND verified?"}
-        ADOPT["adopt searched arch"]
+    subgraph AUGB["3 AUG PROBE: family-matched, AFTER the backbone choice"]
+        ARMS["two small arms OF THE<br/>CHOSEN family: aug-on vs aug-off"]:::measure
+        DAUG{"off wins by a CLEAR margin?<br/>(asymmetric: aug = regularization,<br/>off leads at probe horizons)"}
+        AUGOFF["aug := off + mixup"]
+        AUGON["aug := on<br/>(metadata default)"]:::defpath
+    end
+
+    subgraph MICRO["4 MICRO: depth only, D in {4, 6, 8} (no width search, no TSE)"]
+        DEPTH["short-train candidates {4, 8}<br/>incumbent = default D=6<br/>(skipped for tcn1d / low budget)"]:::gate
+        DCAND{"candidate beats incumbent<br/>> noise AND verified<br/>at a longer horizon?"}
+        ADOPT["adopt searched depth"]
         KEEPD["keep default D=6"]:::defpath
     end
 
-    subgraph RANDB["RANDOM ARM: arch ~ {11-op wide vocab} x D in {3..12} x W in {16,24,32,48}"]
+    subgraph RANDB["5 RANDOM ARM: arch ~ {11-op vocab} x D in {3..12} x W in {16,24,32,48}"]
         DRAND{"encoded AND<br/>budget remains?"}
-        RAND["sample K wide archs,<br/>short-train each,<br/>train best longer"]:::gate
-        DRBEST{"random best clearly<br/>> incumbent?"}
+        RAND["sample K=6 wide archs,<br/>short-train each"]:::gate
+        DRBEST{"clearly > incumbent?<br/>(margin > 2x noise)"}
         RADOPT["adopt random arch"]
         RDISC["discard,<br/>keep incumbent"]:::defpath
     end
 
-    TRAIN["TRAIN-TO-BUDGET<br/>cosine to LR=0, EMA,<br/>best checkpoint"]:::train
+    TRAIN["6 TRAIN-TO-BUDGET<br/>cosine to LR=0, EMA, best checkpoint"]:::train
     OUT["predictions"]
-    REC[("decision record JSON<br/>every gate: measurement,<br/>margin, choice, time spent")]:::art
+    REC[("decision record JSON<br/>every stage: measurement,<br/>margin, choice, time spent")]:::art
+    COLL["low-budget collapse:<br/>< 35 min: no gate / depth / random,<br/>encoded -> conv default;<br/>< 15 min: no aug probe either"]:::defpath
 
-    IN --> FP --> AUG
-    AUG --> DAUG
-    DAUG -->|yes| AUGON --> DENC
-    DAUG -.->|no| AUGOFF -.-> DENC
-    DENC -.->|"no: image-like"| SKIPBO -.-> DSTEEP
-    DENC -->|"yes: encoded"| GATE --> DLEAD
-    DLEAD -->|yes| PICK --> DSTEEP
-    DLEAD -.->|no| PRIOR -.-> DSTEEP
-    DSTEEP -.->|"no: flat"| SKIPS -.-> DRAND
-    DSTEEP -->|"yes"| SEARCH --> DCAND
+    IN --> FP --> DENC
+    DENC -.->|"no: image-like (9/13)"| SKIPBO -.-> ARMS
+    DENC -->|"yes: encoded (4/13)"| GATE --> DLEAD
+    DLEAD -->|yes| PICK --> ARMS
+    DLEAD -.->|no| PRIOR -.-> ARMS
+    ARMS --> DAUG
+    DAUG -->|yes| AUGOFF --> DEPTH
+    DAUG -.->|no| AUGON -.-> DEPTH
+    DEPTH --> DCAND
     DCAND -->|yes| ADOPT --> DRAND
     DCAND -.->|no| KEEPD -.-> DRAND
     DRAND -->|yes| RAND --> DRBEST
@@ -176,9 +177,10 @@ flowchart TD
     TRAIN --> OUT
     FP -.-> REC
     GATE -.-> REC
-    SEARCH -.-> REC
+    DEPTH -.-> REC
     RAND -.-> REC
     TRAIN -.-> REC
+    COLL ~~~ REC
 ```
 
 Standalone image version (same structure, for embedding and the proposal): `![[v10_pipeline.png]]`, generated by `dev/plot_v10_pipeline.py`.
