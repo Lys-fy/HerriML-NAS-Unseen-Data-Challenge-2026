@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from make_qr_dataset import make_code, corrupt, FLIP_P, OCCLUDE
 
 REPO = Path(__file__).resolve().parent.parent
-OUT = REPO / "docs/notes/03 - Datasets/additional/Quincy.png"
+OUT = REPO / "docs/notes/03 - Datasets/examples/Quincy.png"
 OUT.parent.mkdir(parents=True, exist_ok=True)
 
 rng = np.random.default_rng(3)

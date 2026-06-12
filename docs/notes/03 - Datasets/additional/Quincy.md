@@ -8,16 +8,16 @@
 
 The network sees a raw 21x21 binary module grid and must recover which of 20 class tokens was encoded into it. Unlike the official datasets this one is ours: the spec below was fixed before the pipeline ever saw a sample, so whatever v10 does on it is an honest out-of-design-distribution result.
 
-| Field | Value |
-|---|---|
-| Codename | Quincy |
-| Shape | 1x21x21 (channels-first, values {0,1}, float32) |
-| Train / val / test | 50,000 / 10,000 / 10,000 |
-| Classes | 20 (the class token encoded in the payload) |
-| Corruption | 10.0% of samples (uniform across splits) |
-| Benchmark (`metadata`) | **0.0%** placeholder, ResNet-18 run still owed |
-| Generator | `dev/make_qr_dataset.py` (seed 7, fully regenerable) |
-| Location | `dev/datasets/Quincy` (gitignored) + spark `~/local/nas-comp-datasets/Quincy` |
+| Field                  | Value                                                                         |
+| ---------------------- | ----------------------------------------------------------------------------- |
+| Codename               | Quincy                                                                        |
+| Shape                  | 1x21x21 (channels-first, values {0,1}, float32)                               |
+| Train / val / test     | 50,000 / 10,000 / 10,000                                                      |
+| Classes                | 20 (the class token encoded in the payload)                                   |
+| Corruption             | 10.0% of samples (uniform across splits)                                      |
+| Benchmark (`metadata`) | **0.0%** placeholder, ResNet-18 run still owed                                |
+| Generator              | `dev/make_qr_dataset.py` (seed 7, fully regenerable)                          |
+| Location               | `dev/datasets/Quincy` (gitignored) + spark `~/local/nas-comp-datasets/Quincy` |
 
 ## How it was generated
 
