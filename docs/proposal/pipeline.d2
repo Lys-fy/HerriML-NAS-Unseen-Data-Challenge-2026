@@ -1,0 +1,92 @@
+direction: down
+
+classes: {
+  measure: {style: {fill: "#e8f3fc"; stroke: "#1f77b4"; border-radius: 8; font-size: 15}}
+  gate: {style: {fill: "#fff3cd"; stroke: "#b8860b"; border-radius: 8; font-size: 15}}
+  trainbox: {style: {fill: "#fdecea"; stroke: "#b53030"; border-radius: 8; font-size: 16; bold: true}}
+  def: {style: {fill: "#f4f4f4"; stroke: "#888888"; stroke-dash: 4; border-radius: 8; font-size: 14}}
+  dec: {shape: diamond; style: {fill: "#ffffff"; stroke: "#333333"; font-size: 14}}
+  plain: {style: {fill: "#ffffff"; stroke: "#444444"; border-radius: 8; font-size: 15}}
+  stage: {style: {fill: "#fafaf2"; stroke: "#999999"; font-size: 17; bold: true}}
+}
+
+in: "unseen dataset\nmetadata + clock" {class: plain; style.bold: true}
+
+fallback: "low-budget fallback:\nunder 35 min: skip stages 2, 4, 5 (encoded -> CNN default)\nunder 15 min: also skip stage 3" {class: def}
+
+measure: "1  MEASURE\nfingerprint: neighbouring-pixel correlation (corr1)\non the raw inputs, seconds of CPU, no training" {class: measure}
+
+s2: "2  BACKBONE CHOICE      family in {CNN, 1-D TCN, 2-D TCN}" {
+  direction: right
+  class: stage
+  enc: "encoded data?\n(corr1 < 0.2)" {class: dec}
+  skip: "skip the bake-off\nbackbone := 2-D TCN\n(channel-mixing stem if >= 8 channels)\nsaved time goes to training" {class: def}
+  gatebox: "BACKBONE GATE\ntrain each family briefly\nat matched wall-clock" {class: gate}
+  lead: "leader clearly beats\nthe CNN?\n(margin > noise)" {class: dec}
+  pick: "backbone := leader" {class: plain}
+  prior: "backbone := CNN\n(encoded default)" {class: def}
+
+  enc -> skip: "no: image-like" {style: {stroke-dash: 4; stroke: "#888888"}}
+  enc -> gatebox: "yes: encoded"
+  gatebox -> lead
+  lead -> pick: "yes"
+  lead -> prior: "no" {style: {stroke-dash: 4; stroke: "#888888"}}
+}
+
+s3: "3  AUGMENTATION PROBE      after the backbone choice, matched to the chosen family" {
+  direction: right
+  class: stage
+  arms: "two small networks OF THE CHOSEN FAMILY,\ntrained briefly: with vs without augmentation" {class: measure}
+  doff: "does OFF win by a clear margin?\n(asymmetric rule: augmentation is\nregularisation, so OFF leads early)" {class: dec}
+  off: "aug := off + mixup" {class: plain}
+  on: "aug := on (the default)" {class: def}
+
+  arms -> doff
+  doff -> off: "yes"
+  doff -> on: "no" {style: {stroke-dash: 4; stroke: "#888888"}}
+}
+
+s4: "4  DEPTH SEARCH      depth in {4, 6, 8}, default 6" {
+  direction: right
+  class: stage
+  cands: "train depth-4 and depth-8 candidates briefly against\nthe INCUMBENT default depth 6 (skipped for the 1-D TCN)" {class: gate}
+  dver: "candidate beats the incumbent\nby > noise AND survives\nre-training verification?" {class: dec}
+  adopt: "adopt searched depth" {class: plain}
+  keep: "keep default depth 6" {class: def}
+
+  cands -> dver
+  dver -> adopt: "yes"
+  dver -> keep: "no" {style: {stroke-dash: 4; stroke: "#888888"}}
+}
+
+s5: "5  RANDOM SEARCH ARM      random architectures: 11 operation types, depth 3 to 12, width 16 to 48" {
+  direction: right
+  class: stage
+  drand: "encoded AND\nbudget remains?" {class: dec}
+  samp: "sample 6 random architectures,\ntrain each briefly" {class: gate}
+  dbest: "clearly better than\nthe incumbent?\n(margin > 2x noise)" {class: dec}
+  radopt: "adopt random architecture" {class: plain}
+  rdisc: "discard, keep incumbent" {class: def}
+
+  drand -> samp: "yes"
+  samp -> dbest
+  dbest -> radopt: "yes"
+  dbest -> rdisc: "no" {style: {stroke-dash: 4; stroke: "#888888"}}
+}
+
+trainfinal: "6  TRAIN TO BUDGET\ncosine learning rate annealed to zero, keep the best checkpoint" {class: trainbox}
+pred: "predictions" {class: plain; style.bold: true}
+
+in -> measure
+measure -> s2.enc
+s2.skip -> s3.arms: {style: {stroke-dash: 4; stroke: "#888888"}}
+s2.pick -> s3.arms
+s2.prior -> s3.arms: {style: {stroke-dash: 4; stroke: "#888888"}}
+s3.off -> s4.cands
+s3.on -> s4.cands: {style: {stroke-dash: 4; stroke: "#888888"}}
+s4.adopt -> s5.drand
+s4.keep -> s5.drand: {style: {stroke-dash: 4; stroke: "#888888"}}
+s5.drand -> trainfinal: "no budget / image-like" {style: {stroke-dash: 4; stroke: "#888888"}}
+s5.radopt -> trainfinal
+s5.rdisc -> trainfinal: {style: {stroke-dash: 4; stroke: "#888888"}}
+trainfinal -> pred
