@@ -112,7 +112,7 @@ arrow([(6.5, 20.55), (5.0, 19.9)], label="yes", lab_dx=-0.7, lab_dy=0.3)
 arrow([(11.5, 20.55), (13.2, 19.9)], dashed=True, label="no", lab_dx=0.2, lab_dy=0.35)
 
 # ---- MICRO -------------------------------------------------------------------
-container(0.8, 13.9, 17.6, 18.6, "4  MICRO      depth only:  D in {4, 6, 8}   (no width search, no TSE)")
+container(0.8, 13.9, 17.6, 18.6, "4  MICRO      depth only:  D in {4, 6, 8}")
 box(9, 17.4, 7.0, 1.2, "short-train candidates {4, 8} vs the INCUMBENT default D=6\n(skipped for tcn1d / low budget)", C_GATE, fs=9)
 diamond(9, 15.8, 4.8, 1.4, "candidate beats incumbent\n> noise AND verified\nat a longer horizon?", fs=8.5)
 box(5.0, 14.7, 3.2, 0.7, "adopt searched depth")

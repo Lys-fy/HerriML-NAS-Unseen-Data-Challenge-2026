@@ -139,7 +139,7 @@ flowchart TD
         AUGON["aug := on<br/>(metadata default)"]:::defpath
     end
 
-    subgraph MICRO["4 MICRO: depth only, D in {4, 6, 8} (no width search, no TSE)"]
+    subgraph MICRO["4 MICRO: depth only, D in {4, 6, 8}"]
         DEPTH["short-train candidates {4, 8}<br/>incumbent = default D=6<br/>(skipped for tcn1d / low budget)"]:::gate
         DCAND{"candidate beats incumbent<br/>> noise AND verified<br/>at a longer horizon?"}
         ADOPT["adopt searched depth"]
