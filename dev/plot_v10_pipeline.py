@@ -24,8 +24,8 @@ C_DEF = ("#f2f2f2", "#888888")
 C_ART = ("#f6f0fa", "#7d5ba6")
 C_PLAIN = ("#ffffff", "#444444")
 
-fig, ax = plt.subplots(figsize=(15, 22))
-ax.set_xlim(0, 21)
+fig, ax = plt.subplots(figsize=(13.5, 22))
+ax.set_xlim(0, 18.4)
 ax.set_ylim(3.8, 32.4)
 ax.axis("off")
 
@@ -147,18 +147,6 @@ box(9, 4.45, 2.8, 0.6, "predictions", bold=True)
 arrow([(9.5, 8.2), (9.2, 6.25)])
 arrow([(16.2, 8.05), (16.2, 7.0), (11.95, 5.9)], dashed=True)
 arrow([(9, 5.18), (9, 4.78)])
-
-# ---- decision record rail ------------------------------------------------------
-RAILX = 18.6
-box(19.5, 5.7, 2.7, 1.7, "decision record\nJSON\n(every stage:\nmeasure, margin,\nchoice, time)", C_ART, fs=8.8)
-arrow([(12.45, 30.3), (RAILX, 30.3)], dashed=True, color=C_ART[1])
-arrow([(17.6, 26.3), (RAILX, 26.3)], dashed=True, color=C_ART[1])
-arrow([(12.25, 22.0), (RAILX, 22.0)], dashed=True, color=C_ART[1])
-arrow([(12.55, 17.4), (RAILX, 17.4)], dashed=True, color=C_ART[1])
-arrow([(15.85, 10.7), (RAILX, 10.7)], dashed=True, color=C_ART[1])
-arrow([(11.95, 5.7), (18.1, 5.7)], dashed=True, color=C_ART[1])
-ax.plot([RAILX, RAILX], [30.3, 5.7], linestyle=(0, (5, 3)),
-        color=C_ART[1], lw=1.6, zorder=2)
 
 # ---- legend ------------------------------------------------------------------
 lx, ly = 14.6, 31.9
