@@ -51,7 +51,7 @@ flat = axes.flatten()
 for ax, (name, code, bench, base_raw, ours_raw, cfg) in zip(flat, DATA):
     lo, hi = 100.0, 0.0
     for path, c, lab, lw in (
-            (BASE / f"{code}.csv", CB, f"baseline (test {base_raw:.1f}%)", 1.5),
+            (BASE / f"{code}.csv", CB, f"searched CNN (test {base_raw:.1f}%)", 1.5),
             (OURS / f"{code}.csv", CO, f"ours (test {ours_raw:.1f}%)", 2.3)):
         if not path.exists():
             continue
@@ -61,7 +61,7 @@ for ax, (name, code, bench, base_raw, ours_raw, cfg) in zip(flat, DATA):
         lo, hi = min(lo, float(best.min())), max(hi, float(best.max()))
     if bench > 0:
         ax.axhline(bench, color=BENCHC, linestyle="--", linewidth=1.0,
-                   label=f"benchmark {bench:.1f}%")
+                   label=f"official benchmark {bench:.1f}%")
         lo, hi = min(lo, bench), max(hi, bench)
     pad = max(2.0, (hi - lo) * 0.12)
     ax.set_ylim(lo - pad, hi + pad)

@@ -134,15 +134,20 @@ abstain-to-default routes.}
 \begin{figure}[p]
 \centering
 \includegraphics[height=0.88\textheight]{results_grid.png}
-\caption{Our best approach to date versus the reproduced searched-CNN
-baseline on the 13 public datasets (single seed, 2~h per dataset).
-Curves show \emph{validation} accuracy over training epochs (faint:
-per-epoch, solid: best so far), while the legends give the final
-\emph{test} accuracy, which can differ from validation, e.g.\ on
-Windspeed and CIFARTile. The configuration selected by the pipeline is
-noted under each panel. Totals (adjusted score): ours \textbf{+62.5},
-baseline +48.2, best-family oracle +63.2. Sudoku and Cryptic ship
-without a published benchmark, so no benchmark line is drawn there.}
+\caption{Our best approach to date versus the searched-CNN comparison
+method on the 13 public datasets (single seed, 2~h per dataset). The
+blue \emph{searched CNN} is our reproduction of the winning macro--micro
+NAS approach \cite{egnas}, equipped with the same training improvements
+as our pipeline, i.e.\ the strongest fair opponent. The red dashed line
+is the \emph{official benchmark}, the organisers' ResNet-18 reference
+against which the adjusted score is computed. Curves show
+\emph{validation} accuracy over training epochs (faint: per-epoch,
+solid: best so far), while the legends give the final \emph{test}
+accuracy, which can differ from validation, e.g.\ on Windspeed and
+CIFARTile. The configuration selected by the pipeline is noted under
+each panel. Totals (adjusted score): ours \textbf{+62.5}, searched CNN
++48.2, best-family oracle +63.2. Sudoku and Cryptic ship without a
+published benchmark, so no benchmark line is drawn there.}
 \label{fig:res}
 \end{figure}
 
