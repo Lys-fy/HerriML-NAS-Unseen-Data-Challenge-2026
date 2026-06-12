@@ -8,11 +8,11 @@
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{microtype}
+\usepackage[font=small,skip=4pt]{caption}
 \usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue]{hyperref}
 \setlength{\columnsep}{0.7cm}
-\pagenumbering{gobble}
 
-\title{\vspace{-0.9cm}\textbf{Measure, Gate, Train: Budget-Aware Self-Configuring\\Neural Architecture Search for Unseen Data}\vspace{-0.15cm}}
+\title{\vspace{-0.9cm}\textbf{Budget-Aware Self-Configuring\\Neural Architecture Search for Unseen Data}\vspace{-0.15cm}}
 \author{Sebastian Seifert, Luis Melzer \& Leander von Gottberg}
 \date{\vspace{-0.65cm}}
 
@@ -52,11 +52,13 @@ low-fidelity rankings \cite{white2021}?
 at runtime which architectural prior fits an unseen dataset?
 \textbf{RQ3.} How can harmful data augmentation be detected at runtime,
 given that augmentation acts as regularisation (it costs accuracy early
-and pays late) and that, as we observe, augmentation decisions do not
-transfer between architecture families?
+and pays late) and that, as we observe, its decisions do not transfer
+between architecture families?
 
 \section{Approach}
-We propose a \emph{measure--gate--train} pipeline (Fig.~\ref{fig:pipe}, p.~2).
+We propose a self-configuring pipeline that measures the data first,
+gates every decision, and spends all remaining time on training
+(Fig.~\ref{fig:pipe}, p.~2).
 (1)~\emph{Measure}: a fingerprint computed directly from the raw input
 tensors, with no training involved. The mean correlation of neighbouring
 pixels separates the two data families with a wide margin: between
@@ -82,11 +84,13 @@ hours down to minutes.
 
 
 
+
+
 \section{Required Steps}
 (1)~Reproduce the EGNAS baseline and probe candidate architecture
-families at full budget (done). (2)~Validate each decision
-mechanism in isolation by replaying it against known full-budget outcomes
-(gate reliability, fingerprint separation, augmentation transfer).
+families at full budget (done). (2)~Validate each decision mechanism in isolation against known
+full-budget outcomes (gate reliability, fingerprint separation,
+augmentation transfer).
 (3)~Integrate the pipeline and verify all execution paths, including the
 low-budget collapse behaviour. (4)~Full multi-seed evaluation.
 (5)~A budget-ladder study (0.5h to 8h) measuring which decision stages pay
@@ -102,20 +106,18 @@ achievable routing gain. Every stage writes its measurements, margins,
 and choices to a per-dataset decision record, so gains and losses are
 attributable to individual decisions. Robustness is evaluated across
 budgets (30 minutes to 12 hours), on the external suite, and against
-published per-dataset competition bests \cite{geada}. Our best approach to date (one seed, 2~h per dataset)
-totals an adjusted score of \textbf{+62.5} on the 13 public datasets,
-versus +48.2 for the searched-CNN baseline and +63.2 for the family
-oracle (Fig.~\ref{fig:res}, p.~3).
+published competition bests \cite{geada}. First results of the current pipeline, including the
+configuration it selects per dataset, are shown in
+Fig.~\ref{fig:res} (p.~3).
 
 \section{Potential Extensions}
-If time allows, the pipeline's ambition will scale with the budget:
-additional families (e.g.\ recurrent networks, which need longer probes
-to rank fairly) join the bake-off only at large budgets, and when
-families are statistically tied, the surplus is spent on a heterogeneous
-ensemble, kept only if it beats the best single model on validation. In
-parallel we are creating competition-style datasets, designed blind to
-the pipeline (e.g.\ QR codes with partially covered regions, encoded
-board games), as a further generalisation test.
+The pipeline's ambition can scale with the budget: additional families
+(e.g.\ recurrent networks, which need longer probes to rank fairly)
+join the bake-off only at large budgets, and when families tie
+statistically, the surplus trains a heterogeneous ensemble, kept only
+if it beats the best single model. In parallel the team creates
+competition-style datasets blind to the pipeline (QR codes with partly
+covered regions, encoded board games) as a further generalisation test.
 
 
 
@@ -123,31 +125,24 @@ board games), as a further generalisation test.
 \onecolumn
 \begin{figure}[p]
 \centering
-\includegraphics[height=0.93\textheight]{pipeline.png}
-\caption{The measure--gate--train decision pipeline, run once per unseen
-dataset. Diamonds are runtime decisions, dashed paths are the
-abstain-to-default routes.}
+\includegraphics[width=\textwidth,height=0.92\textheight,keepaspectratio]{pipeline.png}
+\caption{The decision pipeline, run once per unseen dataset. Diamonds
+are runtime decisions, dashed paths are the abstain-to-default routes.}
 \label{fig:pipe}
 \end{figure}
 
 \clearpage
 \begin{figure}[p]
 \centering
-\includegraphics[height=0.88\textheight]{results_grid.png}
-\caption{Our best approach to date versus the searched-CNN comparison
-method on the 13 public datasets (single seed, 2~h per dataset). The
-blue \emph{searched CNN} is our reproduction of the winning macro--micro
-NAS approach \cite{egnas}, equipped with the same training improvements
-as our pipeline, i.e.\ the strongest fair opponent. The red dashed line
-is the \emph{official benchmark}, the organisers' ResNet-18 reference
-against which the adjusted score is computed. Curves show
-\emph{validation} accuracy over training epochs (faint: per-epoch,
-solid: best so far), while the legends give the final \emph{test}
-accuracy, which can differ from validation, e.g.\ on Windspeed and
-CIFARTile. The configuration selected by the pipeline is noted under
-each panel. Totals (adjusted score): ours \textbf{+62.5}, searched CNN
-+48.2, best-family oracle +63.2. Sudoku and Cryptic ship without a
-published benchmark, so no benchmark line is drawn there.}
+\includegraphics[width=\textwidth,height=0.85\textheight,keepaspectratio]{results_grid.png}
+\caption{Our best approach versus the searched CNN (our reproduction of
+the winning macro--micro NAS \cite{egnas} with identical training
+improvements), 13 public datasets, single seed, 2~h each. Curves:
+validation accuracy (faint per-epoch, solid best-so-far). Legends: final
+test accuracy, which can differ from validation. Red dashed: the
+official ResNet-18 benchmark; unpublished for Sudoku and Cryptic. The
+selected configuration is noted under each panel. Totals (adjusted
+score): ours \textbf{+62.5}, searched CNN +48.2, family oracle +63.2.}
 \label{fig:res}
 \end{figure}
 
