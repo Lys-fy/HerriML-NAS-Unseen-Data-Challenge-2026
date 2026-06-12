@@ -56,7 +56,7 @@ and pays late) and that, as we observe, augmentation decisions do not
 transfer between architecture families?
 
 \section{Approach}
-We propose a \emph{measure--gate--train} pipeline (figure on page~2).
+We propose a \emph{measure--gate--train} pipeline (Fig.~\ref{fig:pipe}, p.~2).
 (1)~\emph{Measure}: a fingerprint computed directly from the raw input
 tensors, with no training involved. The mean correlation of neighbouring
 pixels separates the two data families with a wide margin: between
@@ -102,11 +102,10 @@ achievable routing gain. Every stage writes its measurements, margins,
 and choices to a per-dataset decision record, so gains and losses are
 attributable to individual decisions. Robustness is evaluated across
 budgets (30 minutes to 12 hours), on the external suite, and against
-published per-dataset competition bests \cite{geada}. A first complete
-run of the pipeline (one seed, 2~h per dataset) totals an adjusted score
-of \textbf{+62.5} on the 13 public datasets, versus +48.2 for the
-searched-CNN baseline and +63.2 for the family oracle
-(figure on p.~3).
+published per-dataset competition bests \cite{geada}. Our best approach to date (one seed, 2~h per dataset)
+totals an adjusted score of \textbf{+62.5} on the 13 public datasets,
+versus +48.2 for the searched-CNN baseline and +63.2 for the family
+oracle (Fig.~\ref{fig:res}, p.~3).
 
 \section{Potential Extensions}
 If time allows, the pipeline's ambition will scale with the budget:
@@ -124,13 +123,27 @@ board games), as a further generalisation test.
 \onecolumn
 \begin{figure}[p]
 \centering
-\includegraphics[height=0.96\textheight]{pipeline.png}
+\includegraphics[height=0.93\textheight]{pipeline.png}
+\caption{The measure--gate--train decision pipeline, run once per unseen
+dataset. Diamonds are runtime decisions, dashed paths are the
+abstain-to-default routes.}
+\label{fig:pipe}
 \end{figure}
 
 \clearpage
 \begin{figure}[p]
 \centering
-\includegraphics[height=0.92\textheight]{results_grid.png}
+\includegraphics[height=0.88\textheight]{results_grid.png}
+\caption{Our best approach to date versus the reproduced searched-CNN
+baseline on the 13 public datasets (single seed, 2~h per dataset).
+Curves show \emph{validation} accuracy over training epochs (faint:
+per-epoch, solid: best so far), while the legends give the final
+\emph{test} accuracy, which can differ from validation, e.g.\ on
+Windspeed and CIFARTile. The configuration selected by the pipeline is
+noted under each panel. Totals (adjusted score): ours \textbf{+62.5},
+baseline +48.2, best-family oracle +63.2. Sudoku and Cryptic ship
+without a published benchmark, so no benchmark line is drawn there.}
+\label{fig:res}
 \end{figure}
 
 \clearpage
