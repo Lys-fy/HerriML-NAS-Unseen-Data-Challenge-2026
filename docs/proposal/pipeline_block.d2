@@ -1,0 +1,66 @@
+grid-columns: 2
+grid-gap: 60
+
+classes: {
+  chip: {style: {fill: "#ffffff"; stroke: "#7a9bd4"; border-radius: 10; font-size: 14}}
+  defchip: {style: {fill: "#f5f7fa"; stroke: "#9aa7b8"; stroke-dash: 3; border-radius: 10; font-size: 13}}
+}
+
+s1: "1   MEASURE" {
+  grid-columns: 1
+  grid-gap: 14
+  style: {fill: "#dbeafe"; stroke: "#5b8def"; border-radius: 14; font-size: 18; bold: true}
+  a: "fingerprint: neighbouring-pixel correlation\non the raw inputs (seconds of CPU, no training)" {class: chip}
+  b: "near-zero correlation = encoded data\nhigh correlation = image-like data" {class: chip}
+  c: "tight budget? under 35 min skip stages 2, 4, 5;\nunder 15 min also skip stage 3" {class: defchip}
+}
+
+s2: "2   BACKBONE CHOICE" {
+  grid-columns: 1
+  grid-gap: 14
+  style: {fill: "#e0e7ff"; stroke: "#7286f0"; border-radius: 14; font-size: 18; bold: true}
+  a: "image-like  ->  2-D TCN directly, no bake-off\n(channel-mixing stem if 8 or more channels)" {class: chip}
+  b: "encoded  ->  gate: train CNN, 1-D TCN and 2-D TCN\nbriefly at matched wall-clock" {class: chip}
+  c: "adopt the leader only if it clearly beats the CNN,\notherwise default to the CNN" {class: defchip}
+}
+
+s3: "3   AUGMENTATION PROBE" {
+  grid-columns: 1
+  grid-gap: 14
+  style: {fill: "#d8eefe"; stroke: "#56a8e8"; border-radius: 14; font-size: 18; bold: true}
+  a: "two small networks of the chosen family,\ntrained briefly: with vs without augmentation" {class: chip}
+  b: "augmentation off (plus mixup) only when OFF wins\nby a clear margin: it is regularisation, OFF leads early" {class: chip}
+  c: "otherwise: augmentation stays on (the default)" {class: defchip}
+}
+
+s4: "4   DEPTH SEARCH" {
+  grid-columns: 1
+  grid-gap: 14
+  style: {fill: "#e7f6f2"; stroke: "#46b39a"; border-radius: 14; font-size: 18; bold: true}
+  a: "depth-4 and depth-8 candidates trained briefly\nagainst the incumbent default depth 6" {class: chip}
+  b: "adopt a candidate only if it beats the incumbent\nbeyond noise AND survives re-training verification" {class: chip}
+  c: "otherwise: keep depth 6\n(skipped for the 1-D TCN)" {class: defchip}
+}
+
+s5: "5   RANDOM SEARCH ARM" {
+  grid-columns: 1
+  grid-gap: 14
+  style: {fill: "#ece9fb"; stroke: "#8d7fe0"; border-radius: 14; font-size: 18; bold: true}
+  a: "runs only on encoded data, only if budget remains" {class: chip}
+  b: "sample 6 random architectures\n(11 operation types, depth 3 to 12, width 16 to 48)" {class: chip}
+  c: "adopt only if clearly better than the incumbent,\notherwise discard" {class: defchip}
+}
+
+s6: "6   TRAIN TO BUDGET" {
+  grid-columns: 1
+  grid-gap: 14
+  style: {fill: "#fde7e9"; stroke: "#e88498"; border-radius: 14; font-size: 18; bold: true}
+  a: "the winner trains on ALL remaining time, cosine\nlearning rate annealed to zero exactly at the budget" {class: chip}
+  b: "keep the best checkpoint  ->  predictions" {class: chip}
+}
+
+s1 -> s2
+s2 -> s3
+s3 -> s4
+s4 -> s5
+s5 -> s6
