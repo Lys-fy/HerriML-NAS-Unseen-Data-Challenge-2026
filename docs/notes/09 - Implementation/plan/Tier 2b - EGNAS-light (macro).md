@@ -1,11 +1,11 @@
 # Tier 2b — EGNAS-light (macro)
 
-> **Status:** macro DONE ([[Tier 2b - Results]]) → **completed to FULL EGNAS (macro + micro) 2026-05-18**; full 11-ds × 3-seed sweep next | **Topic:** The competition's proven core: macro architecture search + micro op-search, scaled to the Phase-2 clock. The first *real* NAS engine in the repo; primary job is to crack the **CIFARTile** ceiling Tier 1 can't move.
-> **Related:** [[Tier 2 - EGNAS-Light]] (original algorithm reference), [[Tier 2b - Results]], [[EGNAS]], [[2025 - EVAI]], [[Tier 1 - Augmentation + Op Search]], [[Multi-Seed - Results]], [[E1 - Results]], [[Probe-Driven Self-Configuration]], [[Reliability vs Peak]], [[Run State + Handoff]]
+> **Status:** macro DONE ([[EGNAS Full|Tier 2b - Results]]) → **completed to FULL EGNAS (macro + micro) 2026-05-18**; full 11-ds × 3-seed sweep next | **Topic:** The competition's proven core: macro architecture search + micro op-search, scaled to the Phase-2 clock. The first *real* NAS engine in the repo; primary job is to crack the **CIFARTile** ceiling Tier 1 can't move.
+> **Related:** [[Tier 2 - EGNAS-Light]] (original algorithm reference), [[EGNAS Full|Tier 2b - Results]], [[EGNAS]], [[2025 - EVAI]], [[Tier 1 - Augmentation + Op Search]], [[Multi-Seed Variance|Multi-Seed - Results]], [[Ensemble E1|E1 - Results]], [[Probe-Driven Self-Configuration]], [[Reliability vs Peak]], [[Run State + Handoff]]
 
 ## ⏵ Update 2026-05-18 — completed to FULL EGNAS (macro + micro). Reasoning.
 
-The macro-only diagnostic ([[Tier 2b - Results]]) **passed the make-or-break** (CIFARTile −0.515→+0.167, all 3 seeds, σ↓ — the ceiling no Tier-1 config could move) but with two caveats: the gain was *small*, and the macro argmax-over-noisy-candidates selection was a **Q8 arch-lottery** (s2024 picked D=5 for AddNIST → −2.81).
+The macro-only diagnostic ([[EGNAS Full|Tier 2b - Results]]) **passed the make-or-break** (CIFARTile −0.515→+0.167, all 3 seeds, σ↓ — the ceiling no Tier-1 config could move) but with two caveats: the gain was *small*, and the macro argmax-over-noisy-candidates selection was a **Q8 arch-lottery** (s2024 picked D=5 for AddNIST → −2.81).
 
 **Why we did NOT pivot to E2 or polish the ranking (the reasoning):**
 - Concluding "conv-search is tapped out, jump to a novel architecture (E2)" from a *deliberately half-built* EGNAS was **premature** — you can't judge the proven 2025-winning method by running half of it. (This was a real over-reach in the earlier recommendation; corrected here.)
@@ -17,9 +17,9 @@ The macro-only diagnostic ([[Tier 2b - Results]]) **passed the make-or-break** (
 - It is **incumbent-kept** — a single noisy short-train cannot hijack the choice (unlike macro's argmax-of-noisy-candidates). So completing the method is *also the principled fix* for the Q8 lottery, not a bolted-on denoiser.
 - Budget: macro gets `MACRO_FRACTION` (60 %) of the 30 % search slice, micro the rest; whole-search failure → Tier-1 default (never a new −10).
 
-**Code hygiene / traceability (why a new dir):** `baselines/tier2b_egnas_macro/` is **frozen** as the macro-only comparator; the full method lives in **`baselines/tier2b_egnas_full/`** (only `nas.py` differs). This keeps a clean full-vs-macro attribution on the 3-ds `egnasdiag` and lets us reproduce/trace exactly what micro bought.
+**Code hygiene / traceability (why a new dir):** `baselines/egnas_macro/` is **frozen** as the macro-only comparator; the full method lives in **`baselines/egnas_full/`** (only `nas.py` differs). This keeps a clean full-vs-macro attribution on the 3-ds `egnas_macro` and lets us reproduce/trace exactly what micro bought.
 
-**Validation (user decision 2026-05-18):** run the **full 11-dataset × 3-seed sweep directly** (`dev/run_tier2b_full.sh`), paired vs the Tier-1 `full_s*` baseline — for a comprehensive read of *actual* performance rather than another cheap gate. A ~15-min correctness smoke still precedes it (guards against burning ~30 h on never-executed code; *not* the strategic gate being skipped). The "what micro adds" attribution stays precise on the 3-ds `egnasdiag` (macro frozen there).
+**Validation (user decision 2026-05-18):** run the **full 11-dataset × 3-seed sweep directly** (`dev/run_egnas_full.sh`), paired vs the Tier-1 `full_s*` baseline — for a comprehensive read of *actual* performance rather than another cheap gate. A ~15-min correctness smoke still precedes it (guards against burning ~30 h on never-executed code; *not* the strategic gate being skipped). The "what micro adds" attribution stays precise on the 3-ds `egnas_macro` (macro frozen there).
 
 **E2 is not abandoned — re-ordered:** a relational/non-conv primitive belongs as a candidate **op in EGNAS's search vocabulary** (probe-thesis-consistent: the search discovers when to use it), considered *after* full EGNAS is validated — not as a premature hand-built sidestep.
 
@@ -30,7 +30,7 @@ Every prior finding pulled us toward training/data/variance work (Tier 0: overfi
 ## Locked decisions (2026-05-18)
 
 1. **Macro-only v1** — depth-grow + width-prune. **No micro (op/kernel) hill-climb** in v1 (the original plan's own "optional, skip if tight"; depth/width is exactly what CIFARTile rewards; far less code & clock). Micro = v1.1 if macro shows signal.
-2. **Return the single best arch; log the discovered pool.** Single best → clean one-variable test ("does macro-search beat Tier 1?"). Top-k evaluated `(arch, val)` written to disk so Tier-3 ensembling ([[E1 - Results]]'s "emit an ensemble-able pool" lesson) is free later — no extra train cost now.
+2. **Return the single best arch; log the discovered pool.** Single best → clean one-variable test ("does macro-search beat Tier 1?"). Top-k evaluated `(arch, val)` written to disk so Tier-3 ensembling ([[Ensemble E1|E1 - Results]]'s "emit an ensemble-able pool" lesson) is free later — no extra train cost now.
 3. **Built on pure Tier 1** — only `nas.py` changes; `data_processor.py` + `trainer.py` byte-identical. One isolated new variable.
 
 ## Algorithm (macro, scaled — full detail in [[Tier 2 - EGNAS-Light]])
@@ -62,7 +62,7 @@ Reuse: `helpers.build_cnn`, `plan_downsamples`; short-train loop pattern from Ti
 
 ## Files / hooks / success / risk
 
-- `baselines/tier2b_egnas_macro/` = copy of Tier 1; rewrite `nas.py` (EGNAS macro); `helpers.py` += arch-aware scheduler + stop criteria + pool logger; `data_processor.py`/`trainer.py` unchanged.
-- Hooks: `EGNAS_DMAX`, `EGNAS_WMIN`, `EGNAS_OFF=1` (→ Tier-1 random op-search, for A/B). Drivers: `dev/run_egnas_diagnostic.sh`, later `dev/run_tier2b.sh`.
+- `baselines/egnas_macro/` = copy of Tier 1; rewrite `nas.py` (EGNAS macro); `helpers.py` += arch-aware scheduler + stop criteria + pool logger; `data_processor.py`/`trainer.py` unchanged.
+- Hooks: `EGNAS_DMAX`, `EGNAS_WMIN`, `EGNAS_OFF=1` (→ Tier-1 random op-search, for A/B). Drivers: `dev/run_egnas_macro.sh`, later `dev/run_tier2b.sh`.
 - **Success:** CIFARTile multi-seed mean beats Tier-1's −0.5 ± 0.5; full sweep ≥ Tier 1 overall with no regression; arch-selection stability characterised; ≤ clock; zero new failure modes.
 - **Risks:** (a) macro-search may not beat Tier 1 on most datasets — *acceptable*, CIFARTile is the test that matters; (b) macro-search may itself be a seed-lottery (Q8) — the multi-seed harness measures this; (c) depth-grow trains many candidates → budget pressure — conservative `D_max` + inherited clock hygiene; (d) if CIFARTile doesn't move, that is itself a thesis-critical finding to report, not a failure to hide.

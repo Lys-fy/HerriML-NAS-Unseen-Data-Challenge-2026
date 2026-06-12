@@ -1,6 +1,6 @@
 """Tier-2b EGNAS-macro diagnostic — paired vs Tier-1, + arch-selection stability.
 
-Compares the EGNAS-macro diagnostic (dev/logs/egnasdiag/egnas_s*.log) against
+Compares the EGNAS-macro diagnostic (dev/logs/egnas_macro/egnas_s*.log) against
 the paired Tier-1 baseline (multi-seed dev/logs/multiseed/full_s*.log — same 3
 datasets × same seeds × same 2 h budget). Reuses aggregate_multiseed's parser
 + stats (DRY). Internal adj (== shipped for these 3; no Sokoto).
@@ -20,12 +20,12 @@ from internal_benchmarks import adj_score_internal
 from aggregate_multiseed import parse_log, mstats, fmt
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-EG_DIR = REPO_ROOT / "dev" / "logs" / "egnasdiag"
+EG_DIR = REPO_ROOT / "dev" / "logs" / "egnas_macro"
 MS_DIR = REPO_ROOT / "dev" / "logs" / "multiseed"
 OUT_JSON = EG_DIR / "_egnas_aggregate.json"
 
 SEEDS = [42, 1337, 2024]
-# run_egnas_diagnostic.sh DATASETS order (= "EGNAS macro done" line order).
+# run_egnas_macro.sh DATASETS order (= "EGNAS macro done" line order).
 DATASETS = ["CIFARTile", "AddNIST", "GeoClassing"]
 CODES = ["Caitie", "Adaline", "Sadie"]          # same dataset order
 CODE2DS = dict(zip(CODES, DATASETS))

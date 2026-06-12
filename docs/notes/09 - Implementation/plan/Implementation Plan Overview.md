@@ -1,7 +1,7 @@
 # Implementation Plan Overview
 
-> **Status:** current | **Topic:** Staged build plan — shipping path (Tiers 0–4) plus experimental branches (B1–B4). Reframed 2026-05-15 around the [[Probe-Driven Self-Configuration]] thesis after the [[Tier 1 - Results|Tier 1 ablation]].
-> **Related:** [[Probe-Driven Self-Configuration]], [[Approaches Overview]], [[Reliability vs Peak]], [[Phase 2 Submission Strategy]], [[Tier 1 - Results]], [[Failure Modes]]
+> **Status:** current | **Topic:** Staged build plan — shipping path (Tiers 0–4) plus experimental branches (B1–B4). Reframed 2026-05-15 around the [[Probe-Driven Self-Configuration]] thesis after the [[Aug + Op Search|Tier 1 ablation]].
+> **Related:** [[Probe-Driven Self-Configuration]], [[Approaches Overview]], [[Reliability vs Peak]], [[Phase 2 Submission Strategy]], [[Aug + Op Search|Tier 1 - Results]], [[Failure Modes]]
 
 > **Read [[Probe-Driven Self-Configuration]] first.** It is the submission's central thesis: the pipeline does not commit to a prior winner's NAS method — it runs cheap runtime probes to characterize the unseen dataset, then configures itself. EGNAS / predictor-EA / DARTS become the *menu the probe selects from*, not the submission. Everything below is the staged build that gets us there.
 
@@ -9,7 +9,7 @@ The [[Submission Contract|submission code]] is built in **tiers** rather than wr
 
 The whole structure is driven by the strategy notes' central claim: [[Reliability vs Peak|reliability dominates peak]]. Tiers exist so the *first* shippable version is a confirmed-working pipeline (Tier 0), and every later tier inherits its working harness. Going straight to EGNAS would mean debugging architecture search against an unverified harness — the failure modes overlap and become hard to bisect.
 
-**Status as of 2026-05-17:** Tier 0 (−0.355) and Tier 1 implemented & measured; the multi-seed sweep ([[Multi-Seed - Results]]) is the authoritative read — Tier 1 = **+11.3 ± 8.2 shipped / +8.4 ± 8.4 internal** (the single-seed +24.644 was a tail draw), seed variance ≈100 % of the signal, plus the `aug-off` arm quantifying augmentation (+21.5 over 7 ds; Language the lone seed-stable reversal). That finding promoted **E1 (budget-filling ensemble)** from optional to necessary — its validation sweep is **running now** ([[E1 - Results]]). Tier 2+ decision is gated on the E1 verdict. See [[Run State + Handoff]] for live operational state.
+**Status as of 2026-05-17:** Tier 0 (−0.355) and Tier 1 implemented & measured; the multi-seed sweep ([[Multi-Seed Variance|Multi-Seed - Results]]) is the authoritative read — Tier 1 = **+11.3 ± 8.2 shipped / +8.4 ± 8.4 internal** (the single-seed +24.644 was a tail draw), seed variance ≈100 % of the signal, plus the `aug-off` arm quantifying augmentation (+21.5 over 7 ds; Language the lone seed-stable reversal). That finding promoted **E1 (budget-filling ensemble)** from optional to necessary — its validation sweep is **running now** ([[Ensemble E1|E1 - Results]]). Tier 2+ decision is gated on the E1 verdict. See [[Run State + Handoff]] for live operational state.
 
 ## Two axes
 
@@ -33,8 +33,8 @@ Experimental branches:
 
 | Tier | Goal | Status |
 |------|------|--------|
-| [[Tier 0 - Hardcoded CNN]] | Validate harness, clock, shape adaptation. No search. | ✓ done — −0.355, see [[Tier 0 - Results]] |
-| [[Tier 1 - Augmentation + Op Search]] | Regularization stack + residual blocks + random op-search. Made the budget productive; +24.644. Its ablation motivates the probe thesis. | ✓ done — +24.644, see [[Tier 1 - Results]] |
+| [[Tier 0 - Hardcoded CNN]] | Validate harness, clock, shape adaptation. No search. | ✓ done — −0.355, see [[Fixed CNN|Tier 0 - Results]] |
+| [[Tier 1 - Augmentation + Op Search]] | Regularization stack + residual blocks + random op-search. Made the budget productive; +24.644. Its ablation motivates the probe thesis. | ✓ done — +24.644, see [[Aug + Op Search|Tier 1 - Results]] |
 | [[Tier 2b - EGNAS-light (macro)]] | **Macro architecture search** (depth-grow + width-prune), the proven 2025 core. Primary job: crack the **CIFARTile** ceiling Tier 1 can't move. Macro-only v1, single-best + log pool, ≥3-seed paired. Design locked 2026-05-18. | **← ACTIVE HEAD** |
 | [[Tier 2a - Probe v1]] | P1 aug-safety probe only (design locked 2026-05-18). **Deferred to after Tier 2b** — pivot 2026-05-18: confront the NAS core (EGNAS/CIFARTile) before the orthogonal aug-probe side-quest. | planned (after 2b) |
 | [[Tier 3 - EGNAS + Reliability]] | Full probe suite (add P2 invariance) + unified controller + OOM-safe / fallback + **Neural Ensemble Search** (Zaidi 2021 — robustness under dataset shift, hedges the −10 clip). The complete self-configuring pipeline. | planned |

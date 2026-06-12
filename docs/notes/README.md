@@ -100,8 +100,8 @@ Split into **plan** (what we intend to build) and **implementation** (what we bu
 **Implementation** — measured results + findings + graphs:
 
 - [[Implementation Results Overview]] — Scoreboard, headline findings, graph index.
-- [[Tier 0 - Results]] — Hardcoded-CNN baseline: total adj −0.355. Established overfitting (not search) is the binding constraint.
-- [[Tier 1 - Results]] — Augmentation + reg + op-search: total adj +24.644. Includes the single-feature ablation quantifying search/EMA/aug.
+- [[Fixed CNN]] — Hardcoded-CNN baseline: total adj −0.355. Established overfitting (not search) is the binding constraint.
+- [[Aug + Op Search]] — Augmentation + reg + op-search: total adj +24.644. Includes the single-feature ablation quantifying search/EMA/aug.
 
 ## Conventions
 

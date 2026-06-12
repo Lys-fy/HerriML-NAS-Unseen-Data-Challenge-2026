@@ -2,11 +2,11 @@
 
 Unit of analysis is **mean ± std across the 3 seeds per (config, dataset)** —
 never a single number. Runs are non-reproducible even at a fixed seed
-(`cudnn.benchmark=True`); see docs/notes Tier 1 - Results single-seed caveat.
+(`cudnn.benchmark=True`); see docs/notes Aug + Op Search single-seed caveat.
 
 Reads   dev/logs/multiseed/{full,augoff}_s{42,1337,2024}.log
 Writes  dev/logs/multiseed/_aggregate.json  (machine-readable, for the plot step)
-        + clean markdown tables to stdout (paste into Multi-Seed - Results.md).
+        + clean markdown tables to stdout (paste into Multi-Seed Variance.md).
 
 Scoring: TWO lenses, always reported side by side —
   * shipped  — exactly what the grader computes (Sudoku/Sokoto benchmark=0.0,

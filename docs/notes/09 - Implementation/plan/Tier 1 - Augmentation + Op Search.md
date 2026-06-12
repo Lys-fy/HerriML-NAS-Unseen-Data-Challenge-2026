@@ -164,7 +164,7 @@ Save for [[Tier 2 - EGNAS-Light]] or later:
 ## Repo layout
 
 ```
-baselines/tier1_aug_op_search/
+baselines/aug_op_search/
   data_processor.py      # adds aug_policy(metadata), TensorDataset → Dataset subclass
                          # with __getitem__ applying transforms on-the-fly
   nas.py                 # random op-type sampler + short-train loop + best-tracker
@@ -174,7 +174,7 @@ baselines/tier1_aug_op_search/
                          # + augmentation transforms
 ```
 
-Same 4-file submission shape. Runnable through `dev/mock_harness.py --submission-dir baselines/tier1_aug_op_search`.
+Same 4-file submission shape. Runnable through `dev/mock_harness.py --submission-dir baselines/aug_op_search`.
 
 ## Open questions
 

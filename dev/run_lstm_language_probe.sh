@@ -23,7 +23,7 @@ set -uo pipefail
 cd ~/projects/HerriML-NAS-Unseen-Data-Challenge-2026
 
 VENV=.venv/bin/python
-SUB=baselines/fixed_arch_probe
+SUB=baselines/tcn_probe
 TIME_LIMIT="${TIME_LIMIT:-2.0}"
 WIDTH="${WIDTH:-24}"
 SEEDS=(42 1337 2024)

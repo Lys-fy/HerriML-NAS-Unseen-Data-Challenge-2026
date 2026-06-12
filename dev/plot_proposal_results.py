@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 REPO = Path(__file__).resolve().parent.parent
 OURS = REPO / "dev/logs/v10_sweep/v10_s42"
-BASE = REPO / "dev/logs/tier2a_p1_v8/p1v8_s42"
+BASE = REPO / "dev/logs/v8/v8_s42"
 OUT = REPO / "docs/proposal/results_grid.png"
 
 CB = "#1f77b4"; CO = "#2c8a3a"; BENCHC = "#b53030"

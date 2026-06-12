@@ -8,7 +8,7 @@
 # on >=2 of 3 datasets, else we keep ours.
 set -uo pipefail
 cd ~/projects/HerriML-NAS-Unseen-Data-Challenge-2026
-VENV=.venv/bin/python; SUB=baselines/fixed_arch_probe
+VENV=.venv/bin/python; SUB=baselines/tcn_probe
 LOG=dev/logs/tcnblock_ab; mkdir -p "$LOG"
 for ds in CIFARTile Myofibre Language; do
   for blk in bn canonical gelu; do

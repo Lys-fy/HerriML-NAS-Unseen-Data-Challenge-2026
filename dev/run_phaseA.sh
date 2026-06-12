@@ -13,7 +13,7 @@
 #     minibatches vs the probe's logged decisions. Seconds per dataset.
 set -uo pipefail
 cd ~/projects/HerriML-NAS-Unseen-Data-Challenge-2026
-VENV=.venv/bin/python; SUB=baselines/fixed_arch_probe
+VENV=.venv/bin/python; SUB=baselines/tcn_probe
 LOG=dev/logs/phaseA; mkdir -p "$LOG/gate" "$LOG/tse"
 
 echo "=== PHASE A start $(date -Iseconds) ==="

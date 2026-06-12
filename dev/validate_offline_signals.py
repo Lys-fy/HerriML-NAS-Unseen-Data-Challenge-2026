@@ -53,7 +53,7 @@ TSE_E = 3  # window for TSE-E
 
 def csv_path(arch, name, code):
     if arch == "conv":
-        return REPO / f"dev/logs/tier2a_p1_v8/p1v8_s42/{code}.csv"
+        return REPO / f"dev/logs/v8/v8_s42/{code}.csv"
     return REPO / f"dev/logs/tcn_probe/{arch}_{name}_s42/{code}.csv"
 
 

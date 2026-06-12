@@ -8,7 +8,7 @@
 #
 # All variations: TIER1_AUG_OFF=1 forces no spatial aug (the multi-seed
 # direction; probe is bypassed entirely). Architecture is fixed (no
-# EGNAS) via tier2a_language_excursion/nas.py. The variations differ
+# EGNAS) via language_excursion/nas.py. The variations differ
 # only in training-side knobs + model width.
 #
 # Variations:
@@ -27,7 +27,7 @@ set -uo pipefail
 cd ~/projects/HerriML-NAS-Unseen-Data-Challenge-2026
 
 VENV=.venv/bin/python
-SUB=baselines/tier2a_language_excursion
+SUB=baselines/language_excursion
 SEEDS=(42 1337 2024)
 TIME_LIMIT=0.5
 

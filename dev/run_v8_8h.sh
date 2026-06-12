@@ -8,7 +8,7 @@
 # 1 seed first (24h); .done markers so we can extend to more seeds.
 set -uo pipefail
 cd ~/projects/HerriML-NAS-Unseen-Data-Challenge-2026
-VENV=.venv/bin/python; SUB=baselines/tier2a_p1_augsafety_v8
+VENV=.venv/bin/python; SUB=baselines/v8
 LOG=dev/logs/v8_8h; mkdir -p "$LOG"
 for seed in 42; do
   for ds in GameOfLife Sudoku Cryptic; do

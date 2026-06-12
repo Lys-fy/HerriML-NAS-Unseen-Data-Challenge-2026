@@ -14,7 +14,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 REPO = Path(__file__).resolve().parent.parent
-OUT = REPO / "docs/notes/09 - Implementation/implementation/images/tier2a"
+OUT = REPO / "docs/notes/09 - Implementation/implementation/images/pipeline"
 OUT.mkdir(parents=True, exist_ok=True)
 
 CONV = "#1f77b4"; T2 = "#ff7f0e"; V9 = "#2c8a3a"; BENCHC = "#b53030"
@@ -53,11 +53,11 @@ flat = axes.flatten()
 
 for ax, (name, code, bench, conv_raw, t2_raw, arch, v9_raw) in zip(flat, DATASETS):
     series = [
-        ("conv (v8)", REPO / f"dev/logs/tier2a_p1_v8/p1v8_s42/{code}.csv",
+        ("conv (v8)", REPO / f"dev/logs/v8/v8_s42/{code}.csv",
          CONV, f"conv  {conv_raw:.1f}%", 1.6),
         ("tcn2d fixed", REPO / f"dev/logs/tcn_probe/tcn2d_{name}_s42/{code}.csv",
          T2, f"tcn2d-fix {t2_raw:.1f}%", 1.6),
-        ("v9", REPO / f"dev/logs/tier2a_p1_v9/p1v9_s42/{code}.csv",
+        ("v9", REPO / f"dev/logs/v9/v9_s42/{code}.csv",
          V9, f"v9 search {arch}  {v9_raw:.1f}%", 2.4),
     ]
     lo, hi = 100.0, 0.0
@@ -104,6 +104,6 @@ for j in range(len(DATASETS) + 1, len(flat)):
 fig.suptitle("v9 searched dilated backbone vs conv (v8) and fixed TCN-2d, seed 42",
              fontsize=15)
 fig.tight_layout(rect=[0, 0, 1, 0.97])
-out = OUT / "tier2a_v9_curves_grid.png"
+out = OUT / "v9_curves_grid.png"
 fig.savefig(out, dpi=125)
 print(f"wrote {out}")

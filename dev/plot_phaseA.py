@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 
 REPO = Path(__file__).resolve().parent.parent
 GATE = REPO / "dev/logs/phaseA/gate"
-IMG = REPO / "docs/notes/09 - Implementation/implementation/images/phaseA"
+IMG = REPO / "docs/notes/09 - Implementation/implementation/images/pipeline"
 IMG.mkdir(parents=True, exist_ok=True)
 
 C = {"conv": "#1f77b4", "tcn1d": "#2c8a3a", "tcn2d": "#ff7f0e"}

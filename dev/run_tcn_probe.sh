@@ -10,7 +10,7 @@
 # match the v8 seed-42 conv numbers. 1 seed (42). Sequential datasets first.
 set -uo pipefail
 cd ~/projects/HerriML-NAS-Unseen-Data-Challenge-2026
-VENV=.venv/bin/python; SUB=baselines/fixed_arch_probe
+VENV=.venv/bin/python; SUB=baselines/tcn_probe
 LOG=dev/logs/tcn_probe; mkdir -p "$LOG"
 DATASETS=(Language Cryptic AddNIST CIFARTile Chesseract GameOfLife GeoClassing Gutenberg MultNIST Myofibre Sudoku Voxel Windspeed)
 SEED=42

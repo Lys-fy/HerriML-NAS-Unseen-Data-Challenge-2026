@@ -1,16 +1,16 @@
 """E1 validation: did the budget-filling ensemble collapse the variance?
 
-Compares the E1 sweep (`dev/logs/e1val/e1_s{42,1337,2024}.log`) against the
+Compares the E1 sweep (`dev/logs/ensemble_e1/e1_s{42,1337,2024}.log`) against the
 Tier-1 paired baseline — the SAME 5 datasets × same seeds × same 2 h budget,
 reused from the multi-seed sweep (`dev/logs/multiseed/full_s*.log`), because
 E1's member 0 *is* that Tier-1 model.
 
 Reuses aggregate_multiseed's parser + stats (DRY, identical regex/scoring).
 Safe to run before the sweep lands: it always prints the Tier-1 baseline
-side and reports E1 as "pending" until the e1val logs exist.
+side and reports E1 as "pending" until the ensemble_e1 logs exist.
 
-Reads   dev/logs/e1val/e1_s*.log + dev/logs/multiseed/full_s*.log
-Writes  dev/logs/e1val/_e1_aggregate.json + markdown to stdout.
+Reads   dev/logs/ensemble_e1/e1_s*.log + dev/logs/multiseed/full_s*.log
+Writes  dev/logs/ensemble_e1/_e1_aggregate.json + markdown to stdout.
 
 Success (thesis Q4): per-dataset σ_adj shrinks substantially vs Tier 1
 (target AddNIST 5.45 -> <2) AND mean >= Tier-1 mean AND no regression on
@@ -27,12 +27,12 @@ from internal_benchmarks import adj_score_internal
 from aggregate_multiseed import parse_log, mstats, fmt  # shared, no matplotlib
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-E1_DIR = REPO_ROOT / "dev" / "logs" / "e1val"
+E1_DIR = REPO_ROOT / "dev" / "logs" / "ensemble_e1"
 MS_DIR = REPO_ROOT / "dev" / "logs" / "multiseed"
 OUT_JSON = E1_DIR / "_e1_aggregate.json"
 
 SEEDS = [42, 1337, 2024]
-# run_e1_validation.sh DATASETS order (positional zip for the ensemble lines).
+# run_ensemble_e1_validation.sh DATASETS order (positional zip for the ensemble lines).
 DATASETS = ["AddNIST", "CIFARTile", "GeoClassing", "Language", "MultNIST"]
 CODES = ["Adaline", "Caitie", "Sadie", "LaMelo", "Mateo"]  # same order
 CODE2DS = dict(zip(CODES, DATASETS))
@@ -194,7 +194,7 @@ def main():
         print("\n⇒ Clean win: E1 is the variance-control layer — promote it.")
     else:
         print("\n⇒ MIXED — NOT a clean win. Read per-row, don't trust the "
-              "totals. Interpretation is in docs/notes [[E1 - Results]] "
+              "totals. Interpretation is in docs/notes [[Ensemble E1]] "
               "(mechanism validated on AddNIST-class only; total σ not "
               "collapsed ⇒ residual variance is structural ⇒ argues for the "
               "probe/Tier-2 direction; member-quality gate is a Tier-3 note).")

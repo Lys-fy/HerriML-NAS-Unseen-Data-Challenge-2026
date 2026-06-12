@@ -21,7 +21,7 @@ set -uo pipefail
 cd ~/projects/HerriML-NAS-Unseen-Data-Challenge-2026
 
 VENV=.venv/bin/python
-SUB=baselines/tier1_aug_op_search
+SUB=baselines/aug_op_search
 
 ALL_DATASETS=(AddNIST CIFARTile Chesseract GameOfLife GeoClassing Gutenberg Language MultNIST Myofibre Sudoku Voxel)
 # Datasets where the metadata-only aug policy actually fires (1/3-channel,

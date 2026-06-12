@@ -1,13 +1,13 @@
 # Tier 2a — Probe v1 (P1 aug-safety)
 
 > **Status:** planned — design locked 2026-05-18 | **Topic:** Tier 1 + a runtime P1 aug-safety probe that decides aug-on/off per dataset, prior-free, ≤5 % clock, asymmetric keep-aug fail-safe. The first actual probe of the [[Probe-Driven Self-Configuration]] thesis.
-> **Related:** [[Probe-Driven Self-Configuration]] (§P1), [[Multi-Seed - Results]] (the aug-oracle), [[E1 - Results]], [[Tier 1 - Augmentation + Op Search]], [[Reliability vs Peak]], [[Threats to Validity]], [[Run State + Handoff]]
+> **Related:** [[Probe-Driven Self-Configuration]] (§P1), [[Multi-Seed Variance|Multi-Seed - Results]] (the aug-oracle), [[Ensemble E1|E1 - Results]], [[Tier 1 - Augmentation + Op Search]], [[Reliability vs Peak]], [[Threats to Validity]], [[Run State + Handoff]]
 
 ## Goal
 
 Recover the Language-class augmentation loss (~+6.8 adj) **without false-positiving** on the datasets where augmentation is the difference between working and a −10 floor — by *measuring* at runtime whether aug helps this specific (unseen) dataset, rather than guessing from metadata.
 
-## The data-driven spec (from the multi-seed aug-oracle, [[Multi-Seed - Results]] §C)
+## The data-driven spec (from the multi-seed aug-oracle, [[Multi-Seed Variance|Multi-Seed - Results]] §C)
 
 P1 is a **binary, high-precision detector of one case**. The oracle (full vs aug-off, 3 seeds):
 
@@ -27,12 +27,12 @@ P1 is a **binary, high-precision detector of one case**. The oracle (full vs aug
 
 ## Locked design decisions (2026-05-18)
 
-1. **Built on pure Tier 1 + P1 only** — one isolated new variable (clean attribution, tiered methodology). E1 stays a separate [[Tier 3 - EGNAS + Reliability]]-gated component per its mixed verdict ([[E1 - Results]]). **P3-lite dropped** (multi-seed showed GameOfLife stable +0.91±0.50; its single-seed regression was noise).
+1. **Built on pure Tier 1 + P1 only** — one isolated new variable (clean attribution, tiered methodology). E1 stays a separate [[Tier 3 - EGNAS + Reliability]]-gated component per its mixed verdict ([[Ensemble E1|E1 - Results]]). **P3-lite dropped** (multi-seed showed GameOfLife stable +0.91±0.50; its single-seed regression was noise).
 2. **Binary all-aug vs none** — one race, full Tier-1 policy vs no aug (matches Language, where *both* crop and cutout destroy the encoding). Per-component (crop vs cutout) deferred to a v1.1.
 
 ## Contract placement — inside `DataProcessor`
 
-Cleanest fit: `DataProcessor` already holds train/valid data + `clock` and builds the loaders; the aug decision *is* a data-processing decision. The probe slots in exactly where `policy = aug_policy_for(self.metadata)` is called (`baselines/tier1_aug_op_search/data_processor.py:61`): pick the metadata policy → if non-empty, run the race → keep or empty the policy → build the train loader. **`nas.py` and `trainer.py` stay byte-identical to Tier 1.**
+Cleanest fit: `DataProcessor` already holds train/valid data + `clock` and builds the loaders; the aug decision *is* a data-processing decision. The probe slots in exactly where `policy = aug_policy_for(self.metadata)` is called (`baselines/aug_op_search/data_processor.py:61`): pick the metadata policy → if non-empty, run the race → keep or empty the policy → build the train loader. **`nas.py` and `trainer.py` stay byte-identical to Tier 1.**
 
 Reuse: `helpers.build_cnn` (tiny config: base_width ≈16, 3–4 blocks), `AugmentedTensorDataset`/`aug_policy_for`, a minimal SGD loop modelled on `nas.py:_short_train`; downsample via `F.interpolate` to hold the probe ≤5 % clock.
 

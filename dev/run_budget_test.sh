@@ -11,7 +11,7 @@
 # = controls (does full-budget help or hurt converged datasets / overfit?).
 set -uo pipefail
 cd ~/projects/HerriML-NAS-Unseen-Data-Challenge-2026
-VENV=.venv/bin/python; SUB=baselines/fixed_arch_probe
+VENV=.venv/bin/python; SUB=baselines/tcn_probe
 LOG=dev/logs/budget_test; mkdir -p "$LOG"
 declare -A ARCH=(
   [GameOfLife]="Conv3,Conv3,Conv3,Conv3,Conv3,Conv3,Conv3,Conv3,Conv3"

@@ -19,13 +19,13 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 REPO = Path(__file__).resolve().parent.parent
-IMG = REPO / "docs" / "notes" / "09 - Implementation" / "implementation" / "images" / "language"
+IMG = REPO / "docs" / "notes" / "09 - Implementation" / "implementation" / "images" / "architecture"
 IMG.mkdir(parents=True, exist_ok=True)
 BENCH = 85.20
 
 # (label, csv, colour, final TEST raw % from the score line)
 SERIES = [
-    ("v8 conv",  REPO / "dev/logs/tier2a_p1_v8/p1v8_s42/LaMelo.csv",            "#1f77b4", 83.68),
+    ("v8 conv",  REPO / "dev/logs/v8/v8_s42/LaMelo.csv",            "#1f77b4", 83.68),
     ("TCN-2d",   REPO / "dev/logs/tcn_probe/tcn2d_Language_s42/LaMelo.csv",     "#ff7f0e", 88.24),
     ("TCN-1d",   REPO / "dev/logs/tcn_probe/tcn1d_Language_s42/LaMelo.csv",     "#2c8a3a", 89.34),
 ]

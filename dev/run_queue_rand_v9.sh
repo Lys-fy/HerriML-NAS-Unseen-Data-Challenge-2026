@@ -8,5 +8,5 @@ echo "=== QUEUE START $(date -Iseconds) ==="
 echo "--- [1/2] random search ---"
 bash dev/run_random_search.sh
 echo "--- [2/2] v9 dilated-backbone 3-seed sweep ---"
-bash dev/run_tier2a_p1_v9.sh
+bash dev/run_v9.sh
 echo "=== QUEUE DONE $(date -Iseconds) ==="

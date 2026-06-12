@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch, Polygon, Rectangle
 
 REPO = Path(__file__).resolve().parent.parent
-OUT = REPO / "docs/notes/09 - Implementation/implementation/images/v10_pipeline.png"
+OUT = REPO / "docs/notes/09 - Implementation/implementation/images/pipeline/v10_pipeline.png"
 
 C_MEAS = ("#e8f3fc", "#1f77b4")
 C_GATE = ("#fff3cd", "#b8860b")

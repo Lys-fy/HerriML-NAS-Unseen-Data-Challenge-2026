@@ -42,20 +42,14 @@ def _img_out(name):
     Obsidian embeds resolve by basename, so ![[name.png]] keeps working
     regardless of which subfolder the file lives in."""
     name = Path(name).name
-    if name.startswith("tier0"):
-        sub = "tier0"
-    elif name.startswith("tier1"):
-        sub = "tier1"
-    elif name.startswith("tier2a"):
-        sub = "tier2a"
-    elif name.startswith("tier2b"):
-        sub = "tier2b"
-    elif name.startswith("e1"):
-        sub = "e1"
-    elif name.startswith("multiseed"):
-        sub = "multiseed"
-    elif name.startswith("lang"):
-        sub = "language"
+    if name.startswith(("fixed_cnn", "aug_op_search", "egnas_full")):
+        sub = "baselines"
+    elif re.match(r"v\d", name):
+        sub = "pipeline"
+    elif name.startswith(("ensemble_e1", "multiseed")):
+        sub = "reliability"
+    elif name.startswith("tcn") or name.startswith("lang"):
+        sub = "architecture"
     else:
         sub = ""
     d = (IMG_DIR / sub) if sub else IMG_DIR
@@ -65,15 +59,15 @@ def _img_out(name):
 # Machine-readable aggregate produced by dev/aggregate_multiseed.py.
 MULTISEED_JSON = REPO_ROOT / "dev" / "logs" / "multiseed" / "_aggregate.json"
 # Machine-readable aggregate produced by dev/aggregate_e1.py.
-E1_JSON = REPO_ROOT / "dev" / "logs" / "e1val" / "_e1_aggregate.json"
-# Machine-readable aggregate produced by dev/aggregate_tier2bfull.py.
-TIER2BFULL_JSON = REPO_ROOT / "dev" / "logs" / "tier2bfull" / "_tier2bfull_aggregate.json"
-TIER2A_P1_V4_JSON = (REPO_ROOT / "dev" / "logs" / "tier2a_p1_v4"
-                     / "_tier2a_p1_v4_aggregate.json")
-TIER2A_P1_V6_JSON = (REPO_ROOT / "dev" / "logs" / "tier2a_p1_v6"
-                     / "_tier2a_p1_v6_aggregate.json")
-TIER2A_P1_V7_JSON = (REPO_ROOT / "dev" / "logs" / "tier2a_p1_v7"
-                     / "_tier2a_p1_v7_aggregate.json")
+E1_JSON = REPO_ROOT / "dev" / "logs" / "ensemble_e1" / "_e1_aggregate.json"
+# Machine-readable aggregate produced by dev/aggregate_egnas_full.py.
+TIER2BFULL_JSON = REPO_ROOT / "dev" / "logs" / "egnas_full" / "_egnas_full_aggregate.json"
+TIER2A_P1_V4_JSON = (REPO_ROOT / "dev" / "logs" / "v4"
+                     / "_v4_aggregate.json")
+TIER2A_P1_V6_JSON = (REPO_ROOT / "dev" / "logs" / "v6"
+                     / "_v6_aggregate.json")
+TIER2A_P1_V7_JSON = (REPO_ROOT / "dev" / "logs" / "v7"
+                     / "_v7_aggregate.json")
 
 CODENAME_TO_DATASET = {
     "Adaline": "AddNIST",
@@ -94,15 +88,15 @@ CODENAME_TO_DATASET = {
 # Per-tier path resolution. Add new tiers here. All outputs land in IMPL_DIR
 # (the Obsidian implementation/ folder) so notes can embed them.
 TIER_CONFIG = {
-    "tier0": dict(
-        csv_dir=REPO_ROOT / "dev" / "logs" / "training-2h",
-        log_file=REPO_ROOT / "dev" / "logs" / "tier0-sweep-2h.log",
+    "fixed_cnn": dict(
+        csv_dir=REPO_ROOT / "dev" / "logs" / "fixed_cnn_2h",
+        log_file=REPO_ROOT / "dev" / "logs" / "fixed_cnn-sweep-2h.log",
         out_dir=IMG_DIR,
         title="Tier 0 — Hardcoded CNN",
     ),
-    "tier1": dict(
-        csv_dir=REPO_ROOT / "dev" / "logs" / "training-tier1-2h",
-        log_file=REPO_ROOT / "dev" / "logs" / "tier1-sweep-2h.log",
+    "aug_op_search": dict(
+        csv_dir=REPO_ROOT / "dev" / "logs" / "aug_op_search_2h",
+        log_file=REPO_ROOT / "dev" / "logs" / "aug_op_search-sweep-2h.log",
         out_dir=IMG_DIR,
         title="Tier 1 — Augmentation + Random Op Search",
     ),
@@ -112,105 +106,105 @@ TIER_CONFIG = {
     # Per-seed Tier-2b configs pull from both the original 11-ds sweep dir and
     # the Windspeed+Cryptic follow-on dir, so the per-seed score bars + curves
     # cover all 13 datasets.
-    "tier2b_s42": dict(
-        csv_dir=(REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_s42",
-                 REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_new_s42"),
-        log_file=(REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_s42.log",
-                  REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_new_s42.log"),
+    "egnas_full_s42": dict(
+        csv_dir=(REPO_ROOT / "dev" / "logs" / "egnas_full" / "t2bfull_s42",
+                 REPO_ROOT / "dev" / "logs" / "egnas_full" / "t2bfull_new_s42"),
+        log_file=(REPO_ROOT / "dev" / "logs" / "egnas_full" / "t2bfull_s42.log",
+                  REPO_ROOT / "dev" / "logs" / "egnas_full" / "t2bfull_new_s42.log"),
         out_dir=IMG_DIR,
         title="Tier 2b — Full EGNAS (macro+micro), seed 42 — single seed, NOT a verdict",
     ),
-    "tier2b_s1337": dict(
-        csv_dir=(REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_s1337",
-                 REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_new_s1337"),
-        log_file=(REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_s1337.log",
-                  REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_new_s1337.log"),
+    "egnas_full_s1337": dict(
+        csv_dir=(REPO_ROOT / "dev" / "logs" / "egnas_full" / "t2bfull_s1337",
+                 REPO_ROOT / "dev" / "logs" / "egnas_full" / "t2bfull_new_s1337"),
+        log_file=(REPO_ROOT / "dev" / "logs" / "egnas_full" / "t2bfull_s1337.log",
+                  REPO_ROOT / "dev" / "logs" / "egnas_full" / "t2bfull_new_s1337.log"),
         out_dir=IMG_DIR,
         title="Tier 2b — Full EGNAS (macro+micro), seed 1337 — single seed",
     ),
-    "tier2b_s2024": dict(
-        csv_dir=(REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_s2024",
-                 REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_new_s2024"),
-        log_file=(REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_s2024.log",
-                  REPO_ROOT / "dev" / "logs" / "tier2bfull" / "t2bfull_new_s2024.log"),
+    "egnas_full_s2024": dict(
+        csv_dir=(REPO_ROOT / "dev" / "logs" / "egnas_full" / "t2bfull_s2024",
+                 REPO_ROOT / "dev" / "logs" / "egnas_full" / "t2bfull_new_s2024"),
+        log_file=(REPO_ROOT / "dev" / "logs" / "egnas_full" / "t2bfull_s2024.log",
+                  REPO_ROOT / "dev" / "logs" / "egnas_full" / "t2bfull_new_s2024.log"),
         out_dir=IMG_DIR,
         title="Tier 2b — Full EGNAS (macro+micro), seed 2024 — single seed",
     ),
     # Tier-2a / P1 v4 — full EGNAS + 3-probe shadow comparison (A drives,
-    # B+C shadow). Per-seed view; v4 verdict lives in Tier 2a - Results.md.
-    "tier2a_p1_v4_s42": dict(
-        csv_dir=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v4" / "p1v4_s42",
-        log_file=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v4" / "p1v4_s42.log",
+    # B+C shadow). Per-seed view; v4 verdict lives in Pipeline v1-v7 - Aug Probe.md.
+    "v4_s42": dict(
+        csv_dir=REPO_ROOT / "dev" / "logs" / "v4" / "v4_s42",
+        log_file=REPO_ROOT / "dev" / "logs" / "v4" / "v4_s42.log",
         out_dir=IMG_DIR,
         title="Tier 2a / P1 v4 (3-probe shadow, A drives), seed 42",
     ),
-    "tier2a_p1_v4_s1337": dict(
-        csv_dir=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v4" / "p1v4_s1337",
-        log_file=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v4" / "p1v4_s1337.log",
+    "v4_s1337": dict(
+        csv_dir=REPO_ROOT / "dev" / "logs" / "v4" / "v4_s1337",
+        log_file=REPO_ROOT / "dev" / "logs" / "v4" / "v4_s1337.log",
         out_dir=IMG_DIR,
         title="Tier 2a / P1 v4 (3-probe shadow, A drives), seed 1337",
     ),
-    "tier2a_p1_v4_s2024": dict(
-        csv_dir=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v4" / "p1v4_s2024",
-        log_file=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v4" / "p1v4_s2024.log",
+    "v4_s2024": dict(
+        csv_dir=REPO_ROOT / "dev" / "logs" / "v4" / "v4_s2024",
+        log_file=REPO_ROOT / "dev" / "logs" / "v4" / "v4_s2024.log",
         out_dir=IMG_DIR,
         title="Tier 2a / P1 v4, seed 2024 — PARTIAL (sweep still running)",
     ),
     # Tier-2a / P1 v5 — driver C + Mixup-on-OFF + GroupConv3 + ResNeXt in OP_VOCAB.
-    "tier2a_p1_v5_s42": dict(
-        csv_dir=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v5" / "p1v5_s42",
-        log_file=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v5" / "p1v5_s42.log",
+    "v5_s42": dict(
+        csv_dir=REPO_ROOT / "dev" / "logs" / "v5" / "v5_s42",
+        log_file=REPO_ROOT / "dev" / "logs" / "v5" / "v5_s42.log",
         out_dir=IMG_DIR,
         title="Tier 2a / P1 v5 (driver C + Mixup-on-OFF + GroupConv3 + ResNeXt), seed 42",
     ),
-    "tier2a_p1_v5_s1337": dict(
-        csv_dir=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v5" / "p1v5_s1337",
-        log_file=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v5" / "p1v5_s1337.log",
+    "v5_s1337": dict(
+        csv_dir=REPO_ROOT / "dev" / "logs" / "v5" / "v5_s1337",
+        log_file=REPO_ROOT / "dev" / "logs" / "v5" / "v5_s1337.log",
         out_dir=IMG_DIR,
         title="Tier 2a / P1 v5, seed 1337",
     ),
-    "tier2a_p1_v5_s2024": dict(
-        csv_dir=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v5" / "p1v5_s2024",
-        log_file=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v5" / "p1v5_s2024.log",
+    "v5_s2024": dict(
+        csv_dir=REPO_ROOT / "dev" / "logs" / "v5" / "v5_s2024",
+        log_file=REPO_ROOT / "dev" / "logs" / "v5" / "v5_s2024.log",
         out_dir=IMG_DIR,
         title="Tier 2a / P1 v5, seed 2024",
     ),
     # Tier-2a / P1 v6 — C-only probe + 9-op vocab + K=12 + verify-of-accepts
     # + clock-extend + zero-shot shadow. Per-seed view; v6 verdict in notes.
-    "tier2a_p1_v6_s42": dict(
-        csv_dir=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v6" / "p1v6_s42",
-        log_file=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v6" / "p1v6_s42.log",
+    "v6_s42": dict(
+        csv_dir=REPO_ROOT / "dev" / "logs" / "v6" / "v6_s42",
+        log_file=REPO_ROOT / "dev" / "logs" / "v6" / "v6_s42.log",
         out_dir=IMG_DIR,
         title="Tier 2a / P1 v6 (C-only + 9 ops + verify + clock-extend), seed 42",
     ),
-    "tier2a_p1_v6_s1337": dict(
-        csv_dir=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v6" / "p1v6_s1337",
-        log_file=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v6" / "p1v6_s1337.log",
+    "v6_s1337": dict(
+        csv_dir=REPO_ROOT / "dev" / "logs" / "v6" / "v6_s1337",
+        log_file=REPO_ROOT / "dev" / "logs" / "v6" / "v6_s1337.log",
         out_dir=IMG_DIR,
         title="Tier 2a / P1 v6, seed 1337",
     ),
-    "tier2a_p1_v6_s2024": dict(
-        csv_dir=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v6" / "p1v6_s2024",
-        log_file=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v6" / "p1v6_s2024.log",
+    "v6_s2024": dict(
+        csv_dir=REPO_ROOT / "dev" / "logs" / "v6" / "v6_s2024",
+        log_file=REPO_ROOT / "dev" / "logs" / "v6" / "v6_s2024.log",
         out_dir=IMG_DIR,
         title="Tier 2a / P1 v6, seed 2024 — PARTIAL (sweep still running)",
     ),
     # Tier-2a / P1 v7 — simplify pivot: EGNAS-full + 4 conv ops + macro-prune-verify + aug-probe.
-    "tier2a_p1_v7_s42": dict(
-        csv_dir=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v7" / "p1v7_s42",
-        log_file=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v7" / "p1v7_s42.log",
+    "v7_s42": dict(
+        csv_dir=REPO_ROOT / "dev" / "logs" / "v7" / "v7_s42",
+        log_file=REPO_ROOT / "dev" / "logs" / "v7" / "v7_s42.log",
         out_dir=IMG_DIR,
         title="Tier 2a / P1 v7 (EGNAS-full + 4-op + macro-prune-verify + aug-probe), seed 42",
     ),
-    "tier2a_p1_v7_s1337": dict(
-        csv_dir=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v7" / "p1v7_s1337",
-        log_file=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v7" / "p1v7_s1337.log",
+    "v7_s1337": dict(
+        csv_dir=REPO_ROOT / "dev" / "logs" / "v7" / "v7_s1337",
+        log_file=REPO_ROOT / "dev" / "logs" / "v7" / "v7_s1337.log",
         out_dir=IMG_DIR,
         title="Tier 2a / P1 v7, seed 1337 — PARTIAL (sweep running)",
     ),
-    "tier2a_p1_v7_s2024": dict(
-        csv_dir=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v7" / "p1v7_s2024",
-        log_file=REPO_ROOT / "dev" / "logs" / "tier2a_p1_v7" / "p1v7_s2024.log",
+    "v7_s2024": dict(
+        csv_dir=REPO_ROOT / "dev" / "logs" / "v7" / "v7_s2024",
+        log_file=REPO_ROOT / "dev" / "logs" / "v7" / "v7_s2024.log",
         out_dir=IMG_DIR,
         title="Tier 2a / P1 v7, seed 2024 — PARTIAL (sweep running)",
     ),
@@ -218,7 +212,7 @@ TIER_CONFIG = {
 
 # Tier 1 ablation: full baseline vs single-feature-disabled configs, on the
 # 3 representative datasets. Baseline numbers from the tier1 full sweep.
-ABLATION_BASELINE = {  # codename: adj from tier1-sweep-2h.log
+ABLATION_BASELINE = {  # codename: adj from aug_op_search-sweep-2h.log
     "Adaline": 1.862,
     "Caitie": -0.498,
     "LaMelo": -6.642,
@@ -636,20 +630,20 @@ def plot_e1(out_path):
     print(f"  wrote {out_path.relative_to(REPO_ROOT)}")
 
 
-def plot_tier2bfull(out_path):
+def plot_egnas_full(out_path):
     """Two-panel figure for the Tier-2b FULL EGNAS sweep (11 ds × 3 seeds).
 
       A) per-dataset Tier-1 vs EGNAS-full mean ± std grouped bars + per-seed
          dots; sorted by Δmean desc; Δ annotated above each pair.
       B) per-dataset σ comparison — the variance-collapse picture.
 
-    Reads dev/logs/tier2bfull/_tier2bfull_aggregate.json. Mirrors plot_e1's
-    style for visual consistency with [[E1 - Results]] and the multi-seed
+    Reads dev/logs/egnas_full/_egnas_full_aggregate.json. Mirrors plot_e1's
+    style for visual consistency with [[Ensemble E1]] and the multi-seed
     figure.
     """
     if not TIER2BFULL_JSON.exists():
         print(f"  {TIER2BFULL_JSON.relative_to(REPO_ROOT)} not found — run "
-              f"dev/aggregate_tier2bfull.py after the sweep lands.")
+              f"dev/aggregate_egnas_full.py after the sweep lands.")
         return
     agg = json.loads(TIER2BFULL_JSON.read_text())
     rows = agg.get("rows", {})
@@ -659,8 +653,8 @@ def plot_tier2bfull(out_path):
     # Sort by Δmean desc so big wins read first.
     names = sorted(rows.keys(), key=str.lower)
     x = np.arange(len(names))
-    bm = np.array([rows[n]["tier1"]["mean"] for n in names])
-    bs = np.array([rows[n]["tier1"]["std"]  for n in names])
+    bm = np.array([rows[n]["aug_op_search"]["mean"] for n in names])
+    bs = np.array([rows[n]["aug_op_search"]["std"]  for n in names])
     em = np.array([rows[n]["egnas"]["mean"] for n in names])
     es = np.array([rows[n]["egnas"]["std"]  for n in names])
 
@@ -675,7 +669,7 @@ def plot_tier2bfull(out_path):
             color="#2c8a3a", edgecolor="black", linewidth=.5,
             error_kw=dict(ecolor="#333", lw=1.0))
     for i, n in enumerate(names):
-        for v in rows[n]["tier1"]["vals"]:
+        for v in rows[n]["aug_op_search"]["vals"]:
             axA.scatter(i - w / 2, v, s=18, color="black", zorder=5, alpha=.6)
         for v in rows[n]["egnas"]["vals"]:
             axA.scatter(i + w / 2, v, s=18, color="black", zorder=5, alpha=.6)
@@ -689,8 +683,8 @@ def plot_tier2bfull(out_path):
     axA.set_xticklabels(names, rotation=22, ha="right", fontsize=9)
     axA.set_ylabel("internal adj (mean ± std, 3 seeds)")
     T = agg.get("totals") or {}
-    if T.get("tier1") and T.get("egnas"):
-        Tb, Te = T["tier1"], T["egnas"]
+    if T.get("aug_op_search") and T.get("egnas"):
+        Tb, Te = T["aug_op_search"], T["egnas"]
         ratio = Te['std'] / Tb['std'] if Tb['std'] > 1e-9 else float('nan')
         axA.set_title(
             "A. Tier-1 vs EGNAS-full per dataset — alphabetic order "
@@ -729,16 +723,16 @@ def plot_tier2bfull(out_path):
     print(f"  wrote {out_path.relative_to(REPO_ROOT)}")
 
 
-def plot_tier2bfull_curves(out_path):
+def plot_egnas_full_curves(out_path):
     """Per-dataset aggregated learning curves across the 3 EGNAS-full seeds.
 
     For each dataset: thin grey lines = each seed's val_acc trajectory; bold
     green = mean across seeds (NaN-aware so early-stopped seeds don't bias
     later epochs); shaded band = ±std. Reads
-    `dev/logs/tier2bfull/t2bfull_s{42,1337,2024}/<codename>.csv` (the
+    `dev/logs/egnas_full/t2bfull_s{42,1337,2024}/<codename>.csv` (the
     per-epoch CSVs the Tier-1 trainer writes via BASELINE_LOG_DIR).
     """
-    base = REPO_ROOT / "dev" / "logs" / "tier2bfull"
+    base = REPO_ROOT / "dev" / "logs" / "egnas_full"
     seeds = [42, 1337, 2024]
     # Original 11-ds sweep lives in t2bfull_s{seed}/; the Windspeed+Cryptic
     # follow-on landed in t2bfull_new_s{seed}/. Union both so the figure now
@@ -845,17 +839,17 @@ def plot_tier2bfull_curves(out_path):
     print(f"  wrote {out_path.relative_to(REPO_ROOT)}")
 
 
-def plot_tier2a_p1_v6(out_path):
+def plot_v6(out_path):
     """Two-panel figure for Tier-2a / P1 v6 (paired vs EGNAS-full, 13 ds × 3 seeds).
 
-    Same shape as plot_tier2bfull but reads _tier2a_p1_v4_aggregate.json,
+    Same shape as plot_egnas_full but reads _v4_aggregate.json,
     where rows have `egnas` and `p1` fields instead of `tier1` and `egnas`.
     Panel A: per-dataset EG vs +P1 mean ± std + seed dots + Δ annotation.
     Panel B: σ change EG → +P1 (×ratio annotated).
     """
     if not TIER2A_P1_V6_JSON.exists():
         print(f"  {TIER2A_P1_V6_JSON.relative_to(REPO_ROOT)} not found — run "
-              "dev/aggregate_tier2a_p1_v6.py after the sweep lands.")
+              "dev/aggregate_v6.py after the sweep lands.")
         return
     agg = json.loads(TIER2A_P1_V6_JSON.read_text())
     rows = agg.get("rows", {})
@@ -948,26 +942,26 @@ def plot_tier2a_p1_v6(out_path):
     print(f"  wrote {out_path.relative_to(REPO_ROOT)}")
 
 
-def plot_tier2a_p1_v6_curves(out_path):
+def plot_v6_curves(out_path):
     """Per-dataset aggregated learning curves: EGNAS-full (green) vs +P1 v6 (orange).
 
-    Mirrors plot_tier2bfull_curves but compares EGNAS-full baseline (the
+    Mirrors plot_egnas_full_curves but compares EGNAS-full baseline (the
     paired EG sweep dirs) against +P1 v6. 13 panels alphabetic; benchmark
     line per panel; thin lines = each seed, bold = across-seed mean, band
     = ±std.
     """
-    base_eg = REPO_ROOT / "dev" / "logs" / "tier2bfull"
-    base_p1 = REPO_ROOT / "dev" / "logs" / "tier2a_p1_v6"
+    base_eg = REPO_ROOT / "dev" / "logs" / "egnas_full"
+    base_p1 = REPO_ROOT / "dev" / "logs" / "v6"
     seeds = [42, 1337, 2024]
     s42_dirs = [base_eg / "t2bfull_s42", base_eg / "t2bfull_new_s42"]
     s42_dirs = [d for d in s42_dirs if d.exists()]
-    p1_seed_dir = base_p1 / "p1v6_s42"
-    if not p1_seed_dir.exists():
-        print(f"  {p1_seed_dir.relative_to(REPO_ROOT)} not found.")
+    v2_seed_dir = base_p1 / "v6_s42"
+    if not v2_seed_dir.exists():
+        print(f"  {v2_seed_dir.relative_to(REPO_ROOT)} not found.")
         return
     # Union codenames (EG sweep + P1 v6 sweep).
     codes = sorted({p.stem for d in s42_dirs for p in d.glob("*.csv")}
-                   | {p.stem for p in p1_seed_dir.glob("*.csv")},
+                   | {p.stem for p in v2_seed_dir.glob("*.csv")},
                    key=_ds_name)
     if not codes:
         print("  no per-codename CSVs found.")
@@ -991,7 +985,7 @@ def plot_tier2a_p1_v6_curves(out_path):
                 for tag in ("t2bfull", "t2bfull_new")]
 
     def _p1_paths(code):
-        return [base_p1 / f"p1v6_s{s}" / f"{code}.csv" for s in seeds]
+        return [base_p1 / f"v6_s{s}" / f"{code}.csv" for s in seeds]
 
     cols = 4
     rows = (len(codes) + cols - 1) // cols
@@ -1061,17 +1055,17 @@ def plot_tier2a_p1_v6_curves(out_path):
     print(f"  wrote {out_path.relative_to(REPO_ROOT)}")
 
 
-def plot_tier2a_p1_v7(out_path):
+def plot_v7(out_path):
     """Two-panel figure for Tier-2a / P1 v7 (paired vs EGNAS-full, 13 ds × 3 seeds).
 
-    Same shape as plot_tier2bfull but reads _tier2a_p1_v4_aggregate.json,
+    Same shape as plot_egnas_full but reads _v4_aggregate.json,
     where rows have `egnas` and `p1` fields instead of `tier1` and `egnas`.
     Panel A: per-dataset EG vs +P1 mean ± std + seed dots + Δ annotation.
     Panel B: σ change EG → +P1 (×ratio annotated).
     """
     if not TIER2A_P1_V7_JSON.exists():
         print(f"  {TIER2A_P1_V7_JSON.relative_to(REPO_ROOT)} not found — run "
-              "dev/aggregate_tier2a_p1_v7.py after the sweep lands.")
+              "dev/aggregate_v7.py after the sweep lands.")
         return
     agg = json.loads(TIER2A_P1_V7_JSON.read_text())
     rows = agg.get("rows", {})
@@ -1164,26 +1158,26 @@ def plot_tier2a_p1_v7(out_path):
     print(f"  wrote {out_path.relative_to(REPO_ROOT)}")
 
 
-def plot_tier2a_p1_v7_curves(out_path):
+def plot_v7_curves(out_path):
     """Per-dataset aggregated learning curves: EGNAS-full (green) vs +P1 v7 (orange).
 
-    Mirrors plot_tier2bfull_curves but compares EGNAS-full baseline (the
+    Mirrors plot_egnas_full_curves but compares EGNAS-full baseline (the
     paired EG sweep dirs) against +P1 v7. 13 panels alphabetic; benchmark
     line per panel; thin lines = each seed, bold = across-seed mean, band
     = ±std.
     """
-    base_eg = REPO_ROOT / "dev" / "logs" / "tier2bfull"
-    base_p1 = REPO_ROOT / "dev" / "logs" / "tier2a_p1_v7"
+    base_eg = REPO_ROOT / "dev" / "logs" / "egnas_full"
+    base_p1 = REPO_ROOT / "dev" / "logs" / "v7"
     seeds = [42, 1337, 2024]
     s42_dirs = [base_eg / "t2bfull_s42", base_eg / "t2bfull_new_s42"]
     s42_dirs = [d for d in s42_dirs if d.exists()]
-    p1_seed_dir = base_p1 / "p1v7_s42"
-    if not p1_seed_dir.exists():
-        print(f"  {p1_seed_dir.relative_to(REPO_ROOT)} not found.")
+    v2_seed_dir = base_p1 / "v7_s42"
+    if not v2_seed_dir.exists():
+        print(f"  {v2_seed_dir.relative_to(REPO_ROOT)} not found.")
         return
     # Union codenames (EG sweep + P1 v7 sweep).
     codes = sorted({p.stem for d in s42_dirs for p in d.glob("*.csv")}
-                   | {p.stem for p in p1_seed_dir.glob("*.csv")},
+                   | {p.stem for p in v2_seed_dir.glob("*.csv")},
                    key=_ds_name)
     if not codes:
         print("  no per-codename CSVs found.")
@@ -1207,7 +1201,7 @@ def plot_tier2a_p1_v7_curves(out_path):
                 for tag in ("t2bfull", "t2bfull_new")]
 
     def _p1_paths(code):
-        return [base_p1 / f"p1v7_s{s}" / f"{code}.csv" for s in seeds]
+        return [base_p1 / f"v7_s{s}" / f"{code}.csv" for s in seeds]
 
     cols = 4
     rows = (len(codes) + cols - 1) // cols
@@ -1280,7 +1274,7 @@ def plot_tier2a_p1_v7_curves(out_path):
 def main():
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--tier", choices=sorted(TIER_CONFIG.keys()), default="tier1")
+    p.add_argument("--tier", choices=sorted(TIER_CONFIG.keys()), default="aug_op_search")
     p.add_argument("--ablation", action="store_true",
                    help="Also produce the Tier 1 ablation comparison chart.")
     p.add_argument("--multiseed", action="store_true",
@@ -1288,31 +1282,31 @@ def main():
                         "(reads dev/logs/multiseed/_aggregate.json) and exit.")
     p.add_argument("--e1", action="store_true",
                    help="Produce the E1-vs-Tier1 variance-collapse figure "
-                        "(reads dev/logs/e1val/_e1_aggregate.json) and exit.")
-    p.add_argument("--tier2bfull", action="store_true",
+                        "(reads dev/logs/ensemble_e1/_e1_aggregate.json) and exit.")
+    p.add_argument("--egnas-full", action="store_true",
                    help="Produce the Tier-2b FULL EGNAS vs Tier-1 figure "
-                        "(reads dev/logs/tier2bfull/_tier2bfull_aggregate.json) "
+                        "(reads dev/logs/egnas_full/_egnas_full_aggregate.json) "
                         "and exit.")
-    p.add_argument("--tier2bfull-curves", action="store_true",
+    p.add_argument("--egnas-full-curves", action="store_true",
                    help="Produce per-dataset aggregated learning curves "
                         "for Tier-2b FULL EGNAS (3 seeds, mean ± std).")
-    p.add_argument("--tier2a-p1-v4", action="store_true",
+    p.add_argument("--v4", action="store_true",
                    help="Produce the Tier-2a / P1 v4 vs EGNAS-full figure "
-                        "(reads dev/logs/tier2a_p1_v4/_tier2a_p1_v4_aggregate.json) "
+                        "(reads dev/logs/v4/_v4_aggregate.json) "
                         "and exit.")
-    p.add_argument("--tier2a-p1-v4-curves", action="store_true",
+    p.add_argument("--v4-curves", action="store_true",
                    help="Produce per-dataset aggregated learning curves for "
                         "Tier-2a / P1 v4 with EGNAS-full overlay (3 seeds).")
-    p.add_argument("--tier2a-p1-v6", action="store_true",
+    p.add_argument("--v6", action="store_true",
                    help="Produce the Tier-2a / P1 v6 vs EGNAS-full figure "
-                        "(reads dev/logs/tier2a_p1_v6/_tier2a_p1_v6_aggregate.json) "
+                        "(reads dev/logs/v6/_v6_aggregate.json) "
                         "and exit.")
-    p.add_argument("--tier2a-p1-v6-curves", action="store_true",
+    p.add_argument("--v6-curves", action="store_true",
                    help="Produce per-dataset aggregated learning curves for "
                         "Tier-2a / P1 v6 with EGNAS-full overlay.")
-    p.add_argument("--tier2a-p1-v7", action="store_true",
+    p.add_argument("--v7", action="store_true",
                    help="Tier-2a / P1 v7 vs EGNAS-full paired figure.")
-    p.add_argument("--tier2a-p1-v7-curves", action="store_true",
+    p.add_argument("--v7-curves", action="store_true",
                    help="Tier-2a / P1 v7 aggregated learning curves vs EGNAS-full.")
     args = p.parse_args()
 
@@ -1325,55 +1319,55 @@ def main():
     if args.e1:
         print("=== E1 figure ===")
         IMPL_DIR.mkdir(parents=True, exist_ok=True)
-        plot_e1(_img_out("e1.png"))
+        plot_e1(_img_out("ensemble_e1.png"))
         return
 
-    if args.tier2bfull:
+    if args.egnas_full:
         print("=== Tier-2b FULL EGNAS figure ===")
         IMPL_DIR.mkdir(parents=True, exist_ok=True)
-        plot_tier2bfull(_img_out("tier2bfull.png"))
+        plot_egnas_full(_img_out("egnas_full.png"))
         return
 
-    if args.tier2bfull_curves:
+    if args.egnas_full_curves:
         print("=== Tier-2b FULL EGNAS — aggregated learning curves ===")
         IMPL_DIR.mkdir(parents=True, exist_ok=True)
-        plot_tier2bfull_curves(_img_out("tier2bfull_curves.png"))
+        plot_egnas_full_curves(_img_out("egnas_full_curves.png"))
         return
 
-    if args.tier2a_p1_v4:
+    if args.v4:
         print("=== Tier-2a / P1 v4 figure ===")
         IMPL_DIR.mkdir(parents=True, exist_ok=True)
-        plot_tier2a_p1_v4(_img_out("tier2a_p1_v4.png"))
+        plot_v4(_img_out("v4.png"))
         return
 
-    if args.tier2a_p1_v4_curves:
+    if args.v4_curves:
         print("=== Tier-2a / P1 v4 — aggregated learning curves ===")
         IMPL_DIR.mkdir(parents=True, exist_ok=True)
-        plot_tier2a_p1_v4_curves(_img_out("tier2a_p1_v4_curves.png"))
+        plot_v4_curves(_img_out("v4_curves.png"))
         return
 
-    if args.tier2a_p1_v6:
+    if args.v6:
         print("=== Tier-2a / P1 v6 figure ===")
         IMPL_DIR.mkdir(parents=True, exist_ok=True)
-        plot_tier2a_p1_v6(_img_out("tier2a_p1_v6.png"))
+        plot_v6(_img_out("v6.png"))
         return
 
-    if args.tier2a_p1_v6_curves:
+    if args.v6_curves:
         print("=== Tier-2a / P1 v6 — aggregated learning curves ===")
         IMPL_DIR.mkdir(parents=True, exist_ok=True)
-        plot_tier2a_p1_v6_curves(_img_out("tier2a_p1_v6_curves.png"))
+        plot_v6_curves(_img_out("v6_curves.png"))
         return
 
-    if args.tier2a_p1_v7:
+    if args.v7:
         print("=== Tier-2a / P1 v7 figure ===")
         IMPL_DIR.mkdir(parents=True, exist_ok=True)
-        plot_tier2a_p1_v7(_img_out("tier2a_p1_v7.png"))
+        plot_v7(_img_out("v7.png"))
         return
 
-    if args.tier2a_p1_v7_curves:
+    if args.v7_curves:
         print("=== Tier-2a / P1 v7 — aggregated learning curves ===")
         IMPL_DIR.mkdir(parents=True, exist_ok=True)
-        plot_tier2a_p1_v7_curves(_img_out("tier2a_p1_v7_curves.png"))
+        plot_v7_curves(_img_out("v7_curves.png"))
         return
 
     cfg = TIER_CONFIG[args.tier]
@@ -1418,7 +1412,7 @@ def main():
 
     if args.ablation:
         print("\n=== Tier 1 ablation chart ===")
-        plot_ablation(_img_out("tier1_ablation.png"))
+        plot_ablation(_img_out("aug_op_search_ablation.png"))
 
 
 if __name__ == "__main__":

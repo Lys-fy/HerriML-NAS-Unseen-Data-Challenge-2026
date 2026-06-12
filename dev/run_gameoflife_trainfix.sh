@@ -12,7 +12,7 @@
 set -uo pipefail
 cd ~/projects/HerriML-NAS-Unseen-Data-Challenge-2026
 VENV=.venv/bin/python
-SUB=baselines/fixed_arch_probe
+SUB=baselines/tcn_probe
 LOG=dev/logs/gol_trainfix
 mkdir -p "$LOG"
 ARCH="Conv3,Conv3,Conv3,Conv3,Conv3,Conv3,Conv3,Conv3,Conv3"   # D=9 deep, all-Conv3

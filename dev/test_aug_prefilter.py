@@ -22,7 +22,7 @@ import numpy as np
 import torch
 
 REPO = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(REPO / "baselines" / "fixed_arch_probe"))
+sys.path.insert(0, str(REPO / "baselines" / "tcn_probe"))
 
 from helpers import build_default_cnn, aug_policy_for  # noqa: E402
 from zeroshot import naswot_score, snip_score          # noqa: E402
@@ -46,7 +46,7 @@ def probe_decisions():
     """Collect the logged two-arm probe decisions (v7, 3 seeds)."""
     out = {}
     for seed in (42, 1337, 2024):
-        d = REPO / f"dev/logs/tier2a_p1_v7/p1v7_s{seed}"
+        d = REPO / f"dev/logs/v7/v7_s{seed}"
         if not d.exists():
             continue
         for f in d.glob("*_p1_probe.json"):

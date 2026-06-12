@@ -10,7 +10,7 @@
 # +9.45, Gutenberg +1.03.
 set -uo pipefail
 cd ~/projects/HerriML-NAS-Unseen-Data-Challenge-2026
-VENV=.venv/bin/python; SUB=baselines/fixed_arch_probe
+VENV=.venv/bin/python; SUB=baselines/tcn_probe
 LOG=dev/logs/random_search; mkdir -p "$LOG"
 for ds in Chesseract Sudoku Gutenberg; do
   for seed in 42 1337 2024; do

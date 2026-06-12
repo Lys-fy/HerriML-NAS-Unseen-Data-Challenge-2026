@@ -107,11 +107,11 @@ def harness_benchmark(codename: str) -> float | None:
 
 def main():
     seed = 42
-    base_v5  = REPO / "dev" / "logs" / "tier2a_p1_v5" / f"p1v5_s{seed}"
-    base_v4  = REPO / "dev" / "logs" / "tier2a_p1_v4" / f"p1v4_s{seed}"
-    base_eg  = REPO / "dev" / "logs" / "tier2bfull" / f"t2bfull_s{seed}"
-    base_egn = REPO / "dev" / "logs" / "tier2bfull" / f"t2bfull_new_s{seed}"
-    v5_log   = REPO / "dev" / "logs" / "tier2a_p1_v5" / f"p1v5_s{seed}.log"
+    base_v5  = REPO / "dev" / "logs" / "v5" / f"v5_s{seed}"
+    base_v4  = REPO / "dev" / "logs" / "v4" / f"v4_s{seed}"
+    base_eg  = REPO / "dev" / "logs" / "egnas_full" / f"t2bfull_s{seed}"
+    base_egn = REPO / "dev" / "logs" / "egnas_full" / f"t2bfull_new_s{seed}"
+    v5_log   = REPO / "dev" / "logs" / "v5" / f"v5_s{seed}.log"
 
     if not base_v5.exists():
         print(f"v5 dir not found: {base_v5}")
@@ -184,7 +184,7 @@ def main():
         fontsize=11,
     )
     fig.tight_layout()
-    out = IMG / "tier2a_p1_v5_s42_partial_compare.png"
+    out = IMG / "pipeline" / "v5_s42_partial_compare.png"
     fig.savefig(out, dpi=130, bbox_inches="tight")
     plt.close(fig)
     print(f"\nwrote {out.relative_to(REPO)}")

@@ -58,11 +58,15 @@ def verify(before_path):
             print(f"  - {m}")
     # link resolution
     basenames = {p.stem for p in md_files()}
+    # known pre-existing non-links (template placeholders, literal text)
+    IGNORE = {"Note A", "Note B", "Note Name", "1,1,1", "PRIOR_FINDINGS",
+              "reference_dgx_spark", "docs/environment.md", "Past Winners"}
     bad = []
     for p in md_files():
         for target in LINK.findall(p.read_text(errors="ignore")):
-            t = target.strip()
-            if t and t not in basenames and not t.endswith((".png", ".jpg", ".pdf", ".svg")):
+            t = target.strip().rstrip("\\").strip()
+            if (t and t not in basenames and t not in IGNORE
+                    and not t.endswith((".png", ".jpg", ".pdf", ".svg"))):
                 bad.append((str(p.relative_to(VAULT)), t))
     if bad:
         print(f"UNRESOLVED WIKILINKS: {len(bad)}")

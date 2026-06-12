@@ -29,7 +29,7 @@ echo "=== recurrence validation + v7 smoke — start $(date -Iseconds) on $(host
 echo; echo "── PHASE 0: v7 GPU smoke (Chesseract, 0.2h) ──"
 env BASELINE_SEED=42 BASELINE_LOG_DIR="$LOG/v7smoke" P1_PROBE=1 VERIFY_MACRO=1 \
     "$VENV" -u dev/mock_harness.py \
-        --submission-dir baselines/tier2a_p1_augsafety_v7 \
+        --submission-dir baselines/v7 \
         --predictions-dir dev/predictions-v7smoke \
         --time-limit 0.2 --score Chesseract \
     > "$LOG/v7smoke.log" 2>&1
@@ -54,7 +54,7 @@ for ds in "${DATASETS[@]}"; do
             FIXED_ARCH="${ARMS[$arm]}" FIXED_WIDTH="$WIDTH" \
             EXTEND_CLOCK_FOR_NAS=0 VERIFY_MICRO_ACCEPTS=0 COMPUTE_ZEROSHOT=0 \
             "$VENV" -u dev/mock_harness.py \
-                --submission-dir baselines/fixed_arch_probe \
+                --submission-dir baselines/tcn_probe \
                 --predictions-dir "dev/predictions-recur-$tag" \
                 --time-limit 2.0 --score "$ds" \
             > "$LOG/$tag.log" 2>&1

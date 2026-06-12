@@ -14,7 +14,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 REPO = Path(__file__).resolve().parent.parent
-OUT = REPO / "docs/notes/09 - Implementation/implementation/images/tier2a"
+OUT = REPO / "docs/notes/09 - Implementation/implementation/images/architecture"
 OUT.mkdir(parents=True, exist_ok=True)
 
 CONV = "#1f77b4"; T1 = "#2c8a3a"; T2 = "#ff7f0e"; BENCHC = "#b53030"
@@ -49,7 +49,7 @@ def load(p):
 
 def paths(name, code):
     return {
-        "conv":  REPO / f"dev/logs/tier2a_p1_v8/p1v8_s42/{code}.csv",
+        "conv":  REPO / f"dev/logs/v8/v8_s42/{code}.csv",
         "tcn1d": REPO / f"dev/logs/tcn_probe/tcn1d_{name}_s42/{code}.csv",
         "tcn2d": REPO / f"dev/logs/tcn_probe/tcn2d_{name}_s42/{code}.csv",
     }
@@ -108,6 +108,6 @@ fig.suptitle("v8 conv vs TCN-1d vs TCN-2d, learning curves, all 13 datasets (see
              "TCN-2d total +59.2 vs conv +48.2",
              fontsize=15)
 fig.tight_layout(rect=[0, 0, 1, 0.97])
-out = OUT / "tier2a_tcn_curves_grid.png"
+out = OUT / "tcn_curves_grid.png"
 fig.savefig(out, dpi=125)
 print(f"wrote {out}")

@@ -111,7 +111,7 @@ Distinction from §4 (top-k ensemble): §4 averages the *k best* candidates of a
 
 Cheapest viable form for our budget: **diverse-seed ensemble** of the chosen architecture (3 seeds, different inits/augmentation draws), or a multi-head trunk if budget allows. Gated like §4 — only on high-leverage datasets (`slope > 0.5`) where the extra forward passes are worth it. High-value, low-risk; the survey explicitly names ensembling as the one technique it ties to shift-robustness.
 
-> Note: §5 TTA still uses a `codename` blacklist — that's the metadata-vs-codename mistake we corrected in [[Tier 1 - Results]]. When Tier 3 is built, replace it with the metadata-only / probe-driven gate (see [[Probe-Driven Self-Configuration]]).
+> Note: §5 TTA still uses a `codename` blacklist — that's the metadata-vs-codename mistake we corrected in [[Aug + Op Search|Tier 1 - Results]]. When Tier 3 is built, replace it with the metadata-only / probe-driven gate (see [[Probe-Driven Self-Configuration]]).
 
 ### 6. Deterministic seeding
 

@@ -1,7 +1,7 @@
 # Language
 
 > **Status:** drafting | **Topic:** Four 6-letter words concatenated, encoded as a 24×24 binary letter-position grid. 10 languages.
-> **Related:** [[Datasets Overview]], [[Gutenberg]], [[Tier 2a - Language Deep Dive]] (our empirical findings), [[Tier 2a - Results]] (probe history), [[Multi-Seed - Results]] (the aug-oracle), [[Reliability vs Peak]]
+> **Related:** [[Datasets Overview]], [[Gutenberg]], [[Language Deep Dive]] (our empirical findings), [[Pipeline v1-v7 - Aug Probe]] (probe history), [[Multi-Seed Variance]] (the aug-oracle), [[Reliability vs Peak]]
 
 ![[Language.png]]
 > *Example samples + the classification target — raw `.npy` arrays rendered for viewing. Regenerate: `python3 dev/plot_dataset_examples.py`.*
@@ -45,7 +45,7 @@ Word-level data leakage is prevented: any given word appears in only one of trai
 
 ## Empirical findings (2026-05-28) — what we have tried
 
-Documented in detail in **[[Tier 2a - Language Deep Dive]]**. Summary of what holds up under 3 seeds per configuration:
+Documented in detail in **[[Language Deep Dive]]**. Summary of what holds up under 3 seeds per configuration:
 
 ### What does NOT help (training-side, with current Conv-only OP_VOCAB)
 
@@ -63,7 +63,7 @@ Documented in detail in **[[Tier 2a - Language Deep Dive]]**. Summary of what ho
 
 | Intervention | Effect on Language | Notes |
 |---|---|---|
-| **Turn augmentation off** | +5 to +10 pp raw vs default | The single biggest training-side lever. Implemented via the P1 aug-safety probe — see [[Tier 2a - Results]]. |
+| **Turn augmentation off** | +5 to +10 pp raw vs default | The single biggest training-side lever. Implemented via the P1 aug-safety probe — see [[Pipeline v1-v7 - Aug Probe]]. |
 | **Mixup α=0.2** (with spatial aug off) | +1.6 adj over aug-off baseline → **81.5 % raw** | Implicit regularisation via label-space mixing; perturbs the loss landscape so the model keeps learning past where it would memorise/saturate. **Novel in the published NAS-Unseen literature** — no past team has documented this on Language. |
 
 ### What the literature says is needed to cross the benchmark
@@ -79,7 +79,7 @@ Per **Geada et al. arXiv:2404.02189** (CVPR 2024), the architectural lever for L
 
 ### Planned next experiment
 
-Adding `GroupConv3` (`Conv2d(in, out, k=3, groups=min(in_ch, 32))`) as a new entry in `OP_VOCAB`. The existing EGNAS micro hill-climb can then pick it per-layer. Combined with the v5 P1 probe (driver C from v4 shadow data) + Mixup-on-OFF, the expected outcome is the first time any configuration we run crosses the 85.20 % Language benchmark. See [[Tier 2a - Language Deep Dive]] §8 for the full design.
+Adding `GroupConv3` (`Conv2d(in, out, k=3, groups=min(in_ch, 32))`) as a new entry in `OP_VOCAB`. The existing EGNAS micro hill-climb can then pick it per-layer. Combined with the v5 P1 probe (driver C from v4 shadow data) + Mixup-on-OFF, the expected outcome is the first time any configuration we run crosses the 85.20 % Language benchmark. See [[Language Deep Dive]] §8 for the full design.
 
 ### Per-method raw acc summary table
 

@@ -7,7 +7,7 @@
 # decisions were derived and validated, so they are out of scope.)
 set -uo pipefail
 cd ~/projects/HerriML-NAS-Unseen-Data-Challenge-2026
-VENV=.venv/bin/python; SUB=baselines/fixed_arch_probe
+VENV=.venv/bin/python; SUB=baselines/tcn_probe
 LOG=dev/logs/phaseA6; mkdir -p "$LOG"
 for ds in AddNIST CIFARTile GeoClassing MultNIST Myofibre Language; do
   for aug in on off; do

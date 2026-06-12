@@ -7,7 +7,7 @@
 # Myofibre, Voxel, Chesseract, Windspeed.
 set -uo pipefail
 cd ~/projects/HerriML-NAS-Unseen-Data-Challenge-2026
-VENV=.venv/bin/python; SUB=baselines/fixed_arch_probe
+VENV=.venv/bin/python; SUB=baselines/tcn_probe
 LOG=dev/logs/budget_validate; mkdir -p "$LOG"
 # dataset : v7-found arch (depth from the v7 sweep; all-Conv3 unless noted)
 declare -A ARCH=(

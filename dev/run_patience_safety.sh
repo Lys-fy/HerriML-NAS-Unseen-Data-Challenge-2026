@@ -11,7 +11,7 @@
 set -uo pipefail
 cd ~/projects/HerriML-NAS-Unseen-Data-Challenge-2026
 VENV=.venv/bin/python
-SUB=baselines/fixed_arch_probe
+SUB=baselines/tcn_probe
 LOG=dev/logs/patience_safety
 mkdir -p "$LOG"
 

@@ -1,6 +1,6 @@
 # Tier 0 — Hardcoded CNN
 
-> **Status:** current — implemented in `baselines/tier0_fixed_cnn/` | **Topic:** Zero-search fixed CNN. Validates harness, dataloaders, clock, and shape adaptation across all 11 public datasets.
+> **Status:** current — implemented in `baselines/fixed_cnn/` | **Topic:** Zero-search fixed CNN. Validates harness, dataloaders, clock, and shape adaptation across all 11 public datasets.
 > **Related:** [[Implementation Plan Overview]], [[Tier 1 - Augmentation + Op Search]], [[Submission Contract]], [[Failure Modes]], [[Mock Harness]]
 
 ## Goal
@@ -9,10 +9,10 @@ The first tier whose job is **not to win on accuracy** but to prove the four-fil
 
 ## What's in it
 
-Lives under `baselines/tier0_fixed_cnn/` as a self-contained 4-file package:
+Lives under `baselines/fixed_cnn/` as a self-contained 4-file package:
 
 ```
-baselines/tier0_fixed_cnn/
+baselines/fixed_cnn/
   data_processor.py    # numpy → tensor → normalised DataLoaders
   nas.py               # returns a single fixed CNN, no search
   trainer.py           # SGD+cosine LR, clock-aware loop, best-val checkpoint
@@ -22,7 +22,7 @@ baselines/tier0_fixed_cnn/
 Runnable through the [[Mock Harness]] with the new `--submission-dir` flag:
 
 ```bash
-python dev/mock_harness.py --submission-dir baselines/tier0_fixed_cnn Sudoku --time-limit 0.05 --score
+python dev/mock_harness.py --submission-dir baselines/fixed_cnn Sudoku --time-limit 0.05 --score
 ```
 
 ## Model
@@ -73,7 +73,7 @@ Best validation accuracy seen is checkpointed in-memory (`copy.deepcopy(model.st
 
 ## Smoke result (April 2026)
 
-`python dev/mock_harness.py --submission-dir baselines/tier0_fixed_cnn Sudoku --time-limit 0.05 --score`
+`python dev/mock_harness.py --submission-dir baselines/fixed_cnn Sudoku --time-limit 0.05 --score`
 
 ```
 Sokoto: raw=67.880%  benchmark= 0.000%  adj= +6.788  runtime=107.5s

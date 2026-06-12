@@ -11,8 +11,8 @@ Two figures land in docs/notes/09 - Implementation/implementation/images/:
 Sources read:
   dev/logs/lang_excursion/V{0..5}_*_s{42,1337,2024}.log
   dev/logs/multiseed/{full,augoff}_s{42,1337,2024}.log
-  dev/logs/tier2bfull/t2bfull_s{42,1337,2024}.log
-  dev/logs/tier2a_p1_v4/p1v4_s{42,1337,2024}.log
+  dev/logs/egnas_full/t2bfull_s{42,1337,2024}.log
+  dev/logs/v4/v4_s{42,1337,2024}.log
 """
 from __future__ import annotations
 
@@ -84,8 +84,8 @@ def collect_other_methods() -> dict[str, dict]:
     for label, base, prefix in [
         ("Multi-seed Tier-1 (aug-on)", "multiseed", "full"),
         ("Multi-seed Tier-1 (aug-off)", "multiseed", "augoff"),
-        ("Tier 2b — EGNAS-full", "tier2bfull", "t2bfull"),
-        ("P1 v4 (probe-driven)", "tier2a_p1_v4", "p1v4"),
+        ("Tier 2b — EGNAS-full", "egnas_full", "t2bfull"),
+        ("P1 v4 (probe-driven)", "v4", "v4"),
     ]:
         raws, adjs = [], []
         for s in (42, 1337, 2024):
@@ -245,7 +245,7 @@ def plot_across_methods(out_path: Path):
 
 
 if __name__ == "__main__":
-    lang_dir = IMG / "language"
+    lang_dir = IMG / "architecture"
     lang_dir.mkdir(parents=True, exist_ok=True)
     plot_excursion(lang_dir / "lang_excursion.png")
     plot_across_methods(lang_dir / "lang_across_methods.png")

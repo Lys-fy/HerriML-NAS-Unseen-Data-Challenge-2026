@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""v10 sweep curves, ONE PNG PER SEED (tier2a_v10_curves_grid_s<seed>.png),
+"""v10 sweep curves, ONE PNG PER SEED (v10_curves_grid_s<seed>.png),
 vs the two key references: conv (v8, same seed when available) and the fixed
 TCN-2d probe (s42 only). v10 labels show the ROUTED architecture from that
 seed's decision records, plus the final test score where the seed has
@@ -13,7 +13,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 REPO = Path(__file__).resolve().parent.parent
-OUT = REPO / "docs/notes/09 - Implementation/implementation/images/tier2a"
+OUT = REPO / "docs/notes/09 - Implementation/implementation/images/pipeline"
 OUT.mkdir(parents=True, exist_ok=True)
 
 CONV = "#1f77b4"; T2 = "#ff7f0e"; V10C = "#2c8a3a"; BENCHC = "#b53030"
@@ -94,7 +94,7 @@ def plot_seed(seed):
         test = V10_TEST.get(seed, {}).get(code)
         score_lab = f"{test:.1f}%" if test is not None else None
         series = [
-            (REPO / f"dev/logs/tier2a_p1_v8/p1v8_s{seed}/{code}.csv", CONV,
+            (REPO / f"dev/logs/v8/v8_s{seed}/{code}.csv", CONV,
              f"conv(v8) {conv_raw:.1f}%" if seed == "42" else "conv(v8) bv={bv:.1f}%",
              1.5),
             (REPO / f"dev/logs/tcn_probe/tcn2d_{name}_s{seed}/{code}.csv", T2,
@@ -140,7 +140,7 @@ def plot_seed(seed):
     fig.suptitle(f"v10 (measure-gate-train) vs references, seed {seed}",
                  fontsize=15)
     fig.tight_layout(rect=[0, 0, 1, 0.97])
-    out = OUT / f"tier2a_v10_curves_grid_s{seed}.png"
+    out = OUT / f"v10_curves_grid_s{seed}.png"
     fig.savefig(out, dpi=125)
     plt.close(fig)
     print(f"wrote {out} ({n_panels} panels)")

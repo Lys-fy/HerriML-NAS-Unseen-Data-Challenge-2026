@@ -12,7 +12,7 @@
 set -uo pipefail
 cd ~/projects/HerriML-NAS-Unseen-Data-Challenge-2026
 VENV=.venv/bin/python
-SUB=baselines/tier2a_p1_augsafety_v7
+SUB=baselines/v7
 LOG=dev/logs/v7_calib
 mkdir -p "$LOG"
 

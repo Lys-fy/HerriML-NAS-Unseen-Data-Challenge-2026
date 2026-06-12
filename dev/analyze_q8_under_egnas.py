@@ -18,7 +18,7 @@ This script answers three Q8 questions under FULL EGNAS:
   (c) AddNIST s2024 specifically: under full EGNAS, did micro override
       the macro lottery that bit us under macro-only (D=5 → −2.81)?
 
-Reads from dev/logs/tier2bfull/ (the existing 11-ds sweep + new-datasets
+Reads from dev/logs/egnas_full/ (the existing 11-ds sweep + new-datasets
 follow-on). Pure local analysis — no Spark, no new training.
 """
 
@@ -33,7 +33,7 @@ from statistics import mean, stdev
 from typing import Dict, List, Optional, Tuple
 
 REPO = Path(__file__).resolve().parent.parent
-TIER2B_DIR = REPO / "dev" / "logs" / "tier2bfull"
+TIER2B_DIR = REPO / "dev" / "logs" / "egnas_full"
 SEEDS = [42, 1337, 2024]
 
 # Codename → dataset name. Mirrors dev/plot_tier_results.py.
@@ -180,7 +180,7 @@ def main():
 
     print("# Q8 stability under FULL EGNAS  (3 seeds × 13 datasets)")
     print()
-    print("Reads dev/logs/tier2bfull/{t2bfull,t2bfull_new}_s{42,1337,2024}.log")
+    print("Reads dev/logs/egnas_full/{t2bfull,t2bfull_new}_s{42,1337,2024}.log")
     print()
 
     # ============================================================
