@@ -76,6 +76,16 @@ In any single run, the [[Scoring]] formula rewards 1% accuracy gains *much* more
 
 Implication for [[Score-Efficient Targeting]]: **don't over-invest in low-benchmark datasets** — even a perfect score on a 50%-benchmark dataset is worth less than a +5% gain on a 90%-benchmark one. Conversely, the biggest cliff is the −10 fail; **never miss a benchmark**.
 
+## Additional datasets (ours)
+
+Custom datasets we build ourselves, spec-frozen before the pipeline sees them, used for the RQ2 generalisation test. They live in `additional/`.
+
+| Dataset | Task | Shape | Status |
+|---|---|---|---|
+| [[Quincy]] | decode the class token from a version-1 QR code, 10% ECC-recoverable corruption | 1x21x21 | built 2026-06-12, benchmark run owed |
+
+Planned next: tic-tac-toe encoded, minesweeper, time-series-as-image, dominos-with-mistakes (see [[Pipeline v10 - Design + Idea Ledger]]).
+
 ## Open dataset questions
 
 - ~~[[Cryptic]] and [[Windspeed]] sources — DOIs wrong~~ **RESOLVED 2026-05-19**: DOIs were fine, datasets just published late (2025-12-05) to Edinburgh DataShare, CC-BY-4.0. Specs in those notes.
