@@ -50,16 +50,30 @@ def generate_dataset(
     images = []
     labels = []
     
-    win_pool = []
-    no_win_pool = []
-    
+    # Class-balanced collection (vendored edit 2026-06-13): bucket boards by
+    # label across all (board_width + 1) classes (each winning column 0..W-1,
+    # plus the "no winning move" class = board_width) and fill every bucket to
+    # the same target. When a board offers several winning columns it is
+    # assigned to the emptiest eligible bucket, so the rare high columns fill up
+    # instead of everything collapsing onto min(winning_cols) and the dominant
+    # "no win" class.
+    n_classes = board_width + 1
+    none_label = board_width
+    cap = -(-num_samples // n_classes)  # ceil: even per-class target
+    buckets = {lab: [] for lab in range(n_classes)}
+
+    def _assign_winning(cols):
+        eligible = [c for c in cols if len(buckets[c]) < cap]
+        if not eligible:
+            return None
+        fewest = min(len(buckets[c]) for c in eligible)
+        tied = [c for c in eligible if len(buckets[c]) == fewest]
+        return int(tied[rng.integers(0, len(tied))])
+
     attempts = 0
-    max_attempts = num_samples * 20
-    
-    # Determine the number of samples we want for each class to balance the dataset
-    half_needed = num_samples // 2
-    
-    while (len(win_pool) < half_needed or len(no_win_pool) < half_needed) and attempts < max_attempts:
+    max_attempts = num_samples * 200
+
+    while sum(len(b) for b in buckets.values()) < num_samples and attempts < max_attempts:
         attempts += 1
         
         # Start a new game
@@ -102,28 +116,23 @@ def generate_dataset(
         # Check winning moves for the active player (Channel 1)
         winning_cols = get_winning_columns(sample_board, connect_k)
         if winning_cols:
-            true_label = min(winning_cols)
-            if len(win_pool) < num_samples:
-                win_pool.append((sample_board, true_label))
-        else:
-            true_label = board_width
-            if len(no_win_pool) < num_samples:
-                no_win_pool.append((sample_board, true_label))
-                
-    # Combine pools to select final set of samples
-    selected_samples = []
-    
-    if len(win_pool) >= half_needed and len(no_win_pool) >= half_needed:
-        rng.shuffle(win_pool)
-        rng.shuffle(no_win_pool)
-        selected_samples.extend(win_pool[:half_needed])
-        selected_samples.extend(no_win_pool[:(num_samples - half_needed)])
-    else:
-        combined = win_pool + no_win_pool
-        rng.shuffle(combined)
-        selected_samples = combined[:num_samples]
-        
+            lab = _assign_winning(winning_cols)
+            if lab is not None:
+                buckets[lab].append((sample_board, lab))
+        elif len(buckets[none_label]) < cap:
+            buckets[none_label].append((sample_board, none_label))
+
+    # Report fill levels: high columns can be genuinely rare as a winning move.
+    fill = {lab: len(b) for lab, b in buckets.items()}
+    underfilled = {lab: n for lab, n in fill.items() if n < cap}
+    if underfilled:
+        print(f"[connect4] balanced collection: target {cap}/class, "
+              f"underfilled {underfilled} (attempts={attempts})")
+
+    # Flatten, shuffle, trim to the requested count
+    selected_samples = [s for b in buckets.values() for s in b]
     rng.shuffle(selected_samples)
+    selected_samples = selected_samples[:num_samples]
     
     # Process and save selected samples
     for board_state, true_label in selected_samples:

@@ -84,9 +84,9 @@ Custom datasets we build ourselves, spec-frozen before the pipeline sees them, u
 |---|---|---|---|---|
 | [[Quincy]] | decode the class token from a version-1 QR code, 10% ECC-recoverable corruption | 1x21x21 | 0.05 / encoded | built, benchmark owed |
 | [[Magnus]] | predict the degree (1-5) of a complex polynomial phase portrait | 3x64x64 | 0.65 / image-like | GOOD, spec to freeze |
-| [[Cornelius]] | predict the immediate winning column of a Connect-4 board (or none) | 3x64x64 | 0.75 / image-like | GOOD (accuracy caveat: imbalanced), spec to freeze |
-| [[Candidates - Pavel + Dominik\|Pavel]] | does the bouncing object hit a wall next step (film strip) | 3x64x256 | 0.75 / image-like | NEEDS WORK: object invisible to logreg |
-| [[Candidates - Pavel + Dominik\|Dominik]] | is the domino chain valid or one-mismatch | 3x64x64 | 0.70 / image-like | NEEDS WORK: pips unreadable |
+| [[Cornelius]] | predict the immediate winning column of a Connect-4 board (or none) | 3x64x64 | 0.75 / image-like | GOOD, balanced 2026-06-13 (none-class 50%->9%), spec to freeze |
+| [[Candidates - Pavel + Dominik\|Pavel]] | does the bouncing object hit a wall next step | 4x64x64 (was 3x64x256) | image-like | frames-as-channels DONE, CNN check owed |
+| [[Candidates - Pavel + Dominik\|Dominik]] | is the domino chain valid or one-mismatch | 3x64x64 | 0.70 / image-like | NEEDS WORK: snake layout + tiny pips (fix in note) |
 
 Triage takeaway: Magnus and Cornelius are genuine NAS-rewarding tasks (logreg far below a real net's reach) and exercise the IMAGE-LIKE branch, complementing Quincy's encoded branch. Pavel and Dominik need generator fixes before use (ideas in [[Candidates - Pavel + Dominik]]). Still planned: tic-tac-toe encoded, minesweeper (see [[Pipeline v10 - Design + Idea Ledger]]).
 

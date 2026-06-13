@@ -24,21 +24,18 @@ The network sees a 10x10 Connect-Four position (default `board_width=board_heigh
 - **Spatially structured multi-class output.** Predicting *which* column wins forces the model to scan every column for a connect-k threat, a real lookahead-by-pattern task rather than a global property.
 - Built blind to the pipeline (valid RQ2 test); exercises the IMAGE-LIKE branch.
 
-## Caveat: class imbalance makes raw accuracy misleading
+## Class balance: FIXED 2026-06-13
 
-The generator balances the dataset 50% "a winning move exists" vs 50% "none". But the 50% with a winning move are split across up to 10 column labels, while the single "none" class holds the whole other 50%. Measured on 1260 train samples: the "none" class had ~617 members, individual columns 26-100. So:
+The original generator balanced only win vs no-win, which left ~50% of samples in the single "no winning move" class while the other ~50% scattered across 10 column labels (a model predicting "none" scored ~50% learning nothing). The vendored generator (`dev/datagen/connect4/generator.py`) now buckets boards by their actual label across all 11 classes and fills each bucket to the same target; when a board has several winning columns it goes to the emptiest bucket so the rare high columns fill up. Measured on a 1100-sample run (770 train): per-class counts 60-83, the "none" class down from ~50% to **9.4% (= 1/11)**. Raw accuracy is now meaningful.
 
-- A model that always predicts "none" scores ~50% accuracy while learning nothing about columns. logreg's 63.7% is only modestly above that floor.
-- **Recommendation:** report per-class / macro-F1, not raw accuracy, OR reframe (see below). For the internal adjusted score we use, the imbalance is not fatal but the headline number must not be read as "63% of winning moves found".
-
-## Difficulty / framing dials (decide before freezing)
-
-- **Binary reframe** ("does an immediate winning move exist?") -> a clean balanced 2-class task, easier and metric-honest. Good if we want a reliable signal.
-- **Keep 11-way but balance columns** -> condition generation to draw winning columns evenly and cap the "none" class; harder and more interesting, needs a small generator tweak.
-- **Smaller board** (`--board_width 7`, the classic Connect-4 width) -> fewer classes, pieces larger at 64px, easier to read.
+Difficulty / framing dials still available:
+- **Binary reframe** ("does an immediate winning move exist?") -> a clean 2-class task if we want an easier second dataset.
+- **Smaller board** (`--board_width 7`, classic Connect-4) -> fewer classes, larger pieces at 64px.
 - `--noise_level`, `--label_noise` as usual.
+
+Note: with the balanced rule the label is *a* winning column (the one chosen to balance), not necessarily the smallest; any winning column is a correct answer, so a prediction of a different valid winning column counts as wrong. That single-label limitation is inherent to framing this as classification.
 
 ## Open items
 
-- Decide the framing (recommend: balanced 11-way with even columns, or the binary version as a second easier dataset), then freeze the spec before any pipeline run.
-- Shared PNG/CSV -> npy converter; ResNet-18 benchmark; first v10 run behind the sweep.
+- Freeze the spec (board size, sample counts, noise) before any pipeline run.
+- Convert with `dev/datagen_to_npy.py --dataset connect4` (PNG/CSV -> npy, 3x64x64, 11 classes). ResNet-18 benchmark; first v10 run behind the sweep.
