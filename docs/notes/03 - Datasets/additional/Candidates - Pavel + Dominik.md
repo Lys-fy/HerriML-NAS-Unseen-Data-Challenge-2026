@@ -7,6 +7,9 @@ Both probe a genuinely different regime from [[Magnus]] / [[Cornelius]] (tempora
 
 ## Pavel (polygon_collision) - frames-as-channels DONE, pending a CNN check
 
+![[Pavel.png]]
+> *After the fix: the 4 timesteps are stacked as 4 channels (N, 4, 64, 64). Top row (collision next): the object reaches the wall by the last channel. Bottom row (no collision): it stays interior. A conv now sees all four positions at one location.*
+
 Original: 3x64x256 (a horizontal strip of 4 frames), binary, does the moving object collide with a wall next step. **logreg 48.5% vs 50% chance** because the informative pixels are a small cyan dot whose position changes frame to frame, and on the wide strip the four positions sit 64px apart so a conv cannot relate them without a huge receptive field.
 
 **Fixed (2026-06-13): the converter `dev/datagen_to_npy.py --dataset polygon_collision --frames_as_channels` splits the strip into its T frames, greyscales each, and stacks them as a (T, 64, 64) channel tensor.** Verified shape `(N, 4, 64, 64)`. This is the competition's own idiom (Windspeed 12x32x32, GameOfLife multi-step): now a single 3x3 conv at each location sees all four timesteps at once, so "did the object move toward a wall" is a local cross-channel pattern instead of a long-range one. (Note: logreg is permutation-invariant to feature order, so the strip and the channel stack give it the same ~chance score; the gain is for a conv, not for logreg, so the real test is a small CNN.)
