@@ -78,13 +78,17 @@ Implication for [[Score-Efficient Targeting]]: **don't over-invest in low-benchm
 
 ## Additional datasets (ours)
 
-Custom datasets we build ourselves, spec-frozen before the pipeline sees them, used for the RQ2 generalisation test. They live in `additional/`.
+Custom datasets we build ourselves, spec-frozen before the pipeline sees them, used for the RQ2 generalisation test. They live in `additional/`. Two are home-built (Quincy), four come from a teammate's generator tool vendored at `dev/datagen/` (The Count: mathvision, connect4, polygon_collision, domino), triaged 2026-06-13 with corr1 + logreg.
 
-| Dataset | Task | Shape | Status |
-|---|---|---|---|
-| [[Quincy]] | decode the class token from a version-1 QR code, 10% ECC-recoverable corruption | 1x21x21 | built 2026-06-12, benchmark run owed |
+| Dataset | Task | Shape | corr1 / route | Status |
+|---|---|---|---|---|
+| [[Quincy]] | decode the class token from a version-1 QR code, 10% ECC-recoverable corruption | 1x21x21 | 0.05 / encoded | built, benchmark owed |
+| [[Magnus]] | predict the degree (1-5) of a complex polynomial phase portrait | 3x64x64 | 0.65 / image-like | GOOD, spec to freeze |
+| [[Cornelius]] | predict the immediate winning column of a Connect-4 board (or none) | 3x64x64 | 0.75 / image-like | GOOD (accuracy caveat: imbalanced), spec to freeze |
+| [[Candidates - Pavel + Dominik\|Pavel]] | does the bouncing object hit a wall next step (film strip) | 3x64x256 | 0.75 / image-like | NEEDS WORK: object invisible to logreg |
+| [[Candidates - Pavel + Dominik\|Dominik]] | is the domino chain valid or one-mismatch | 3x64x64 | 0.70 / image-like | NEEDS WORK: pips unreadable |
 
-Planned next: tic-tac-toe encoded, minesweeper, time-series-as-image, dominos-with-mistakes (see [[Pipeline v10 - Design + Idea Ledger]]).
+Triage takeaway: Magnus and Cornelius are genuine NAS-rewarding tasks (logreg far below a real net's reach) and exercise the IMAGE-LIKE branch, complementing Quincy's encoded branch. Pavel and Dominik need generator fixes before use (ideas in [[Candidates - Pavel + Dominik]]). Still planned: tic-tac-toe encoded, minesweeper (see [[Pipeline v10 - Design + Idea Ledger]]).
 
 ## Open dataset questions
 
