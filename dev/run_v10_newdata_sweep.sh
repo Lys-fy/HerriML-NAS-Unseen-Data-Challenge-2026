@@ -35,6 +35,28 @@ run() {
     grep -E 'v10 fingerprint|v10 backbone|v10 final|raw=|Total score' "$sweep_log" | sed 's/^/    /' | tail -40
     echo
 }
-echo "v10 newdata sweep starting $(date -Iseconds) on $(hostname)"
+# ResNet-18 baseline pass (1 seed): the zero-point for the adjusted score on
+# these custom datasets (their shipped benchmark is the 0.0 placeholder; the
+# official datasets use a ResNet-18 number here). Same 2h budget as v10.
+resnet_baseline() {
+    local seed=42
+    local log_dir="dev/logs/v10_newdata_sweep/resnet18_s${seed}"
+    local pred_dir="dev/predictions-resnet18-newdata-s${seed}"
+    local sweep_log="dev/logs/v10_newdata_sweep/resnet18_s${seed}.log"
+    echo "================================================================"
+    echo "  resnet18 baseline  seed=$seed  started: $(date -Iseconds)"
+    echo "================================================================"
+    mkdir -p "$log_dir" "$pred_dir"
+    env BASELINE_SEED="$seed" BASELINE_LOG_DIR="$log_dir" V10_PERFECT_STOP_S=300 \
+        "$VENV" -u dev/mock_harness.py --submission-dir baselines/resnet18 \
+            --predictions-dir "$pred_dir" --time-limit 2.0 \
+            --score "${ALL_DATASETS[@]}" > "$sweep_log" 2>&1
+    echo "  resnet18 finished: $(date -Iseconds)  exit=$?"
+    grep -E 'resnet18:|raw=|Total score' "$sweep_log" | sed 's/^/    /' | tail -20
+    echo
+}
+
+echo "newdata sweep starting $(date -Iseconds) on $(hostname)"
+resnet_baseline
 for seed in "${SEEDS[@]}"; do run "$seed"; done
 echo "v10 newdata sweep done $(date -Iseconds)"
