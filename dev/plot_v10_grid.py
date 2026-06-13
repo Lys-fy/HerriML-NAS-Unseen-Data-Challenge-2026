@@ -62,8 +62,9 @@ SUMMARY = {
              "    12 ops W=32 probed 0.95 but realised\n"
              "    0.86, below the conv-6 incumbent 0.87:\n"
              "    random arm trusted a noisy probe score\n\n"
-             "references: conv (v8) same seed;\n"
-             "tcn2d fixed probe exists only for s42"),
+             "references (conv v8, fixed tcn2d) are the\n"
+             "seed-42 baselines, marked (s42); only the\n"
+             "v10 curve is seed 1337"),
 }
 
 
@@ -99,12 +100,15 @@ def plot_seed(seed):
         v10_csv = v10_dir / f"{code}.csv"
         test = V10_TEST.get(seed, {}).get(code)
         score_lab = f"{test:.1f}%" if test is not None else None
+        # References are the FIXED s42 baselines on every grid (the v8 sweep
+        # and the tcn2d-fixed probe are only complete for s42; their seed
+        # variation is negligible). Only the v10 curve varies by seed.
+        ref = " (s42)" if seed != "42" else ""
         series = [
-            (REPO / f"dev/logs/v8/v8_s{seed}/{code}.csv", CONV,
-             f"conv(v8) {conv_raw:.1f}%" if seed == "42" else "conv(v8) bv={bv:.1f}%",
-             1.5),
-            (REPO / f"dev/logs/tcn_probe/tcn2d_{name}_s{seed}/{code}.csv", T2,
-             f"tcn2d-fix {t2_raw:.1f}%", 1.5),
+            (REPO / f"dev/logs/v8/v8_s42/{code}.csv", CONV,
+             f"conv(v8) {conv_raw:.1f}%{ref}", 1.5),
+            (REPO / f"dev/logs/tcn_probe/tcn2d_{name}_s42/{code}.csv", T2,
+             f"tcn2d-fix {t2_raw:.1f}%{ref}", 1.5),
             (v10_csv, V10C, None, 2.5),
         ]
         lo, hi = 100.0, 0.0
@@ -116,8 +120,6 @@ def plot_seed(seed):
             if lab is None:
                 s = score_lab if score_lab else f"bv={best.max():.1f}%"
                 lab = f"v10 [{v10_arch(v10_dir, code)}] {s}"
-            elif "{bv" in lab:
-                lab = lab.format(bv=best.max())
             ax.plot(ep, val, color=c, alpha=0.15, linewidth=0.9)
             ax.plot(ep, best, color=c, linewidth=lw, label=lab)
             lo, hi = min(lo, float(best.min())), max(hi, float(best.max()))
