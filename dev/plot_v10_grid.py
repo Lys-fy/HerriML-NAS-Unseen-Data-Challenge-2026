@@ -51,6 +51,14 @@ SUMMARY = {
            "  conv (v8)     +48.2\n"
            "  tcn2d fixed   +59.2\n"
            "  v10           +62.49  (all-time best)"),
+    "2024": ("v10 measure-gate-train, 2h, seed 2024 (PARTIAL,\n"
+             "green label = best-val; test scoring pending)\n\n"
+             "5/13 datasets done before a spark reboot;\n"
+             "the remaining 8 are re-running (resumed),\n"
+             "then the 4 new datasets are queued.\n\n"
+             "references (conv v8, fixed tcn2d) are the\n"
+             "seed-42 baselines, marked (s42); only the\n"
+             "v10 curve is seed 2024"),
     "1337": ("v10 measure-gate-train, 2h, seed 1337 (13/13,\n"
              "green label = best-val; test scoring pending)\n\n"
              "routing matches s42 on 11/13 datasets.\n"
