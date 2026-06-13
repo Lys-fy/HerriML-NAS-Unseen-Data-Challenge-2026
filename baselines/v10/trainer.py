@@ -38,6 +38,12 @@ PATIENCE = int(os.environ.get("TRAIN_PATIENCE", "999"))  # v10: train-to-budget,
 LR_SCALE = float(os.environ.get("TRAIN_LR_SCALE", "1.0"))  # GameOfLife fix: <1 dampens the deep-net val oscillation
 LR_WARMUP_EPOCHS = 5  # for the LR schedule (not to be confused with patience-warmup)
 SEED = int(os.environ.get("BASELINE_SEED", "42"))
+# Optional early stop once the val metric is effectively perfect: stop
+# PERFECT_STOP_S budget-seconds after the val accuracy first reaches
+# PERFECT_ACC. Default 0 = DISABLED (submission + main sweep train to budget
+# as before); only the new-datasets sweep sets V10_PERFECT_STOP_S.
+PERFECT_STOP_S = float(os.environ.get("V10_PERFECT_STOP_S", "0"))
+PERFECT_ACC = float(os.environ.get("V10_PERFECT_ACC", "0.9995"))
 
 LABEL_SMOOTHING = 0.1
 EMA_DECAY = 0.999
@@ -185,6 +191,7 @@ class Trainer:
         csv_file, csv_writer = _open_csv_logger(self.metadata)
         try:
             epoch = 0
+            perfect_remaining = None  # clock-remaining when val first hit PERFECT_ACC
             while epoch < MAX_EPOCHS:
                 if self.clock.check() < SAFETY_MARGIN_SECONDS:
                     break
@@ -256,6 +263,20 @@ class Trainer:
                     print(f"  early-stop: no val improvement for {PATIENCE} epochs "
                           f"(best at epoch {best_epoch}, val_acc={self.best_val_acc:.4f})")
                     break
+
+                # Optional perfect-accuracy early stop (off unless V10_PERFECT_STOP_S
+                # is set). Stop PERFECT_STOP_S budget-seconds after val first hits
+                # PERFECT_ACC, to avoid burning the rest of the budget on a solved
+                # dataset. Used only by the new-datasets sweep.
+                if PERFECT_STOP_S > 0 and cand_val >= PERFECT_ACC:
+                    if perfect_remaining is None:
+                        perfect_remaining = remaining
+                        print(f"  perfect-acc reached (val={cand_val:.4f}) at "
+                              f"clock={remaining:.0f}s; will stop after {PERFECT_STOP_S:.0f}s")
+                    elif perfect_remaining - remaining >= PERFECT_STOP_S:
+                        print(f"  perfect-acc early-stop: {PERFECT_STOP_S:.0f}s elapsed "
+                              f"since val hit {PERFECT_ACC:.4f} (best={self.best_val_acc:.4f})")
+                        break
 
                 if remaining < elapsed + SAFETY_MARGIN_SECONDS:
                     break

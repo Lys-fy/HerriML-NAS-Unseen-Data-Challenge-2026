@@ -24,7 +24,9 @@ run() {
     echo "  started:  $(date -Iseconds)"
     echo "================================================================"
     mkdir -p "$log_dir" "$pred_dir"
-    env BASELINE_SEED="$seed" BASELINE_LOG_DIR="$log_dir" \
+    # V10_PERFECT_STOP_S: stop 5 min after a dataset's val accuracy hits 100%
+    # (saves budget on easy datasets). Only set here, not in the main sweep.
+    env BASELINE_SEED="$seed" BASELINE_LOG_DIR="$log_dir" V10_PERFECT_STOP_S=300 \
         "$VENV" -u dev/mock_harness.py --submission-dir "$SUB" \
             --predictions-dir "$pred_dir" --time-limit 2.0 \
             --score "${ALL_DATASETS[@]}" > "$sweep_log" 2>&1
