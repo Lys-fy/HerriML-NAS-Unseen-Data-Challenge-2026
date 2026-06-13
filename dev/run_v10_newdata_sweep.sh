@@ -1,7 +1,8 @@
 #!/bin/bash
-# v10 sweep on the four teammate-built additional datasets (The Count),
-# 3 seeds x --time-limit 2.0, comparable to the main v10 sweep.
+# v10 sweep on our five custom additional datasets (Quincy home-built + four
+# from The Count), 3 seeds x --time-limit 2.0, comparable to the main v10 sweep.
 # Datasets (spark dirs under ~/local/nas-comp-datasets/, codenames):
+#   Quincy    (QR codes)          1x21x21   20 classes (encoded, corr1~0)
 #   Magnus    (mathvision)        3x64x64   5 classes
 #   Cornelius (connect4)          3x64x64   11 classes
 #   Pavel     (polygon_collision) 4x64x64   2 classes (temporal, frames-as-channels)
@@ -11,7 +12,7 @@ set -uo pipefail
 cd ~/projects/HerriML-NAS-Unseen-Data-Challenge-2026
 VENV=.venv/bin/python
 SUB=baselines/v10
-ALL_DATASETS=(Magnus Cornelius Pavel Dominik)
+ALL_DATASETS=(Quincy Magnus Cornelius Pavel Dominik)
 SEEDS=(42 1337 2024)
 mkdir -p dev/logs/v10_newdata_sweep
 run() {
