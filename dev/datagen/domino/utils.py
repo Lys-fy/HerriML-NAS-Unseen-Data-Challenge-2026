@@ -81,8 +81,9 @@ def find_self_avoiding_walk(
 def generate_domino_chain(
     n: int,
     rng: np.random.Generator,
-    inject_error: bool = False
-) -> list[Domino]:
+    inject_error: bool = False,
+    error_boundary: int | None = None
+) -> tuple[list[Domino], int]:
     """
     Generate n dominoes forming a chain, returned in chain order.
 
@@ -93,9 +94,13 @@ def generate_domino_chain(
         n: Number of dominoes.
         rng: NumPy random Generator.
         inject_error: If True, inject exactly one mismatch.
+        error_boundary: If given (and inject_error), inject the mismatch at this
+            specific junction index 0..n-2 (used to balance the localisation
+            task). If None, a random junction is chosen.
 
     Returns:
-        list[Domino] in chain order (index 0 is first, index n-1 is last).
+        (list[Domino] in chain order, boundary): boundary is the junction index
+        of the injected mismatch, or -1 for a valid chain.
     """
     grid_dim = int(np.ceil(np.sqrt(n))) + 1
     path = find_self_avoiding_walk(n, grid_dim, grid_dim, rng)
@@ -122,14 +127,19 @@ def generate_domino_chain(
         vals.append(vals[-1])              # val1 = previous val2
         vals.append(int(rng.integers(0, 7)))  # val2 is free
 
-    # Inject exactly one mismatch at a random boundary
+    # Inject exactly one mismatch at the chosen (or a random) boundary
+    used_boundary = -1
     if inject_error and n > 1:
-        boundary = int(rng.integers(0, n - 1))  # boundary between domino[boundary] and [boundary+1]
+        if error_boundary is None:
+            boundary = int(rng.integers(0, n - 1))
+        else:
+            boundary = int(error_boundary)
         correct_val1 = vals[2 * (boundary + 1)]
         wrong_val1 = int(rng.integers(0, 7))
         while wrong_val1 == correct_val1:
             wrong_val1 = int(rng.integers(0, 7))
         vals[2 * (boundary + 1)] = wrong_val1
+        used_boundary = boundary
 
     # Construct Domino objects in chain order
     dominoes = []
@@ -137,7 +147,7 @@ def generate_domino_chain(
         r, c = path[i]
         dominoes.append(Domino(r, c, vals[2 * i], vals[2 * i + 1], orientations[i]))
 
-    return dominoes
+    return dominoes, used_boundary
 
 
 def apply_label_noise(
@@ -160,4 +170,24 @@ def apply_label_noise(
         return true_label
     if rng.uniform(0.0, 1.0) < label_noise:
         return 1 - true_label
+    return true_label
+
+
+def apply_label_noise_multiclass(
+    true_label: int,
+    n_classes: int,
+    label_noise: float,
+    rng: np.random.Generator
+) -> int:
+    """
+    With probability label_noise, replace the label with a different random
+    class in 0..n_classes-1 (used by the localisation task).
+    """
+    if label_noise <= 0.0 or n_classes < 2:
+        return true_label
+    if rng.uniform(0.0, 1.0) < label_noise:
+        other = int(rng.integers(0, n_classes - 1))
+        if other >= true_label:
+            other += 1
+        return other
     return true_label

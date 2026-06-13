@@ -86,7 +86,7 @@ Custom datasets we build ourselves, spec-frozen before the pipeline sees them, u
 | [[Magnus]] | predict the degree (1-5) of a complex polynomial phase portrait | 3x64x64 | 0.65 / image-like | GOOD, spec to freeze |
 | [[Cornelius]] | predict the immediate winning column of a Connect-4 board (or none) | 3x64x64 | 0.75 / image-like | GOOD, balanced 2026-06-13 (none-class 50%->9%), spec to freeze |
 | [[Candidates - Pavel + Dominik\|Pavel]] | does the bouncing object hit a wall next step | 4x64x64 (was 3x64x256) | image-like | frames-as-channels DONE, CNN check owed |
-| [[Candidates - Pavel + Dominik\|Dominik]] | is the domino chain valid or one-mismatch | 3x64x64 | 0.70 / image-like | NEEDS WORK: snake layout + tiny pips (fix in note) |
+| [[Candidates - Pavel + Dominik\|Dominik]] | which junction of a domino chain mismatches, or valid (localisation) | 3x44x374 | 0.84 / image-like | REBUILT 2026-06-13: linear layout + readable pips + localisation (logreg 35% vs 20%) |
 
 Triage takeaway: Magnus and Cornelius are genuine NAS-rewarding tasks (logreg far below a real net's reach) and exercise the IMAGE-LIKE branch, complementing Quincy's encoded branch. Pavel and Dominik need generator fixes before use (ideas in [[Candidates - Pavel + Dominik]]). Still planned: tic-tac-toe encoded, minesweeper (see [[Pipeline v10 - Design + Idea Ledger]]).
 

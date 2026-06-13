@@ -1,12 +1,9 @@
 # Candidates - Pavel (polygon_collision) + Dominik (domino)
 
-> **Status:** assessed 2026-06-13, NEED WORK before use | **Topic:** the two teammate datasets that are not usable as-is, with concrete ideas to make them interesting. Generators vendored at `dev/datagen/`.
+> **Status:** assessed then FIXED 2026-06-13 | **Topic:** the two teammate datasets that were not usable as-is. Both are now addressed: Pavel channel-stacked, Dominik rebuilt as a localisation task. Generators vendored at `dev/datagen/`.
 > **Related:** [[Datasets Overview]], [[Magnus]], [[Cornelius]], [[Quincy]]
 
-![[_candidates_polygon_domino.png]]
-> *Top: Pavel, a 4-frame film strip of a tiny object (cyan dot) bouncing inside a polygon; predict whether it hits a wall next step. Bottom: Dominik, a domino chain; predict valid vs one-mismatch.*
-
-Both probe a genuinely different regime from [[Magnus]] / [[Cornelius]] (temporal for Pavel, fine-detail symbol reading for Dominik), so they are worth fixing rather than dropping, but neither is usable in its current form.
+Both probe a genuinely different regime from [[Magnus]] / [[Cornelius]] (temporal for Pavel, fine-detail symbol reading for Dominik). Neither was usable in its original form; the fixes below are implemented in `dev/datagen/`.
 
 ## Pavel (polygon_collision) - frames-as-channels DONE, pending a CNN check
 
@@ -20,21 +17,26 @@ Still recommended before a full build:
 - **Motion trail** option: draw the last k positions as a fading streak so heading is readable within one frame.
 - **Richer label** once visible: which wall/edge it bounces off (multi-class) instead of binary.
 
-## Dominik (domino) - weak; root cause is layout + resolution, not the task
+## Dominik (domino) - REBUILT 2026-06-13, now a localisation task
 
-3x64x64, binary: is the chain valid (all adjacent halves match) or does exactly one pair mismatch. **logreg 52.2% vs 50%: barely above chance**, and the teammate flags it as "not quite working".
+![[Dominik.png]]
+> *Five-domino chain read left to right; the label is which junction (the gap between two dominoes) breaks the matching rule, or "valid". Pips are now countable.*
 
-Root cause (from reading `dev/datagen/domino/render.py`): the chain is laid out as a **self-avoiding walk on a 2-D grid** that snakes around, and the whole walk is scaled to fit 64x64. With up to 9 tiles the grid can be ~9 cells wide, so `cell_size` collapses to a handful of pixels and the pips (`pip_r = cell//9`, ~2-3 px) merge into the blobs we see. So the label is not recoverable from the image: the dataset is closer to broken than hard. The task also stacks three sub-problems (recover chain order from the 2-D snake, read every pip count, check adjacency), which is too much at this resolution.
+Original: 3x64x64 binary (valid vs one mismatch), **logreg 52.2% vs 50%: barely above chance**, teammate "not quite working". Root cause (from `dev/datagen/domino/render.py`): the chain was a **self-avoiding walk snaking on a 2-D grid** scaled to fit 64x64, so with up to 9 tiles each cell collapsed to a few pixels and the pips merged into blobs. The label was not recoverable from the image, and the task stacked three sub-problems (recover chain order from the snake, read every pip, check adjacency).
 
-How I would fix it (in priority order):
-1. **Drop the 2-D snake for a linear layout.** Lay the chain left-to-right in a single row (wrap to a second row only if needed). This removes the "find the chain order" sub-problem (order is just left-to-right) and frees pixels for larger tiles.
-2. **Fewer, bigger tiles + larger canvas.** Cap at 4-5 dominoes (`--max_dominoes 5`) and render at 96-128 px so each half-tile gets ~16 px and the standard pip layout is countable. Bump `pip_r` to ~`cell//6`.
-3. **Re-measure** with the same corr1 + logreg + small-CNN triage; only freeze a spec once a human can read the pips and a small CNN clears ~60%.
-4. **Optional richer reframe** once readable: predict the *position* of the mismatching junction (multi-class localisation) rather than a single valid/invalid bit; forces the model to read every junction and gives a denser signal.
-5. Lowest priority of the four. If the linear-layout + resolution fix does not lift it clearly above chance, drop it in favour of [[Magnus]] / [[Cornelius]] / [[Quincy]].
+All four fixes are now implemented in the vendored generator:
+1. **Linear layout.** `render_dominoes` was rewritten to draw the chain as a single left-to-right row; chain order is just left to right and the touching halves the rule checks flank the gap between consecutive dominoes. The 2-D walk is gone.
+2. **Bigger tiles + larger pips.** Half-cell size is set by `--domino_tile` (default 34 px) independent of `image_size`, and the pip radius was bumped (`min(hw,hh)//4`). Pips are countable (see figure).
+3. **Localisation reframe (the richer task).** New `--domino_task localisation` (now the default) uses a fixed `--domino_count` (default 5) chain. Label = the junction index of the single mismatch, or a dedicated "valid" class: **class 0 = valid, class k = mismatch at junction k-1**, so `domino_count` classes total, balanced across all of them. The model must read every junction and point to the wrong one. The original binary task stays available via `--domino_task validity`.
+4. **Re-measured.** Balanced 5-class run (770 train): per-class counts 151-160; **logreg 35.2% vs 20% chance** (was 52 vs 50), confirming the signal is now readable. Shape 3x44x374 (a wide chain strip; a 1-D chain is honestly a wide image, cf. Cryptic 6x768).
 
-(Steps 1-2 are generator changes I have not made yet, since the task framing should be a team call; Cornelius's balancing and Pavel's channel stack were unambiguous fixes so those are done.)
+Build + convert:
+```
+python dev/datagen/generate.py --dataset domino --num_samples 70000 --seed S --output_dir <png>
+python dev/datagen_to_npy.py --dataset domino --in_dir <png> --out_dir <npy>   # 3x44x374, 5 classes
+```
+Open items: freeze the spec (domino_count, tile, noise), ResNet-18 benchmark, first v10 run behind the sweep. To make it harder: raise `--domino_count` (more junctions and classes) or add `--noise_level` / `--label_noise`.
 
 ## Shared next step
 
-Convert any of these to competition npy with `dev/datagen_to_npy.py` (handles the label remap and, for Pavel, `--frames_as_channels`). Re-run the corr1 + logreg + small-CNN triage before freezing a spec; keep specs frozen before the pipeline sees them (RQ2 no-design-leakage).
+Convert any of these to competition npy with `dev/datagen_to_npy.py` (handles the label remap and, for Pavel, `--frames_as_channels`). A small-CNN learnability smoke on spark is the remaining gate for Pavel; Dominik already clears logreg. Keep specs frozen before the pipeline sees them (RQ2 no-design-leakage).

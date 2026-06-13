@@ -29,7 +29,7 @@ SPEC = {
     "mathvision": ("degree", "Magnus"),
     "connect4": ("winning_column", "Cornelius"),
     "polygon_collision": ("collision", "Pavel"),
-    "domino": ("validity", "Dominik"),
+    "domino": ("label", "Dominik"),
 }
 SPLITS = [("train", "train"), ("val", "valid"), ("test", "test")]
 

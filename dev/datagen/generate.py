@@ -108,7 +108,27 @@ def main() -> None:
         default=9,
         help="[Domino] Maximum number of domino tiles per chain (inclusive)"
     )
-    
+    parser.add_argument(
+        "--domino_task",
+        type=str,
+        default="localisation",
+        choices=["localisation", "validity"],
+        help="[Domino] 'localisation' = predict the mismatch junction; "
+             "'validity' = binary valid/invalid"
+    )
+    parser.add_argument(
+        "--domino_count",
+        type=int,
+        default=5,
+        help="[Domino] Fixed chain length for the localisation task"
+    )
+    parser.add_argument(
+        "--domino_tile",
+        type=int,
+        default=34,
+        help="[Domino] Half-cell size in px (pip readability)"
+    )
+
     # Dataset 4: Polygon Collision arguments
     parser.add_argument(
         "--num_sides", 
@@ -192,6 +212,9 @@ def main() -> None:
             export_hdf5=args.export_hdf5,
             min_dominoes=args.min_dominoes,
             max_dominoes=args.max_dominoes,
+            task=args.domino_task,
+            domino_count=args.domino_count,
+            tile=args.domino_tile,
         )
     elif args.dataset == "polygon_collision":
         from polygon_collision.generator import generate_dataset as poly_gen
