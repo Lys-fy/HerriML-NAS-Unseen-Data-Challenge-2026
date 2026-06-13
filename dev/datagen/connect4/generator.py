@@ -23,7 +23,8 @@ def generate_dataset(
     export_hdf5: bool = False,
     board_width: int = 10,
     board_height: int = 10,
-    connect_k: int = 4
+    connect_k: int = 4,
+    unique_winner_only: bool = True,
 ) -> None:
     """
     Generate the Connect Four Win Exists dataset.
@@ -113,9 +114,17 @@ def generate_dataset(
         # Pick a random state from history
         sample_board = valid_history[rng.integers(0, len(valid_history))]
         
-        # Check winning moves for the active player (Channel 1)
+        # Check winning moves for the active player (Channel 1).
         winning_cols = get_winning_columns(sample_board, connect_k)
         if winning_cols:
+            # A position can have several winning columns (e.g. an open three
+            # wins at either end; ~23% of win-boards on a 10x10 board). Such a
+            # label is ambiguous for a single-label classifier - a model that
+            # names a different valid winning column would be marked wrong.
+            # By default keep only positions with exactly one winning move, so
+            # the label is unambiguous.
+            if unique_winner_only and len(winning_cols) != 1:
+                continue
             lab = _assign_winning(winning_cols)
             if lab is not None:
                 buckets[lab].append((sample_board, lab))

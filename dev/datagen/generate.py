@@ -89,10 +89,16 @@ def main() -> None:
         help="[Connect4] Height of the board"
     )
     parser.add_argument(
-        "--connect_k", 
-        type=int, 
-        default=4, 
+        "--connect_k",
+        type=int,
+        default=4,
         help="[Connect4] Win condition length"
+    )
+    parser.add_argument(
+        "--c4_allow_multi_winner",
+        action="store_true",
+        help="[Connect4] Keep positions with several winning columns "
+             "(ambiguous single label); default off keeps unique-winner only"
     )
     
     # Dataset 3: Domino arguments
@@ -197,7 +203,8 @@ def main() -> None:
             export_hdf5=args.export_hdf5,
             board_width=args.board_width,
             board_height=args.board_height,
-            connect_k=args.connect_k
+            connect_k=args.connect_k,
+            unique_winner_only=not args.c4_allow_multi_winner,
         )
     elif args.dataset == "domino":
         from domino.generator import generate_dataset as domino_gen
