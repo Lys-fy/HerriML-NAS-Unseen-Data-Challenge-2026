@@ -1,12 +1,12 @@
 # Cornelius (connect4)
 
-> **Status:** assessed 2026-06-13, GOOD with a metric caveat, spec not yet frozen | **Topic:** rendered Connect-Four boards; predict the immediate winning column. A teammate-built additional dataset (The Count), vendored at `dev/datagen/`.
-> **Related:** [[Datasets Overview]], [[Quincy]], [[Magnus]], [[Chesseract]], [[Sudoku]], [[Pipeline v10 - Design + Idea Ledger]]
+> **Status:** rebuilt 2026-06-13, GOOD, v10 3-seed sweep queued | **Topic:** rendered Connect-Four boards; predict the immediate winning column. A teammate-built additional dataset (The Count), vendored at `dev/datagen/`.
+> **Related:** [[Datasets Overview]], [[Quincy]], [[Magnus]], [[Pavel]], [[Dominik]], [[Chesseract]], [[Sudoku]], [[Pipeline v10 - Design + Idea Ledger]]
 
 ![[Cornelius.png]]
 > *Six train examples: a no-winning-move board plus boards whose winning column is 0, 2, 4, 6, 8. Red and yellow are the two players; the active player is the one to move.*
 
-The network sees a 10x10 Connect-Four position (default `board_width=board_height=10`, `connect_k=4`) and must output which column gives the active player an immediate win, or a "no winning move" class. With a width-10 board that is 11 classes (columns 0..9 plus "none"). Boards are sampled from legal self-play games, then a state is kept and analytically checked for winning columns (the label is the smallest winning column).
+The network sees a 10x10 Connect-Four position (default `board_width=board_height=10`, `connect_k=4`) and must output which column gives the active player an immediate win, or a "no winning move" class. With a width-10 board that is 11 classes (columns 0..9 plus "none"). Boards are sampled from legal self-play games, then a state is kept and analytically checked for winning columns; when several columns win, the label is the one chosen to keep the classes balanced (see below).
 
 | Field | Value |
 |---|---|
@@ -37,5 +37,5 @@ Note: with the balanced rule the label is *a* winning column (the one chosen to 
 
 ## Open items
 
-- Freeze the spec (board size, sample counts, noise) before any pipeline run.
-- Convert with `dev/datagen_to_npy.py --dataset connect4` (PNG/CSV -> npy, 3x64x64, 11 classes). ResNet-18 benchmark; first v10 run behind the sweep.
+- v10 3-seed 2h sweep queued (2026-06-13); spec frozen at default 10x10 board, balanced 11-way. Build/convert: `dev/datagen/generate.py --dataset connect4` then `dev/datagen_to_npy.py --dataset connect4` (3x64x64, 11 classes).
+- ResNet-18 benchmark to replace the 0.0 placeholder.

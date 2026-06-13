@@ -1,7 +1,7 @@
 # Magnus (mathvision)
 
-> **Status:** assessed 2026-06-13, GOOD, spec not yet frozen | **Topic:** domain-coloured complex polynomial phase portraits; predict the polynomial degree. A teammate-built additional dataset (The Count), vendored at `dev/datagen/`.
-> **Related:** [[Datasets Overview]], [[Quincy]], [[Cornelius]], [[Pipeline v10 - Design + Idea Ledger]]
+> **Status:** assessed 2026-06-13, GOOD, v10 3-seed sweep queued | **Topic:** domain-coloured complex polynomial phase portraits; predict the polynomial degree. A teammate-built additional dataset (The Count), vendored at `dev/datagen/`.
+> **Related:** [[Datasets Overview]], [[Quincy]], [[Cornelius]], [[Pavel]], [[Dominik]], [[Pipeline v10 - Design + Idea Ledger]]
 
 ![[Magnus.png]]
 > *Six train examples spanning degrees 1-5. The degree equals the number of phase singularities (the points where all colours meet, one per root). Regenerate examples: see the command below.*
@@ -32,6 +32,5 @@ The network sees a full-frame domain-coloured plot of a complex polynomial p(z) 
 
 ## Open items
 
-- Freeze the spec (max_degree, noise, image_size, sample counts) BEFORE the first pipeline run, per the no-design-leakage rule.
-- Convert to the competition format (PNG/CSV -> `train/valid/test_x.npy` float32 channels-first + `*_y.npy` int64 + `metadata`); a small shared converter will serve all teammate datasets.
-- ResNet-18 benchmark + first v10 run, queued behind the 3-seed sweep.
+- v10 3-seed 2h sweep queued (2026-06-13); spec frozen at default max_degree 5, image_size 64. Build/convert: `dev/datagen/generate.py --dataset mathvision` then `dev/datagen_to_npy.py --dataset mathvision` (remaps degrees 1-5 -> classes 0-4).
+- ResNet-18 benchmark to replace the 0.0 placeholder.

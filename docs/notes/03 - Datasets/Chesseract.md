@@ -9,19 +9,19 @@
 
 Late-game (final 15% of moves) board positions from games played by 8 grandmasters (Fischer, Kasparov, Carlsen, Anand, Nakamura, Karpov, Caruana, Tal). Each board is one-hot-encoded by piece type × colour, producing **12 channels** (6 piece types × 2 colours) on an 8×8 board. Label = game outcome (White wins, Draw, Black wins).
 
-| Field | Value |
-|---|---|
-| Codename | Chester |
-| Era | CVPR-2023 |
-| Shape | 12×8×8 (channels-first, 12 channels) |
-| Train / val / test | 49,998 / 10,001 / 10,001 (Geada says 9,999 / 9,999 — small discrepancy, trust local README) |
-| Classes | 3 (White wins / Draw / Black wins) |
-| Benchmark (ResNet-18) | 57.83% (`metadata`) — random is 33.3% |
-| Best off-the-shelf CNN (Geada) | DenseNet 59.60% |
-| Best NAS method (Geada Tab. 2) | random-Bonsai **68.83%** (Bonsai-Net 60.76%, the best directed method) |
-| Best 2023-comp submission | 62.98% |
-| License | CC BY 4.0 |
-| DOI | https://data.ncl.ac.uk/articles/dataset/Chesseract_Dataset/24118743 |
+| Field                          | Value                                                                                       |
+| ------------------------------ | ------------------------------------------------------------------------------------------- |
+| Codename                       | Chester                                                                                     |
+| Era                            | CVPR-2023                                                                                   |
+| Shape                          | 12×8×8 (channels-first, 12 channels)                                                        |
+| Train / val / test             | 49,998 / 10,001 / 10,001 (Geada says 9,999 / 9,999 — small discrepancy, trust local README) |
+| Classes                        | 3 (White wins / Draw / Black wins)                                                          |
+| Benchmark (ResNet-18)          | 57.83% (`metadata`) — random is 33.3%                                                       |
+| Best off-the-shelf CNN (Geada) | DenseNet 59.60%                                                                             |
+| Best NAS method (Geada Tab. 2) | random-Bonsai **68.83%** (Bonsai-Net 60.76%, the best directed method)                      |
+| Best 2023-comp submission      | 62.98%                                                                                      |
+| License                        | CC BY 4.0                                                                                   |
+| DOI                            | https://data.ncl.ac.uk/articles/dataset/Chesseract_Dataset/24118743                         |
 
 ## The 12-channel pathology
 

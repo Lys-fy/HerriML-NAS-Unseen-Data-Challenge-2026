@@ -78,17 +78,17 @@ Implication for [[Score-Efficient Targeting]]: **don't over-invest in low-benchm
 
 ## Additional datasets (ours)
 
-Custom datasets we build ourselves, spec-frozen before the pipeline sees them, used for the RQ2 generalisation test. They live in `additional/`. Two are home-built (Quincy), four come from a teammate's generator tool vendored at `dev/datagen/` (The Count: mathvision, connect4, polygon_collision, domino), triaged 2026-06-13 with corr1 + logreg.
+Custom datasets we build ourselves, spec-frozen before the pipeline sees them, used for the RQ2 generalisation test. They live in `additional/`. One is home-built (Quincy); four come from a teammate's generator tool vendored at `dev/datagen/` (The Count: mathvision, connect4, polygon_collision, domino), triaged 2026-06-13 with corr1 + logreg and converted to competition `.npy` via `dev/datagen_to_npy.py`.
 
-| Dataset | Task | Shape | corr1 / route | Status |
-|---|---|---|---|---|
-| [[Quincy]] | decode the class token from a version-1 QR code, 10% ECC-recoverable corruption | 1x21x21 | 0.05 / encoded | built, benchmark owed |
-| [[Magnus]] | predict the degree (1-5) of a complex polynomial phase portrait | 3x64x64 | 0.65 / image-like | GOOD, spec to freeze |
-| [[Cornelius]] | predict the immediate winning column of a Connect-4 board (or none) | 3x64x64 | 0.75 / image-like | GOOD, balanced 2026-06-13 (none-class 50%->9%), spec to freeze |
-| [[Candidates - Pavel + Dominik\|Pavel]] | does the bouncing object hit a wall next step | 4x64x64 (was 3x64x256) | image-like | frames-as-channels DONE, CNN check owed |
-| [[Candidates - Pavel + Dominik\|Dominik]] | which junction of a domino chain mismatches, or valid (localisation) | 3x44x374 | 0.84 / image-like | REBUILT 2026-06-13: linear layout + readable pips + localisation (logreg 35% vs 20%) |
+| Dataset | Task | Shape | corr1 / route | Classes | logreg vs chance | Status |
+|---|---|---|---|---|---|---|
+| [[Quincy]] | decode the class token from a version-1 QR code, 10% ECC-recoverable corruption | 1x21x21 | 0.05 / encoded | 20 | 25% / 5% | built, benchmark owed |
+| [[Magnus]] | degree (1-5) of a complex polynomial phase portrait | 3x64x64 | 0.65 / image-like | 5 | 23% / 20% | GOOD, sweep queued |
+| [[Cornelius]] | immediate winning column of a Connect-4 board (or none) | 3x64x64 | 0.75 / image-like | 11 | 64% / 9% | GOOD, balanced (none 50%->9%), sweep queued |
+| [[Pavel]] | does the bouncing object hit a wall next step (temporal) | 4x64x64 | 0.75 / image-like | 2 | chance | frames-as-channels done, CNN check owed, sweep queued |
+| [[Dominik]] | which junction of a domino chain mismatches, or valid (localisation) | 3x44x374 | 0.84 / image-like | 5 | 35% / 20% | REBUILT (linear layout, readable pips, localisation), sweep queued |
 
-Triage takeaway: Magnus and Cornelius are genuine NAS-rewarding tasks (logreg far below a real net's reach) and exercise the IMAGE-LIKE branch, complementing Quincy's encoded branch. Pavel and Dominik need generator fixes before use (ideas in [[Candidates - Pavel + Dominik]]). Still planned: tic-tac-toe encoded, minesweeper (see [[Pipeline v10 - Design + Idea Ledger]]).
+Takeaway: all five are genuine learning tasks (logreg well below a real net's reach) built blind to the pipeline. Quincy is the one encoded-branch probe (corr1 ~ 0); the four teammate datasets all route image-like and add a board-logic task (Cornelius, like Chesseract/Sudoku), a visual-counting task (Magnus), a temporal task (Pavel), and a wide-input localisation task (Dominik). The teammate four are queued for a v10 3-seed 2h sweep (2026-06-13). Still planned: tic-tac-toe encoded, minesweeper (see [[Pipeline v10 - Design + Idea Ledger]]).
 
 ## Open dataset questions
 

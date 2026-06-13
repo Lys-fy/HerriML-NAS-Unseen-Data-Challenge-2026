@@ -1,7 +1,7 @@
 # Quincy (QR codes)
 
 > **Status:** built 2026-06-12, spec frozen | **Topic:** version-1 QR codes encoding a class token; 20-way classification with 10% ECC-recoverable corruption. First of our own additional datasets (built blind to the pipeline, for the RQ2 generalisation test).
-> **Related:** [[Datasets Overview]], [[Pipeline v10 - Design + Idea Ledger]], [[Sudoku]], [[GameOfLife]]
+> **Related:** [[Datasets Overview]], [[Magnus]], [[Cornelius]], [[Pavel]], [[Dominik]], [[Pipeline v10 - Design + Idea Ledger]], [[Sudoku]], [[GameOfLife]]
 
 ![[Quincy.png]]
 > *Row 1: six clean codes of the same class (the visible variation comes from the random payload suffix and the random mask pattern). Row 2: six different classes. Row 3: the two corruption types. Regenerate: `/tmp/qrenv/bin/python dev/plot_quincy_examples.py` (any env with the `qrcode` package works).*
