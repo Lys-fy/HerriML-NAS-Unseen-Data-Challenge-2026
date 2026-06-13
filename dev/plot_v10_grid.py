@@ -51,11 +51,17 @@ SUMMARY = {
            "  conv (v8)     +48.2\n"
            "  tcn2d fixed   +59.2\n"
            "  v10           +62.49  (all-time best)"),
-    "1337": ("v10 measure-gate-train, 2h, seed 1337 (PARTIAL,\n"
-             "sweep running; green label = best-val)\n\n"
-             "notable: the random arm fired on Chesseract\n"
-             "(6 ops W=16) and leads at 64.8 val, above\n"
-             "the all-time competition best (63.0)\n\n"
+    "1337": ("v10 measure-gate-train, 2h, seed 1337 (13/13,\n"
+             "green label = best-val; test scoring pending)\n\n"
+             "routing matches s42 on 11/13 datasets.\n"
+             "the two random-arm adoptions diverge:\n"
+             "  Chesseract  64.8 bv  (+6.1 vs s42)  WIN\n"
+             "    attn-after-stem, 6 ops W=16; above the\n"
+             "    all-time competition best (63.0)\n"
+             "  Sudoku      86.2 bv  (-12.0 vs s42) LOSS\n"
+             "    12 ops W=32 probed 0.95 but realised\n"
+             "    0.86, below the conv-6 incumbent 0.87:\n"
+             "    random arm trusted a noisy probe score\n\n"
              "references: conv (v8) same seed;\n"
              "tcn2d fixed probe exists only for s42"),
 }
