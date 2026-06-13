@@ -84,7 +84,7 @@ Custom datasets we build ourselves, spec-frozen before the pipeline sees them, u
 |---|---|---|---|---|---|---|
 | [[Quincy]] | decode the class token from a version-1 QR code, 10% ECC-recoverable corruption | 1x21x21 | 0.05 / encoded | 20 | 25% / 5% | built, benchmark owed |
 | [[Magnus]] | degree (1-5) of a complex polynomial phase portrait | 3x64x64 | 0.65 / image-like | 5 | 23% / 20% | GOOD, sweep queued |
-| [[Cornelius]] | immediate winning column of a Connect-4 board (or none) | 3x64x64 | 0.75 / image-like | 11 | 64% / 9% | GOOD, balanced (none 50%->9%), sweep queued |
+| [[Cornelius]] | immediate winning column of a Connect-4 board (or none) | 3x64x64 | 0.75 / image-like | 11 | 64% / 9% | GOOD, balanced + unique-winner only (no ambiguous labels), sweep queued |
 | [[Pavel]] | does the bouncing object hit a wall next step (temporal) | 4x64x64 | 0.75 / image-like | 2 | chance | frames-as-channels done, CNN check owed, sweep queued |
 | [[Dominik]] | which junction of a domino chain mismatches, or valid (localisation) | 3x44x374 | 0.84 / image-like | 5 | 35% / 20% | REBUILT (linear layout, readable pips, localisation), sweep queued |
 

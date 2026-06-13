@@ -26,14 +26,18 @@ The network sees a 10x10 Connect-Four position (default `board_width=board_heigh
 
 ## Class balance: FIXED 2026-06-13
 
-The original generator balanced only win vs no-win, which left ~50% of samples in the single "no winning move" class while the other ~50% scattered across 10 column labels (a model predicting "none" scored ~50% learning nothing). The vendored generator (`dev/datagen/connect4/generator.py`) now buckets boards by their actual label across all 11 classes and fills each bucket to the same target; when a board has several winning columns it goes to the emptiest bucket so the rare high columns fill up. Measured on a 1100-sample run (770 train): per-class counts 60-83, the "none" class down from ~50% to **9.4% (= 1/11)**. Raw accuracy is now meaningful.
+The original generator balanced only win vs no-win, which left ~50% of samples in the single "no winning move" class while the other ~50% scattered across 10 column labels (a model predicting "none" scored ~50% learning nothing). The vendored generator (`dev/datagen/connect4/generator.py`) now buckets boards by their actual label across all 11 classes and fills each bucket to the same target by rejection (a board whose label-bucket is already full is dropped). The "none" class drops from ~50% to ~1/11. Raw accuracy is now meaningful. (Combined with the unique-winner rule below, each board contributes its single winning column to that column's bucket; high columns are filled by continuing to sample until their bucket reaches target.)
 
 Difficulty / framing dials still available:
 - **Binary reframe** ("does an immediate winning move exist?") -> a clean 2-class task if we want an easier second dataset.
 - **Smaller board** (`--board_width 7`, classic Connect-4) -> fewer classes, larger pieces at 64px.
 - `--noise_level`, `--label_noise` as usual.
 
-Note: with the balanced rule the label is *a* winning column (the one chosen to balance), not necessarily the smallest; any winning column is a correct answer, so a prediction of a different valid winning column counts as wrong. That single-label limitation is inherent to framing this as classification.
+## Multiple winning moves: FIXED 2026-06-13 (unique-winner only)
+
+A position can have several immediate winning columns (an open three wins at either end; stacked threats win in two places). Measured on 10x10 boards: of all win-boards, **23.5% have 2+ winning columns** (7.3% have 2, 1.1% have 3, 0.3% have 4). A single-label classifier can only be credited for one of them, so labelling such a board with one column means a model that names a *different valid* winning column is marked wrong - a ~23% noise ceiling on the win classes.
+
+Fix: the generator now keeps **only positions with exactly one winning move** (`unique_winner_only=True`, the default; `--c4_allow_multi_winner` opts out). Every win label is then unambiguous: there is one correct column. The "none" class is unchanged. This discards the multi-winner boards during collection (a minority, but it does make generation slower, so the shipped dataset is 20k samples / 14k train rather than 50k). The task is now cleanly "name the unique winning move, or say none".
 
 ## Open items
 

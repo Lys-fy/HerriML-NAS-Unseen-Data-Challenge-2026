@@ -65,22 +65,30 @@ def main():
     uniq = sorted({int(r[label_col]) for r in train_csv})
     remap = {v: i for i, v in enumerate(uniq)}
 
+    stack = args.dataset == "polygon_collision" and args.frames_as_channels
+
+    def to_arr(rgb):
+        return strip_to_channels(rgb) if stack else rgb_to_chw(rgb)
+
     shape = None
     for src, dst in SPLITS:
         sdir = in_dir / src
         if not (sdir / "labels.csv").exists():
             continue
         rows = list(csv.DictReader(open(sdir / "labels.csv")))
-        xs, ys = [], []
-        for r in rows:
+        n = len(rows)
+        # Preallocate from the first image so we never hold a Python list of
+        # arrays (large wide images like Dominik 3x44x374 OOM otherwise).
+        first = to_arr(np.array(Image.open(sdir / rows[0]["filename"]).convert("RGB")))
+        x = np.empty((n,) + first.shape, dtype=np.float32)
+        y = np.empty((n,), dtype=np.int64)
+        x[0] = first
+        y[0] = remap[int(rows[0][label_col])]
+        for i in range(1, n):
+            r = rows[i]
             rgb = np.array(Image.open(sdir / r["filename"]).convert("RGB"))
-            if args.dataset == "polygon_collision" and args.frames_as_channels:
-                xs.append(strip_to_channels(rgb))
-            else:
-                xs.append(rgb_to_chw(rgb))
-            ys.append(remap[int(r[label_col])])
-        x = np.asarray(xs, dtype=np.float32)
-        y = np.asarray(ys, dtype=np.int64)
+            x[i] = to_arr(rgb)
+            y[i] = remap[int(r[label_col])]
         np.save(out_dir / f"{dst}_x.npy", x)
         np.save(out_dir / f"{dst}_y.npy", y)
         if shape is None:
