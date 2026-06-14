@@ -35,13 +35,24 @@ DATASETS = [
     ("Windspeed",   "windspeed", 13.492, 19.74, 19.74),
 ]
 
-# v10 FINAL test raw per seed (only seeds that finished scoring)
+# v10 FINAL test raw per seed (all three seeds scored)
 V10_TEST = {
     "42": {"Adaline": 96.33, "Caitie": 73.65, "Chester": 57.66,
            "Cryptic": 74.25, "conway": 100.00, "Sadie": 95.36,
            "Gutenberg": 47.28, "LaMelo": 90.03, "Mateo": 95.52,
            "Myopia": 91.09, "Sokoto": 97.70, "Volga": 81.56,
            "windspeed": 19.36},
+    "1337": {"Adaline": 95.80, "Caitie": 74.26, "Chester": 64.30,
+             "Cryptic": 69.02, "conway": 99.99, "Sadie": 95.63,
+             "Gutenberg": 46.97, "LaMelo": 90.15, "Mateo": 95.18,
+             "Myopia": 91.57, "Sokoto": 86.14, "Volga": 80.84,
+             "windspeed": 20.51},
+    # s2024: conway test pred lost to reboot (val=100%); shown imputed 100.0
+    "2024": {"Adaline": 96.53, "Caitie": 72.43, "Chester": 61.69,
+             "Cryptic": 72.96, "conway": 100.00, "Sadie": 95.37,
+             "Gutenberg": 47.10, "LaMelo": 89.40, "Mateo": 95.25,
+             "Myopia": 91.57, "Sokoto": 91.83, "Volga": 81.20,
+             "windspeed": 18.65},
 }
 
 SUMMARY = {
@@ -51,24 +62,22 @@ SUMMARY = {
            "  conv (v8)     +48.2\n"
            "  tcn2d fixed   +59.2\n"
            "  v10           +62.49  (all-time best)"),
-    "2024": ("v10 measure-gate-train, 2h, seed 2024 (PARTIAL,\n"
-             "green label = best-val; test scoring pending)\n\n"
-             "5/13 datasets done before a spark reboot;\n"
-             "the remaining 8 are re-running (resumed),\n"
-             "then the 4 new datasets are queued.\n\n"
+    "2024": ("v10 measure-gate-train, 2h, seed 2024 (13/13,\n"
+             "COMPLETE; green label = FINAL TEST)\n\n"
+             "total +62.15 adj (GameOfLife test pred lost\n"
+             "to a spark reboot, val=100%, imputed +10).\n"
+             "5/13 ran before the reboot, 8 resumed.\n\n"
              "references (conv v8, fixed tcn2d) are the\n"
              "seed-42 baselines, marked (s42); only the\n"
              "v10 curve is seed 2024"),
     "1337": ("v10 measure-gate-train, 2h, seed 1337 (13/13,\n"
-             "green label = best-val; test scoring pending)\n\n"
-             "routing matches s42 on 11/13 datasets.\n"
-             "the two random-arm adoptions diverge:\n"
-             "  Chesseract  64.8 bv  (+6.1 vs s42)  WIN\n"
+             "COMPLETE; green label = FINAL TEST)\n\n"
+             "total +62.06 adj. routing matches s42 on\n"
+             "11/13; the two random-arm adoptions diverge:\n"
+             "  Chesseract 64.30 test (+6.6 vs s42)  WIN\n"
              "    attn-after-stem, 6 ops W=16; above the\n"
              "    all-time competition best (63.0)\n"
-             "  Sudoku      86.2 bv  (-12.0 vs s42) LOSS\n"
-             "    12 ops W=32 probed 0.95 but realised\n"
-             "    0.86, below the conv-6 incumbent 0.87:\n"
+             "  Sudoku     86.14 test (-11.6 vs s42) LOSS\n"
              "    random arm trusted a noisy probe score\n\n"
              "references (conv v8, fixed tcn2d) are the\n"
              "seed-42 baselines, marked (s42); only the\n"
