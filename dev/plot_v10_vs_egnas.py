@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""v10 vs EGNAS-full (Tier 2b, the 2025-winner reimplementation = our method
+"""v10 vs EGNAS (Tier 2b, the 2025-winner reimplementation = our method
 baseline), aggregated over 3 seeds (42/1337/2024), on all 13 datasets.
 
 Two figures:
@@ -83,7 +83,7 @@ fig, axes = plt.subplots(4, 4, figsize=(19, 17), squeeze=False)
 flat = axes.flatten()
 for ax, (name, code, bench) in zip(flat, DATASETS):
     lo, hi = 100.0, 0.0
-    for pathfn, col, lab in ((v10_path, V10C, "v10"), (egnas_path, EGC, "EGNAS-full")):
+    for pathfn, col, lab in ((v10_path, V10C, "v10"), (egnas_path, EGC, "EGNAS")):
         b = band(pathfn, code)
         if b is None:
             continue
@@ -106,18 +106,18 @@ for ax, (name, code, bench) in zip(flat, DATASETS):
     ax.grid(alpha=0.25); ax.legend(loc="lower right", fontsize=8, framealpha=0.92)
 ax = flat[len(DATASETS)]; ax.axis("off")
 ax.text(0.02, 0.98,
-        "v10 vs EGNAS-full (Tier 2b,\n2025-winner reimplementation)\n\n"
-        "green = v10, blue = EGNAS-full\n"
+        "v10 vs EGNAS (Tier 2b,\n2025-winner reimplementation)\n\n"
+        "green = v10, blue = EGNAS\n"
         "  band = +/- std over 3 seeds\n"
         "red dashed = ResNet-18 benchmark\n\n"
         "total adjusted (test):\n"
-        "  v10        +62.2\n"
-        "  EGNAS-full +35.5\n"
+        "  v10    +62.2\n"
+        "  EGNAS  +35.5\n"
         "  -> +26.7 over the baseline",
         transform=ax.transAxes, fontsize=10.5, va="top", family="monospace")
 for j in range(len(DATASETS) + 1, len(flat)):
     flat[j].axis("off")
-fig.suptitle("v10 vs EGNAS-full per-dataset learning curves, aggregated over 3 seeds (mean ± std)", fontsize=15)
+fig.suptitle("v10 vs EGNAS per-dataset learning curves, aggregated over 3 seeds (mean ± std)", fontsize=15)
 fig.tight_layout(rect=[0, 0, 1, 0.97])
 out1 = IMG / "v10_vs_egnas_curves_grid_3seed.png"
 fig.savefig(out1, dpi=125); plt.close(fig)
@@ -144,16 +144,16 @@ def total_per_seed(pathfn):
 v10_t = total_per_seed(v10_path)
 eg_t = total_per_seed(egnas_path)
 fig, ax = plt.subplots(figsize=(10, 6.5))
-for arr, col, lab in ((eg_t, EGC, "EGNAS-full"), (v10_t, V10C, "v10")):
+for arr, col, lab in ((eg_t, EGC, "EGNAS"), (v10_t, V10C, "v10")):
     m, sd = arr.mean(0), arr.std(0)
     ax.fill_between(GRID, m - sd, m + sd, color=col, alpha=0.22)
     ax.plot(GRID, m, color=col, linewidth=2.6, label=f"{lab}  (val {m[-1]:.1f} ± {sd[-1]:.1f})")
 ax.set_xlabel("fraction of training budget (per dataset, 2h)", fontsize=11)
 ax.set_ylabel("total adjusted score over 13 datasets (validation)", fontsize=11)
 gap = v10_t.mean(0)[-1] - eg_t.mean(0)[-1]
-ax.set_title("Aggregated learning curve: v10 vs EGNAS-full (Tier 2b baseline), 3-seed mean ± std\n"
+ax.set_title("Aggregated learning curve: v10 vs EGNAS (Tier 2b baseline), 3-seed mean ± std\n"
              f"validation +{v10_t.mean(0)[-1]:.1f} vs +{eg_t.mean(0)[-1]:.1f} (+{gap:.1f})   |   "
-             "final TEST: v10 +62.2, EGNAS-full +35.5", fontsize=11)
+             "final TEST: v10 +62.2, EGNAS +35.5", fontsize=11)
 ax.grid(alpha=0.25); ax.legend(loc="lower right", fontsize=10, framealpha=0.95)
 fig.tight_layout()
 out2 = IMG / "v10_vs_egnas_aggregate_curve.png"
