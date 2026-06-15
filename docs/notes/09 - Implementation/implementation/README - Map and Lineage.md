@@ -52,6 +52,8 @@ The naming drifted across three eras as the project's unit of iteration changed.
 
 ## Version lineage
 
+For a self-contained one-note-per-version summary (what was done / why / tested / results / verdict for each of v1 through v11), see the per-version notes in `pipeline/versions/` indexed at [[README - Versions]]. The table below is the lineage at a glance; the deep-dives are [[Pipeline v1-v7 - Aug Probe]] and [[Pipeline v10 - Design + Idea Ledger]].
+
 | Version | What it is | Code dir | Results note | Old note name | Total adj (s42, 2h) |
 |---|---|---|---|---|---|
 | Tier 0 | hardcoded CNN baseline | `baselines/fixed_cnn` | [[Fixed CNN]] | Tier 0 - Results | -0.36 |
