@@ -65,6 +65,14 @@ COLLAPSE_AUG_S = 15 * 60      # below this: not even the aug probe
 
 DEFAULT_DEPTH = 6             # the validated incumbent (fixed tcn2d D=6 = +59.2)
 DEPTH_CANDS = (4, 8)
+DEFAULT_WIDTH = 48           # the validated incumbent width
+WIDTH_CANDS = (32, 64)
+# Verified width-search stage (default-incumbent W=48 vs candidates, short-train
+# + re-train verification before adopting) -- the systematic, protected version
+# of "search width again" (width-prune cratered in v9 only because it had no
+# verification). Env-gated; default OFF so the submission/main v10 is unchanged.
+WIDTH_SEARCH = os.environ.get("WIDTH_SEARCH", "0") == "1"
+WIDTH_FRAC = float(os.environ.get("WIDTH_FRAC", "0.12"))
 STEM_EMBED_MIN_CH = 8         # A5a: channel-embed wins on the dilated family
 ENCODED_CORR1 = 0.2           # fingerprint gap is 0.07 vs 0.38 (5x)
 RAND_K = int(os.environ.get("RAND_K", "6"))
@@ -337,6 +345,54 @@ class NAS:
         else:
             self._log("depth_search", skipped=True, picked=depth)
 
+        # ---- stage 4b: width, default-incumbent (optional, env-gated) ----------
+        width = DEFAULT_WIDTH
+        if WIDTH_SEARCH and not collapse and family != "tcn1d":
+            slice_s = t0 * WIDTH_FRAC
+            cand_s = slice_s / (len(WIDTH_CANDS) + 1.5)  # shorts + verify
+            model = self._build(family, in_ch, nc, h, w, depth=depth,
+                                width=DEFAULT_WIDTH)
+            vals = self._timed_train(model, device, cand_s)
+            inc_w = max(vals)
+            wnoise = self._noise(vals)
+            del model
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            best_wc, best_wv = None, inc_w
+            wres = {}
+            for wd in WIDTH_CANDS:
+                model = self._build(family, in_ch, nc, h, w, depth=depth, width=wd)
+                try:
+                    vals = self._timed_train(model, device, cand_s)
+                    v = max(vals)
+                except Exception:
+                    v = 0.0
+                wres[wd] = round(v, 4)
+                if v > best_wv + wnoise:
+                    best_wc, best_wv = wd, v
+                del model
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+            wverified = None
+            if best_wc is not None:
+                # verification: re-train the challenger fresh, longer horizon
+                model = self._build(family, in_ch, nc, h, w, depth=depth, width=best_wc)
+                try:
+                    vv = self._timed_train(model, device, cand_s * 1.5)
+                    wverified = round(max(vv), 4)
+                except Exception:
+                    wverified = 0.0
+                del model
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                if wverified > inc_w + wnoise:
+                    width = best_wc
+            self._log("width_search", incumbent=round(inc_w, 4), candidates=wres,
+                      noise=round(wnoise, 4), challenger=best_wc,
+                      verified=wverified, picked=width)
+        else:
+            self._log("width_search", skipped=True, picked=width)
+
         # ---- stage 5: random arm, encoded only --------------------------------
         rand_pick = None
         if encoded and not collapse and self.clock.check() > 0.45 * t0:
@@ -398,7 +454,7 @@ class NAS:
                               drop_path_rate=0.1)
             self._log("final", arch=f"random[{len(ops)} ops W={W}]")
         else:
-            final = self._build(family, in_ch, nc, h, w, depth=depth)
-            self._log("final", arch=f"{family} D={depth} W=48")
+            final = self._build(family, in_ch, nc, h, w, depth=depth, width=width)
+            self._log("final", arch=f"{family} D={depth} W={width}")
         self._dump_record()
         return final

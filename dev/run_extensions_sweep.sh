@@ -2,9 +2,9 @@
 # Queued after the random-arm validation. Three experiments, seed 42, 2h each:
 #  (1) architecture gauntlet: attn / recur / modern fixed archs x 4 datasets
 #  (2) ensemble probe: conv+tcn2d+tcn1d logit-average x 2 datasets
-#  (3) micro-search expansion: v10 with a bigger random arm (RAND_K=12,
-#      RAND_FRAC=0.20, wider widths) -- now safe to revisit since the arm
-#      verifies before adopting. x 4 encoded datasets.
+#  (3) verified width-search: v10 with the systematic WIDTH_SEARCH stage
+#      (default-incumbent W=48 vs {32,64}, short-train + verify before adopt --
+#      the protected version of "search width again"). x 4 encoded datasets.
 # ~36h total; GPU stays busy. Self-contained (self-cd).
 set -uo pipefail
 cd ~/projects/HerriML-NAS-Unseen-Data-Challenge-2026
@@ -30,10 +30,10 @@ env BASELINE_SEED=$SEED BASELINE_LOG_DIR=dev/logs/ensemble_probe \
         --predictions-dir dev/predictions-ensemble_probe --time-limit 2.0 --score "${ENS_DS[@]}" > dev/logs/ensemble_probe/run.log 2>&1
 echo "ensemble_probe done $(date -Iseconds)" >> "$MARK"
 
-MICRO_DS=(Chesseract Sudoku Gutenberg Language)
-mkdir -p dev/logs/micro_expand dev/predictions-micro_expand
-env BASELINE_SEED=$SEED BASELINE_LOG_DIR=dev/logs/micro_expand RAND_K=12 RAND_FRAC=0.20 RAND_WIDTHS=16,24,32,48,64,96 \
+WIDTH_DS=(Chesseract Sudoku Gutenberg Language)
+mkdir -p dev/logs/width_search dev/predictions-width_search
+env BASELINE_SEED=$SEED BASELINE_LOG_DIR=dev/logs/width_search WIDTH_SEARCH=1 \
     "$VENV" -u dev/mock_harness.py --submission-dir baselines/v10 \
-        --predictions-dir dev/predictions-micro_expand --time-limit 2.0 --score "${MICRO_DS[@]}" > dev/logs/micro_expand/run.log 2>&1
-echo "micro_expand done $(date -Iseconds)" >> "$MARK"
+        --predictions-dir dev/predictions-width_search --time-limit 2.0 --score "${WIDTH_DS[@]}" > dev/logs/width_search/run.log 2>&1
+echo "width_search done $(date -Iseconds)" >> "$MARK"
 echo "extensions sweep done $(date -Iseconds)" >> "$MARK"
