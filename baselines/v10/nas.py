@@ -57,7 +57,7 @@ from helpers import (
 GATE_FRAC = 0.18          # 3-arm bake-off, encoded data only
 AUG_FRAC = 0.08           # two-arm aug probe, family-matched
 DEPTH_FRAC = 0.14         # 2 candidate shorts + 1 verification
-RAND_FRAC = 0.12          # random arm, encoded only
+RAND_FRAC = float(os.environ.get("RAND_FRAC", "0.12"))  # random arm, encoded only
 
 # low-budget collapse thresholds (seconds remaining at search start)
 COLLAPSE_FULL_S = 35 * 60     # below this: no gate, no depth search, no random
@@ -67,7 +67,11 @@ DEFAULT_DEPTH = 6             # the validated incumbent (fixed tcn2d D=6 = +59.2
 DEPTH_CANDS = (4, 8)
 STEM_EMBED_MIN_CH = 8         # A5a: channel-embed wins on the dilated family
 ENCODED_CORR1 = 0.2           # fingerprint gap is 0.07 vs 0.38 (5x)
-RAND_K = 6
+RAND_K = int(os.environ.get("RAND_K", "6"))
+# random-arm width pool (env-configurable for the micro-search-expansion study;
+# default unchanged). Verification (added 2026-06-15) makes a bigger search
+# safe to revisit -- a short-train mirage no longer gets adopted.
+RAND_WIDTHS = [int(x) for x in os.environ.get("RAND_WIDTHS", "16,24,32,48").split(",")]
 WIDE_VOCAB = tuple(o for o in OP_NAMES
                    if o not in ("RowBiLSTM", "CrossAxisBiLSTM"))
 
@@ -337,14 +341,14 @@ class NAS:
         rand_pick = None
         if encoded and not collapse and self.clock.check() > 0.45 * t0:
             slice_s = t0 * RAND_FRAC
-            cand_s = slice_s / RAND_K
+            cand_s = slice_s / (RAND_K + 2.0)  # reserve 2x cand_s for verify
             rng = random.Random(int(os.environ.get("BASELINE_SEED", "42")))
             base = incumbent_short or 0.0
             best_r, best_cfg = base, None
             samples = []
             for _ in range(RAND_K):
                 D = rng.randint(3, 12)
-                W = rng.choice([16, 24, 32, 48])
+                W = rng.choice(RAND_WIDTHS)
                 ops = [rng.choice(WIDE_VOCAB) for _ in range(D)]
                 model = build_cnn(in_ch, nc, h, w, ops=ops, base_width=W,
                                   drop_path_rate=0.0)
@@ -359,10 +363,30 @@ class NAS:
                 del model
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
+            # verification: re-train the best random arch fresh at a longer
+            # horizon and adopt only if it STILL beats the incumbent. The random
+            # arm was the pipeline's only UNVERIFIED adoption; without this a
+            # short-train mirage gets adopted (Sudoku s1337: a 12-op arch probed
+            # 0.95 but realised 0.86, below the conv incumbent -> -12). Mirrors
+            # the depth-search verify (v9: 13 fires, real rescues).
+            verified = None
             if best_cfg is not None:
-                rand_pick = best_cfg
-            self._log("random_arm", samples=samples,
-                      incumbent=round(base, 4), adopted=bool(rand_pick),
+                ops, W = best_cfg
+                model = build_cnn(in_ch, nc, h, w, ops=ops, base_width=W,
+                                  drop_path_rate=0.0)
+                try:
+                    vvals = self._timed_train(model, device, cand_s * 2.0)
+                    verified = round(max(vvals), 4)
+                except Exception:
+                    verified = 0.0
+                del model
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                if verified > base + noise:
+                    rand_pick = best_cfg
+            self._log("random_arm", samples=samples, incumbent=round(base, 4),
+                      challenger_short=round(best_r, 4) if best_cfg else None,
+                      verified=verified, adopted=bool(rand_pick),
                       ops=list(rand_pick[0]) if rand_pick else None)
         else:
             self._log("random_arm", skipped=True)
