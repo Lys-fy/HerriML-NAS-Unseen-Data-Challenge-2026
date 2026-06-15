@@ -73,6 +73,16 @@ WIDTH_CANDS = (32, 64)
 # verification). Env-gated; default OFF so the submission/main v10 is unchanged.
 WIDTH_SEARCH = os.environ.get("WIDTH_SEARCH", "0") == "1"
 WIDTH_FRAC = float(os.environ.get("WIDTH_FRAC", "0.12"))
+# Real "macro" search (BLOX sense): per-stage HETEROGENEOUS ops. Split the net
+# into MACRO_STAGES contiguous stages; greedily swap each stage's op to a
+# candidate, default-incumbent + verify before adopting (never below the
+# uniform arch). Env-gated, default OFF; a long-budget v11 experiment. The
+# candidate ops are a first guess, to be refined from the arch gauntlet.
+MACRO_SEARCH = os.environ.get("MACRO_SEARCH", "0") == "1"
+MACRO_FRAC = float(os.environ.get("MACRO_FRAC", "0.25"))
+MACRO_STAGES = int(os.environ.get("MACRO_STAGES", "3"))
+MACRO_DEFAULT_OP = os.environ.get("MACRO_DEFAULT_OP", "DilatedConv3")
+MACRO_OPS = [o for o in os.environ.get("MACRO_OPS", "SpatialSelfAttn2D,SEConv3").split(",") if o]
 STEM_EMBED_MIN_CH = 8         # A5a: channel-embed wins on the dilated family
 ENCODED_CORR1 = 0.2           # fingerprint gap is 0.07 vs 0.38 (5x)
 RAND_K = int(os.environ.get("RAND_K", "6"))
@@ -393,9 +403,83 @@ class NAS:
         else:
             self._log("width_search", skipped=True, picked=width)
 
+        # ---- stage 4c: per-stage macro (heterogeneous) search (env-gated) ------
+        # The real "macro" search: let stages use DIFFERENT ops, found greedily
+        # with default-incumbent + verify (worst case = the uniform arch, no
+        # regression). Long-budget v11 experiment; default OFF.
+        macro_pick = None
+        if MACRO_SEARCH and not collapse and family != "tcn1d":
+            mstem = "channel_embed" if in_ch >= STEM_EMBED_MIN_CH else "conv3"
+            D = depth
+            n_st = max(1, min(MACRO_STAGES, D))
+            bounds = [round(i * D / n_st) for i in range(n_st + 1)]
+            stage_ops = [MACRO_DEFAULT_OP] * D
+            slice_s = t0 * MACRO_FRAC
+            n_short = n_st * len(MACRO_OPS) + n_st * 1.5
+            cand_s = slice_s / max(n_short, 1.0)
+            model = build_cnn(in_ch, nc, h, w, ops=stage_ops, base_width=width,
+                              drop_path_rate=0.0, stem=mstem)
+            vals = self._timed_train(model, device, cand_s)
+            inc = max(vals)
+            mnoise = self._noise(vals)
+            del model
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            stages_log = []
+            for gi in range(n_st):
+                a, b = bounds[gi], bounds[gi + 1]
+                cur = stage_ops[a]
+                best_op, best_v = cur, inc
+                for cop in MACRO_OPS:
+                    if cop == cur:
+                        continue
+                    trial = list(stage_ops)
+                    for k in range(a, b):
+                        trial[k] = cop
+                    model = build_cnn(in_ch, nc, h, w, ops=trial, base_width=width,
+                                      drop_path_rate=0.0, stem=mstem)
+                    try:
+                        v = max(self._timed_train(model, device, cand_s))
+                    except Exception:
+                        v = 0.0
+                    del model
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                    if v > best_v + mnoise:
+                        best_op, best_v = cop, v
+                accepted = False
+                if best_op != cur and best_v > inc + mnoise:
+                    # verification: re-train the swapped arch fresh, longer horizon
+                    trial = list(stage_ops)
+                    for k in range(a, b):
+                        trial[k] = best_op
+                    model = build_cnn(in_ch, nc, h, w, ops=trial, base_width=width,
+                                      drop_path_rate=0.0, stem=mstem)
+                    try:
+                        vv = max(self._timed_train(model, device, cand_s * 1.5))
+                    except Exception:
+                        vv = 0.0
+                    del model
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                    if vv > inc + mnoise:
+                        for k in range(a, b):
+                            stage_ops[k] = best_op
+                        inc = vv
+                        accepted = True
+                stages_log.append({"stage": gi, "picked": stage_ops[a],
+                                   "best_short": round(best_v, 4), "accepted": accepted})
+            if any(o != MACRO_DEFAULT_OP for o in stage_ops):
+                macro_pick = stage_ops
+            self._log("macro_search", default_op=MACRO_DEFAULT_OP, n_stages=n_st,
+                      cand_ops=list(MACRO_OPS), stages=stages_log,
+                      final_ops=stage_ops, adopted=bool(macro_pick))
+        elif MACRO_SEARCH:
+            self._log("macro_search", skipped=True)
+
         # ---- stage 5: random arm, encoded only --------------------------------
         rand_pick = None
-        if encoded and not collapse and self.clock.check() > 0.45 * t0:
+        if encoded and not collapse and not MACRO_SEARCH and self.clock.check() > 0.45 * t0:
             slice_s = t0 * RAND_FRAC
             cand_s = slice_s / (RAND_K + 2.0)  # reserve 2x cand_s for verify
             rng = random.Random(int(os.environ.get("BASELINE_SEED", "42")))
@@ -453,6 +537,11 @@ class NAS:
             final = build_cnn(in_ch, nc, h, w, ops=ops, base_width=W,
                               drop_path_rate=0.1)
             self._log("final", arch=f"random[{len(ops)} ops W={W}]")
+        elif macro_pick is not None:
+            mstem = "channel_embed" if in_ch >= STEM_EMBED_MIN_CH else "conv3"
+            final = build_cnn(in_ch, nc, h, w, ops=macro_pick, base_width=width,
+                              drop_path_rate=0.1, stem=mstem)
+            self._log("final", arch=f"macro[{'/'.join(macro_pick)}] W={width}")
         else:
             final = self._build(family, in_ch, nc, h, w, depth=depth, width=width)
             self._log("final", arch=f"{family} D={depth} W={width}")
