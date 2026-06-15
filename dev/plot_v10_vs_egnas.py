@@ -9,10 +9,12 @@ Two figures:
   2. v10_vs_egnas_aggregate_curve.png - total adjusted score (summed over the
      13 datasets) as training progresses, both methods as 3-seed mean +/- std.
 
-Both are validation-based (curves are val); adjusted score uses the metadata
-ResNet-18 benchmark, same convention for both methods, so the comparison is
-fair. EGNAS CSVs live in dev/logs/egnas_full/t2bfull_s<seed> (11) and
-t2bfull_new_s<seed> (Cryptic, windspeed).
+x-axis is EPOCHS. Seeds within a method have different epoch counts, so each
+seed's best-val (monotone) is forward-filled at its final value to the longest
+seed before averaging. Validation-based curves; adjusted score uses the
+metadata ResNet-18 benchmark, same convention for both methods.
+EGNAS CSVs: dev/logs/egnas_full/t2bfull_s<seed> (11) and t2bfull_new_s<seed>
+(Cryptic, windspeed).
 """
 import csv
 from pathlib import Path
@@ -24,7 +26,6 @@ import matplotlib.pyplot as plt
 REPO = Path(__file__).resolve().parent.parent
 IMG = REPO / "docs/notes/09 - Implementation/implementation/images/pipeline"
 SEEDS = ["42", "1337", "2024"]
-GRID = np.linspace(0.0, 1.0, 100)
 V10C = "#2c8a3a"; EGC = "#1f77b4"; BENCHC = "#b53030"
 
 DATASETS = [
@@ -43,14 +44,17 @@ V10_TEST = {
 }
 
 
-def best_curve(path):
+def best_epochs(path):
+    """best_val_acc (%) per epoch, raw (no resampling)."""
     best = []
     with open(path) as f:
         for r in csv.DictReader(f):
             best.append(float(r["best_val_acc"]) * 100)
-    if len(best) < 2:
-        return None
-    return np.interp(GRID, np.linspace(0, 1, len(best)), np.array(best))
+    return np.array(best) if len(best) >= 2 else None
+
+
+def pad(arr, n):
+    return arr if len(arr) >= n else np.concatenate([arr, np.full(n - len(arr), arr[-1])])
 
 
 def v10_path(code, s):
@@ -59,23 +63,28 @@ def v10_path(code, s):
 
 def egnas_path(code, s):
     p = REPO / f"dev/logs/egnas_full/t2bfull_s{s}/{code}.csv"
-    if p.exists():
-        return p
-    return REPO / f"dev/logs/egnas_full/t2bfull_new_s{s}/{code}.csv"
+    return p if p.exists() else REPO / f"dev/logs/egnas_full/t2bfull_new_s{s}/{code}.csv"
 
 
-def band(pathfn, code):
-    curves = []
+def seed_curves(pathfn, code):
+    cs = []
     for s in SEEDS:
         p = pathfn(code, s)
         if p.exists():
-            c = best_curve(p)
+            c = best_epochs(p)
             if c is not None:
-                curves.append(c)
-    if not curves:
+                cs.append(c)
+    return cs
+
+
+def band(pathfn, code):
+    """Per-method curve over epochs: x, mean, std (seeds forward-filled)."""
+    cs = seed_curves(pathfn, code)
+    if not cs:
         return None
-    a = np.array(curves)
-    return a.mean(0), a.std(0), len(curves)
+    n = max(len(c) for c in cs)
+    arr = np.array([pad(c, n) for c in cs])
+    return np.arange(n), arr.mean(0), arr.std(0)
 
 
 # ---- Figure 1: per-dataset grid ---------------------------------------------
@@ -87,28 +96,29 @@ for ax, (name, code, bench) in zip(flat, DATASETS):
         b = band(pathfn, code)
         if b is None:
             continue
-        mean, std, n = b
-        ax.fill_between(GRID, mean - std, mean + std, color=col, alpha=0.22, zorder=2)
+        x, mean, std = b
+        ax.fill_between(x, mean - std, mean + std, color=col, alpha=0.22, zorder=2)
         if lab == "v10":
             tests = [V10_TEST[s][code] for s in SEEDS]
             tag = f"test {np.mean(tests):.1f}±{np.std(tests):.1f}%"
         else:
             tag = f"val {mean[-1]:.1f}%"
-        ax.plot(GRID, mean, color=col, linewidth=2.4, zorder=3, label=f"{lab} ({tag})")
+        ax.plot(x, mean, color=col, linewidth=2.4, zorder=3, label=f"{lab} ({tag})")
         lo, hi = min(lo, float(mean.min())), max(hi, float(mean.max()))
     if bench > 0:
         ax.axhline(bench, color=BENCHC, linestyle="--", linewidth=1.1, label=f"bench {bench:.1f}%")
         lo, hi = min(lo, bench), max(hi, bench)
-    pad = max(2.0, (hi - lo) * 0.12)
-    ax.set_ylim(lo - pad, hi + pad)
+    pad_y = max(2.0, (hi - lo) * 0.12)
+    ax.set_ylim(lo - pad_y, hi + pad_y)
     ax.set_title(name, fontsize=12, fontweight="bold")
-    ax.set_xlabel("fraction of training"); ax.set_ylabel("val acc (%)")
+    ax.set_xlabel("epoch"); ax.set_ylabel("val acc (%)")
     ax.grid(alpha=0.25); ax.legend(loc="lower right", fontsize=8, framealpha=0.92)
 ax = flat[len(DATASETS)]; ax.axis("off")
 ax.text(0.02, 0.98,
         "v10 vs EGNAS (Tier 2b,\n2025-winner reimplementation)\n\n"
         "green = v10, blue = EGNAS\n"
         "  band = +/- std over 3 seeds\n"
+        "  (shorter seeds held at final)\n"
         "red dashed = ResNet-18 benchmark\n\n"
         "total adjusted (test):\n"
         "  v10    +62.2\n"
@@ -124,31 +134,38 @@ fig.savefig(out1, dpi=125); plt.close(fig)
 print(f"wrote {out1}")
 
 
-# ---- Figure 2: aggregated total curve ---------------------------------------
+# ---- Figure 2: aggregated total curve over epochs ---------------------------
 def total_per_seed(pathfn):
-    tots = []
+    """Per seed: total adjusted score over 13 datasets at each epoch.
+    Each dataset's curve is forward-filled to the seed's longest dataset."""
+    out = []
     for s in SEEDS:
-        tot = np.zeros_like(GRID); n = 0
+        cols = []
         for name, code, bench in DATASETS:
             p = pathfn(code, s)
             if not p.exists():
                 continue
-            c = best_curve(p)
+            c = best_epochs(p)
             if c is None:
                 continue
-            tot += np.maximum(-10.0, (c - bench) * 10.0 / max(100.0 - bench, 1e-6))
-            n += 1
-        tots.append(tot)
-    return np.array(tots)
+            cols.append(np.maximum(-10.0, (c - bench) * 10.0 / max(100.0 - bench, 1e-6)))
+        if not cols:
+            continue
+        n = max(len(c) for c in cols)
+        out.append(np.sum([pad(c, n) for c in cols], axis=0))
+    n = max(len(c) for c in out)
+    return np.array([pad(c, n) for c in out])
+
 
 v10_t = total_per_seed(v10_path)
 eg_t = total_per_seed(egnas_path)
 fig, ax = plt.subplots(figsize=(10, 6.5))
 for arr, col, lab in ((eg_t, EGC, "EGNAS"), (v10_t, V10C, "v10")):
     m, sd = arr.mean(0), arr.std(0)
-    ax.fill_between(GRID, m - sd, m + sd, color=col, alpha=0.22)
-    ax.plot(GRID, m, color=col, linewidth=2.6, label=f"{lab}  (val {m[-1]:.1f} ± {sd[-1]:.1f})")
-ax.set_xlabel("fraction of training budget (per dataset, 2h)", fontsize=11)
+    x = np.arange(len(m))
+    ax.fill_between(x, m - sd, m + sd, color=col, alpha=0.22)
+    ax.plot(x, m, color=col, linewidth=2.6, label=f"{lab}  (val {m[-1]:.1f} ± {sd[-1]:.1f})")
+ax.set_xlabel("epoch", fontsize=11)
 ax.set_ylabel("total adjusted score over 13 datasets (validation)", fontsize=11)
 gap = v10_t.mean(0)[-1] - eg_t.mean(0)[-1]
 ax.set_title("Aggregated learning curve: v10 vs EGNAS (Tier 2b baseline), 3-seed mean ± std\n"
