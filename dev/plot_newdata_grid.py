@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Custom-datasets result grid, 4 rows x 5 cols.
-Rows: seed 42, seed 1337, seed 2024, 3-seed aggregate (mean +/- std).
-Cols: Quincy, Magnus, Cornelius, Pavel, Dominik.
+"""Custom-datasets result grid, 5 rows x 4 cols.
+Rows: Quincy, Magnus, Cornelius, Pavel, Dominik (one dataset per row).
+Cols: seed 42, seed 1337, seed 2024, 3-seed aggregate (mean +/- std).
 Each panel shows the v10 best-val curve (green) and, the same way in every
 panel, the ResNet-18 baseline (blue, seed 42) which is the zero-point for
 these custom datasets. Missing cells (sweep still running) are annotated.
@@ -41,21 +41,21 @@ def resnet_curve(code):
     return best_curve(NDLOG / "resnet18_s42" / f"{code}.csv")
 
 
-fig, axes = plt.subplots(4, 5, figsize=(20, 14), squeeze=False)
-row_labels = ["seed 42", "seed 1337", "seed 2024", "3-seed aggregate"]
+fig, axes = plt.subplots(5, 4, figsize=(16, 18), squeeze=False)
+col_labels = ["seed 42", "seed 1337", "seed 2024", "3-seed aggregate"]
 
-for ci, (code, hint) in enumerate(COLS):
+for ri, (code, hint) in enumerate(COLS):
     rn = resnet_curve(code)
-    for ri in range(4):
+    for ci in range(4):
         ax = axes[ri][ci]
         lo, hi = 100.0, 0.0
-        # ResNet baseline (same in every row)
+        # ResNet baseline (same in every column)
         if rn is not None:
             ax.plot(GRID, rn, color=RNC, linewidth=1.8, label=f"ResNet-18 {rn[-1]:.1f}%")
             lo, hi = min(lo, float(rn.min())), max(hi, float(rn.max()))
         # v10
-        if ri < 3:
-            c = best_curve(NDLOG / f"v10_s{SEEDS[ri]}" / f"{code}.csv")
+        if ci < 3:
+            c = best_curve(NDLOG / f"v10_s{SEEDS[ci]}" / f"{code}.csv")
             if c is not None:
                 ax.plot(GRID, c, color=V10C, linewidth=2.4, label=f"v10 {c[-1]:.1f}%")
                 lo, hi = min(lo, float(c.min())), max(hi, float(c.max()))
@@ -77,15 +77,15 @@ for ci, (code, hint) in enumerate(COLS):
             ax.legend(loc="lower right", fontsize=8, framealpha=0.92)
         ax.grid(alpha=0.25)
         if ri == 0:
-            ax.set_title(f"{code}\n({hint})", fontsize=12, fontweight="bold")
+            ax.set_title(col_labels[ci], fontsize=12, fontweight="bold")
         if ci == 0:
-            ax.set_ylabel(f"{row_labels[ri]}\nval acc (%)", fontsize=10)
-        if ri == 3:
+            ax.set_ylabel(f"{code}\n({hint})\nval acc (%)", fontsize=10)
+        if ri == 4:
             ax.set_xlabel("fraction of training")
 
 fig.suptitle("v10 on the 5 custom datasets vs ResNet-18 baseline  "
-             "(rows: seeds 42/1337/2024 + aggregate; blue = ResNet-18 zero-point)",
-             fontsize=15)
+             "(rows: datasets; cols: seeds 42/1337/2024 + aggregate; blue = ResNet-18 zero-point)",
+             fontsize=14)
 fig.tight_layout(rect=[0, 0, 1, 0.97])
 fig.savefig(OUT, dpi=120)
 print(f"wrote {OUT}")
