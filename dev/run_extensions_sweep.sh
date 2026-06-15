@@ -37,13 +37,14 @@ env BASELINE_SEED=$SEED BASELINE_LOG_DIR=dev/logs/width_search WIDTH_SEARCH=1 \
         --predictions-dir dev/predictions-width_search --time-limit 2.0 --score "${WIDTH_DS[@]}" > dev/logs/width_search/run.log 2>&1
 echo "width_search done $(date -Iseconds)" >> "$MARK"
 
-# (4) per-stage macro (heterogeneous) search: v10 with MACRO_SEARCH=1
-#     (uniform DilatedConv3 incumbent vs per-stage swaps to {attn, SE}, verified;
-#     disables the random arm to isolate the macro mechanism). x 2 encoded ds.
-MACRO_DS=(Chesseract Sudoku)
-mkdir -p dev/logs/macro_search dev/predictions-macro_search
-env BASELINE_SEED=$SEED BASELINE_LOG_DIR=dev/logs/macro_search MACRO_SEARCH=1 \
-    "$VENV" -u dev/mock_harness.py --submission-dir baselines/v10 \
-        --predictions-dir dev/predictions-macro_search --time-limit 2.0 --score "${MACRO_DS[@]}" > dev/logs/macro_search/run.log 2>&1
-echo "macro_search done $(date -Iseconds)" >> "$MARK"
+# (4) macro-ONLY search on ALL 13 datasets: baselines/macro_probe always trains
+#     the per-stage macro arch (uniform DilatedConv3 incumbent vs per-stage swaps
+#     to {SpatialSelfAttn2D, SEConv3, Conv5}, verified). Isolates the macro
+#     search's own standalone performance -- NO family-default fallback.
+MACRO_DS=(AddNIST CIFARTile Chesseract Cryptic GameOfLife GeoClassing Gutenberg Language MultNIST Myofibre Sudoku Voxel Windspeed)
+mkdir -p dev/logs/macro_probe dev/predictions-macro_probe
+env BASELINE_SEED=$SEED BASELINE_LOG_DIR=dev/logs/macro_probe \
+    "$VENV" -u dev/mock_harness.py --submission-dir baselines/macro_probe \
+        --predictions-dir dev/predictions-macro_probe --time-limit 2.0 --score "${MACRO_DS[@]}" > dev/logs/macro_probe/run.log 2>&1
+echo "macro_probe (all 13) done $(date -Iseconds)" >> "$MARK"
 echo "extensions sweep done $(date -Iseconds)" >> "$MARK"
