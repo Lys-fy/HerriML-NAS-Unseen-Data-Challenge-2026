@@ -20,7 +20,7 @@ s2: "2  BACKBONE CHOICE      family in {CNN, 1-D TCN, 2-D TCN}" {
   direction: right
   class: stage
   enc: "encoded data?\n(corr1 < 0.2)" {class: dec}
-  skip: "skip the bake-off\nbackbone := 2-D TCN\n(channel-mixing stem if >= 8 channels)\nsaved time goes to training" {class: def}
+  skip: "skip the comparison\nbackbone := 2-D TCN\n(channel-mixing stem if >= 8 channels)\nsaved time goes to training" {class: def}
   gatebox: "BACKBONE GATE\ntrain each family briefly\nat matched wall-clock" {class: gate}
   lead: "leader clearly beats\nthe CNN?\n(margin > noise)" {class: dec}
   pick: "backbone := leader" {class: plain}

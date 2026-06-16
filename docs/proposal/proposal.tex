@@ -59,10 +59,10 @@ gates every decision, and spends all remaining time on training
 (Fig.~\ref{fig:pipe}, p.~2). At its core is one search principle applied
 at every level: each choice is searched against a robust incumbent
 default, scored by a short-training proxy, and adopted only when it beats
-the default beyond the proxy noise \emph{and} survives a higher-fidelity
-re-check. The search is reliability-aware by design, never trusting a
-low-fidelity ranking alone, the failure mode that makes naive operation
-search harmful.
+the default beyond the proxy noise \emph{and} survives a longer
+verification re-training. The search is reliability-aware by design, never
+trusting a short-training ranking alone, the failure mode that makes naive
+operation search harmful.
 (1)~\emph{Measure}: a fingerprint computed directly from the raw input
 tensors, with no training involved. The mean correlation of neighbouring
 pixels separates the two data families with a wide margin: between
@@ -114,11 +114,12 @@ configuration it selects per dataset, are shown in
 Fig.~\ref{fig:res} (p.~3).
 
 \section{Potential Extensions}
-The pipeline scales with the budget: extra families (e.g.\ recurrent
-networks) join the bake-off only at large budgets, and when families tie
-the surplus trains a heterogeneous ensemble, kept only if it beats the
-best single model. In parallel we build competition-style datasets blind
-to the pipeline as a further generalisation test.
+The pipeline scales with the budget: at large budgets it admits extra
+families (recurrent and attention blocks) via the gated comparison and
+searches per-stage \emph{heterogeneous} architectures rather than one
+uniform stack; on ties it trains a cross-family ensemble, kept only if it
+beats the best single model. We also build competition-style datasets
+blind to the pipeline as a generalisation test.
 
 
 
