@@ -1,7 +1,7 @@
 \documentclass[10pt,twocolumn]{article}
 \usepackage[a4paper,margin=1.5cm,bottom=1.45cm]{geometry}
 \usepackage{titlesec}
-\titlespacing*{\section}{0pt}{0.45em}{0.25em}
+\titlespacing*{\section}{0pt}{0.3em}{0.18em}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
@@ -29,18 +29,16 @@ misleads. All decisions must be made at runtime, blind.
 
 Our starting point is the winning method of the 2025 edition, EGNAS
 \cite{egnas}, a macro--micro search (depth, width, per-layer operation)
-over convolutional blocks. Reproducing it surfaced two systematic
+over convolutional blocks. Reproducing it surfaced two
 weaknesses. First, rankings from short training runs are unreliable:
-operations that lead after a few epochs often lose after full training,
-so fine-grained (micro) operation search tends to \emph{harm} final
-accuracy. Second, the space is confined to one architecture family: in
-our preliminary experiments a \emph{fixed} 2-D dilated-convolution
-backbone in the style of temporal convolutional networks \cite{tcn}
-clearly outperformed the fully searched CNN baseline on most datasets,
-while plain CNNs and randomly sampled architectures won precisely on the
-encoded datasets, in line with random search being a strong NAS baseline
-\cite{geada,li2019}. The leverage lies in choosing the right architecture
-\emph{family} per dataset, not in fine-grained operation search.
+operations that lead early often lose after full training, so fine-grained
+(micro) operation search tends to \emph{harm} final accuracy. Second, the
+space is confined to one family: in our experiments a \emph{fixed} 2-D
+dilated-convolution backbone (temporal convolutional networks \cite{tcn})
+beat the fully searched CNN on most datasets, while plain CNNs and random
+architectures won on the encoded ones, matching random search as a strong
+NAS baseline \cite{geada,li2019}. The leverage is choosing the right
+architecture \emph{family} per dataset, not operation search.
 
 \section{Research Questions}
 \textbf{RQ1.} Can macro--micro NAS \cite{egnas} be generalised across
@@ -58,25 +56,32 @@ between architecture families?
 \section{Approach}
 We propose a self-configuring pipeline that measures the data first,
 gates every decision, and spends all remaining time on training
-(Fig.~\ref{fig:pipe}, p.~2).
+(Fig.~\ref{fig:pipe}, p.~2). At its core is one search principle applied
+at every level: each choice is searched against a robust incumbent
+default, scored by a short-training proxy, and adopted only when it beats
+the default beyond the proxy noise \emph{and} survives a higher-fidelity
+re-check. The search is reliability-aware by design, never trusting a
+low-fidelity ranking alone, the failure mode that makes naive operation
+search harmful.
 (1)~\emph{Measure}: a fingerprint computed directly from the raw input
 tensors, with no training involved. The mean correlation of neighbouring
 pixels separates the two data families with a wide margin: between
 $-0.05$ and $0.07$ on the four encoded public datasets versus $0.38$ to
-$1.00$ on all others. (2)~\emph{Macro stage}: for image-like data the
-dilated backbone is selected directly. Only encoded data pays for a
-brief bake-off of all families at matched wall-clock.
-The leader is adopted only if it beats the robust default by more than
-the measured ranking noise, otherwise the pipeline \emph{abstains} to the
-default, which makes every decision bounded-downside.
-(3)~\emph{Augmentation probe}: a two-arm A/B test run \emph{after} the
-family choice with arms of the chosen family. It deviates from the
-default only on a clear margin (RQ3).
-(4)~\emph{Micro stage}: depth search anchored on an incumbent default. A
-deviation must win significantly \emph{and} survive verification by
-re-training at a longer horizon. (5)~A \emph{random-search arm} over a
-wide operation vocabulary runs only on encoded data and only if budget
-remains \cite{geada}. (6)~\emph{Train to budget}: the winner trains on
+$1.00$ on all others. (2)~\emph{Family selection}: image-like data goes to the dilated
+backbone directly; encoded data, where the prior is ambiguous, evaluates
+all families at matched wall-clock and adopts the leader only when it
+clears the default beyond the ranking noise, otherwise \emph{abstaining}
+to the default (a built-in null hypothesis that bounds the downside).
+(3)~\emph{Augmentation probe}: a two-arm test run \emph{after} the family
+choice, with arms of the chosen family; it deviates only on a clear
+margin (RQ3).
+(4)~\emph{Structural search}: depth and width are searched against an
+incumbent default, adopting a non-default choice only when it wins beyond
+the proxy noise \emph{and} survives re-training verification at a longer
+horizon. (5)~\emph{Operation-level exploration}: on encoded data with
+budget to spare, the search samples architectures from a broad operation
+vocabulary under the same verify-before-adopt rule; random sampling is a
+deliberate, competitive NAS baseline \cite{li2019}. (6)~\emph{Train to budget}: the winner trains on
 the full remaining time with a cosine learning-rate schedule \cite{sgdr}
 sized to reach zero exactly when the budget ends. All stage budgets are
 fractions of the clock, so the pipeline degrades gracefully from many
@@ -88,14 +93,12 @@ hours down to minutes.
 
 \section{Required Steps}
 (1)~Reproduce the EGNAS baseline and probe candidate architecture
-families at full budget (done). (2)~Validate each decision mechanism in isolation against known
-full-budget outcomes (gate reliability, fingerprint separation,
-augmentation transfer).
-(3)~Integrate the pipeline and verify all execution paths, including the
-low-budget collapse behaviour. (4)~Full multi-seed evaluation.
-(5)~A budget-ladder study (0.5h to 8h) measuring which decision stages pay
-at which budget. (6)~A generalisation test on untouched external datasets (CIFAR-10/100,
-EMNIST, MedMNIST, spectrograms). (7)~Packaging and stress tests.
+families at full budget (done). (2)~Validate each decision mechanism in
+isolation against known full-budget outcomes. (3)~Integrate the pipeline
+and verify all execution paths, including low-budget collapse.
+(4)~Full multi-seed evaluation. (5)~A budget-ladder study (0.5h to 8h)
+measuring which stages pay at which budget. (6)~A generalisation test on
+untouched external datasets. (7)~Packaging and stress tests.
 
 \section{Evaluation Strategy}
 Primary evaluation uses the 13 public competition datasets with the
@@ -111,13 +114,11 @@ configuration it selects per dataset, are shown in
 Fig.~\ref{fig:res} (p.~3).
 
 \section{Potential Extensions}
-The pipeline's ambition can scale with the budget: additional families
-(e.g.\ recurrent networks, which need longer probes to rank fairly)
-join the bake-off only at large budgets, and when families tie
-statistically, the surplus trains a heterogeneous ensemble, kept only
-if it beats the best single model. In parallel we create
-competition-style datasets blind to the pipeline (QR codes with partly
-covered regions, encoded board games) as a further generalisation test.
+The pipeline scales with the budget: extra families (e.g.\ recurrent
+networks) join the bake-off only at large budgets, and when families tie
+the surplus trains a heterogeneous ensemble, kept only if it beats the
+best single model. In parallel we build competition-style datasets blind
+to the pipeline as a further generalisation test.
 
 
 
@@ -137,7 +138,8 @@ are runtime decisions, dashed paths are the abstain-to-default routes.}
 \includegraphics[width=\textwidth,height=0.85\textheight,keepaspectratio]{results_grid.png}
 \caption{Our current best approach versus the searched CNN (our reproduction of
 the winning macro--micro NAS \cite{egnas} with identical training
-improvements), 13 public datasets, single seed, 2~h each. Curves:
+improvements), 13 public datasets, single seed, 2~h per dataset on a
+single GB10. Curves:
 validation accuracy (faint per-epoch, solid best-so-far). Legends: final
 test accuracy, which can differ from validation. Red dashed: the
 official benchmark from the dataset metadata; unpublished for Sudoku and
