@@ -1,0 +1,10 @@
+# Python deps for the v10 pipeline + the in-depth per-stage macro search.
+# Versions pinned to the validated Spark (GB10) environment.
+#
+# NOTE: torch is installed SEPARATELY, CUDA-matched to the node -- see the
+# conda setup commands (do NOT pin torch here, the right wheel depends on the
+# A100 driver's CUDA version).
+numpy==2.4.4
+scipy==1.17.1
+scikit-learn==1.8.0
+matplotlib

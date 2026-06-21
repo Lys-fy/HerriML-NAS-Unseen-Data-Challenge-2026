@@ -20,7 +20,7 @@ The deep-dive sources stay authoritative; these notes are the navigable summary 
 - **[[v8]]** - clean aggregate + train-to-budget + adaptive stem; **+48.2** (train-to-budget is the big cheap lever).
 - **[[v9]]** - searched dilated backbone; +52.4, but the search is net-negative vs the fixed TCN-2d +59.2 (motivates the default-incumbent rule).
 - **[[v10]]** - measure-gate-train (fingerprint routing + family-matched probes + train-to-budget); **+62.23 +/- 0.19, all-time best**.
-- **[[v11]]** - extensions (random-arm verify done; gauntlet / ensemble / width-search / macro-search RUNNING/QUEUED; budget ladder last).
+- **[[v11]]** - extensions: sweep DONE (only Chesseract has headroom; forced-macro +5.94 there); in-depth per-stage macro search running. Tests, graphs and the v11 design are all in the [[v11]] note.
 
 ## Lineage table
 

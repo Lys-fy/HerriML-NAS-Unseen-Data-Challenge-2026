@@ -25,7 +25,9 @@ SEEDS = ["42", "1337", "2024"]
 V10C = "#2c8a3a"; RNC = "#1f77b4"
 COLS = [("Quincy", "QR, encoded"), ("Magnus", "polynomial degree"),
         ("Cornelius", "connect-4 win col"), ("Pavel", "collision, temporal"),
-        ("Dominik", "domino mismatch")]
+        ("Dominik", "domino mismatch"),
+        ("Sedol", "Go outcome, encoded"), ("Sloan", "photometry, image-like"),
+        ("Cauchy", "convergence, encoded")]
 
 
 def best_epochs(path):
@@ -47,7 +49,7 @@ def resnet_curve(code):
     return best_epochs(NDLOG / "resnet18_s42" / f"{code}.csv")
 
 
-fig, axes = plt.subplots(5, 4, figsize=(16, 18), squeeze=False)
+fig, axes = plt.subplots(len(COLS), 4, figsize=(16, 3.6 * len(COLS)), squeeze=False)
 col_labels = ["seed 42", "seed 1337", "seed 2024", "3-seed aggregate"]
 
 for ri, (code, hint) in enumerate(COLS):
@@ -90,10 +92,10 @@ for ri, (code, hint) in enumerate(COLS):
             ax.set_title(col_labels[ci], fontsize=12, fontweight="bold")
         if ci == 0:
             ax.set_ylabel(f"{code}\n({hint})\nval acc (%)", fontsize=10)
-        if ri == 4:
+        if ri == len(COLS) - 1:
             ax.set_xlabel("epoch")
 
-fig.suptitle("v10 on the 5 custom datasets vs ResNet-18 baseline  "
+fig.suptitle("v10 on the 8 custom datasets vs ResNet-18 baseline  "
              "(rows: datasets; cols: seeds 42/1337/2024 + aggregate; blue = ResNet-18 zero-point)",
              fontsize=14)
 fig.tight_layout(rect=[0, 0, 1, 0.97])
