@@ -1,6 +1,15 @@
 > **Status:** drafting | **Topic:** Phase 1, 2, 3 — what happens in each, key dates.
 > **Related:** [[Competition Overview]], [[Submission Contract]], [[Phase 2 Submission Strategy]]
 
+## ⭐ ORGANISER CONFIRMATIONS (David Towers, Discord, 2026-07-06/08 — OVERRIDES the sections below where they conflict)
+
+1. **Time limit is PER DATASET** (not pooled). `TIME_LIMIT` env is deprecated; the limit comes from dataset metadata (`main.py` line 110). Rely on `metadata["time_remaining"]` / the clock — our design already complies (clock-fraction budgets everywhere).
+2. **Phase 3 final evaluation: 24 hours total across THREE datasets, ~8 hours each.** Only 3 hidden finals (2025 precedent: GameOfLife, Wind, Cryptic). The ~8h/dataset operating point is exactly our long-tier test regime.
+3. **Phase 2 (started July 1): 7 submissions, DUMMY data, short limit (30 min, possibly 1h), evaluated MANUALLY.** Purpose is only "does the code run in our environment".
+4. **Submission is by EMAIL**: d.towers2@ncl.ac.uk or nas-competition-contact@newcastle.ac.uk (no portal).
+5. **The LAST successful Phase-2 submission advances to Phase 3** — so the final email before July 31 must be the best package, and every earlier submission is a free smoke test.
+6. Eval hardware (inferred, not confirmed): Newcastle's HPC is **Comet** (Rocket decommissioned 2025) — GPU nodes are **H100 96GB PCIe (4/node, limited/paid)** and more numerous **L40S** GPU-S nodes. So the grader most likely runs an H100 or L40S — both bracketed by our 2h hardware matrix (H100 measured directly; L40S ≈ A100-class for our small nets).
+
 Three phases. Phase 1 is local development. Phase 2 is timed runs on the organisers' servers against hidden datasets. Phase 3 is **not a separate submission** — it re-runs the last working Phase-2 entry with a (longer, unspecified) wall-clock budget.
 
 ## Timeline (2026 edition)

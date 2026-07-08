@@ -103,10 +103,11 @@ rule), Sudoku 93.6 vs 94.7, Chesseract 56.3 vs 59.4. flip_h remains in the TA op
 3. **The decisive A/B (run AFTER the current 2h fleet + budget grid land):** `V12_MAX_SEEDS=6`
    on the cap-bound sets (Chesseract, Sudoku, GameOfLife) @2h vs tonight's K=3 numbers, same
    hardware (~4h GPU). Adopt both changes if >= +0.3 mean, else keep the package simple.
-4. Open budget-model question for the organisers (with the next contact, same channel that
-   answered requirements.txt): Phase-3 = per-dataset limit or pooled? v12 is correct under both
-   (reads clock.check() per dataset, never assumes pooling); only the bookkeeping differs.
-   The old "24h pooled / ~8h per dataset" note is unverified.
+4. ~~Open budget-model question~~ **ANSWERED (David Towers, Discord 2026-07):** time limit is
+   PER DATASET; Phase 3 = 24h across THREE hidden datasets, ~8h each; Phase 2 = 7 manual email
+   submissions on dummy data at ~30min; LAST successful Phase-2 email advances. See the
+   organiser-confirmations block in [[Phases and Timeline]]. v12 already complies (per-dataset
+   clock fractions). Eval hardware likely Newcastle Comet: H100 96GB or L40S.
 
 ### Net v12 build spec (all questions closed)
 1. v11.1 base (fingerprint -> family -> probes) + **TrivialAug default-on** (flip in).
