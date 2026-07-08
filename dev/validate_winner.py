@@ -9,6 +9,7 @@ Reads the v11.2 decision JSON for the winner. Reuses v10's build_cnn / build_tcn
 / DataProcessor / Trainer."""
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -25,7 +26,10 @@ from trainer import Trainer                         # noqa: E402
 # v10's known real test accuracies (3-seed s42), by codename AND dataset name.
 V10_REAL = {"Chesseract": 57.66, "Gutenberg": 47.28, "CIFARTile": 73.65,
             "Sudoku": 97.70, "Language": 90.03, "Cauchy": 93.91, "Sedol": 56.55,
-            "Sloan": 84.60}
+            "Sloan": 84.60,
+            # Cryptic ships a PLACEHOLDER benchmark (adj score meaningless); this
+            # is v10's RAW 3-seed mean test acc (74.25/72.96/69.02), for reference.
+            "Cryptic": 72.08}
 
 
 class Clock:
@@ -58,6 +62,8 @@ def main():
     winner = wj["decision"]["winner"]
     sr = wj["searched"]; stem = wj["stem"]
     d = Path(args.dataset_dir); out = Path(args.out_dir); out.mkdir(parents=True, exist_ok=True)
+    # write the full-budget Trainer per-epoch CSV ({codename}.csv) for curve plots
+    os.environ["BASELINE_LOG_DIR"] = str(out)
     tr, va, test_x, test_y, meta = load_dataset(d)
     code = meta.get("codename", d.name)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

@@ -5,7 +5,7 @@
 set -u
 cd "$HOME/projects/HerriML-NAS-Unseen-Data-Challenge-2026" || exit 1
 source .venv/bin/activate
-OUT="$HOME/local/v112"; mkdir -p "$OUT"
+OUT=${OUT:-"$HOME/local/v112"}; mkdir -p "$OUT"
 DATA="$HOME/local/nas-comp-datasets"
 SE=${SE:-12}; VE=${VE:-40}; FE=${FE:-120}; NST=${NST:-4}; SEED=${SEED:-42}
 

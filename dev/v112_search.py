@@ -46,6 +46,48 @@ OP_CANDS = ["Conv3", "DilatedConv3", "SepConv3", "SEConv3", "SpatialSelfAttn2D"]
 DEPTHS = [6, 10, 14, 20]                          # macro: includes DEEP
 WIDTHS = [32, 48, 64]
 STEM_EMBED_MIN_CH = 8
+ENCODED_CORR1 = 0.2                               # v10's routing threshold (5x gap)
+
+
+def corr1_of(train_x, n_samples=256, seed=42):
+    """v10's fingerprint: mean tau=1 pixel correlation (h+v) on standardized
+    raw tensors. corr1 < ENCODED_CORR1 -> encoded data (the image prior is
+    wrong). Computed INLINE because the custom datasets carry no fp_corr1 in
+    metadata (so meta.get would mis-route them all to image-like). CPU, seconds.
+    Mirrors dev/fingerprint_probe.py."""
+    x = np.asarray(train_x, dtype=np.float64)
+    if x.ndim == 3:
+        x = x[:, None]
+    rng = np.random.default_rng(seed)
+    n = x.shape[0]
+    idx = np.sort(rng.choice(n, size=min(n_samples, n), replace=False))
+    x = x[idx]
+    mu = x.mean(axis=(0, 2, 3), keepdims=True)
+    sd = x.std(axis=(0, 2, 3), keepdims=True) + 1e-8
+    x = (x - mu) / sd
+    h = float((x[..., :, :-1] * x[..., :, 1:]).mean())
+    v = float((x[..., :-1, :] * x[..., 1:, :]).mean())
+    return (h + v) / 2.0
+
+
+def filter_ops_by_shape(cands, in_ch, nc, h, w, stem, device):
+    """Drop ops that crash building/forwarding a 1-layer net on the REAL input
+    shape (e.g. SpatialSelfAttn2D throws on odd encoded grids -> previously a
+    silent 0.0 arm). Keeps the search honest: a candidate is only in the
+    vocabulary if it can actually run on this dataset."""
+    ok, dropped = [], []
+    dummy = torch.zeros(2, in_ch, h, w, device=device)
+    for op in cands:
+        try:
+            m = build_cnn(in_ch, nc, h, w, ops=[op], base_width=48,
+                          drop_path_rate=0.0, stem=stem).to(device)
+            with torch.no_grad():
+                m(dummy)
+            ok.append(op); del m
+        except Exception as e:
+            dropped.append((op, type(e).__name__))
+        torch.cuda.empty_cache() if torch.cuda.is_available() else None
+    return ok, dropped
 
 
 class Clock:
@@ -186,12 +228,18 @@ def main():
     in_ch, h, w = xb0.shape[1], xb0.shape[2], xb0.shape[3]
     nc = int(meta["num_classes"])
     stem = "channel_embed" if in_ch >= STEM_EMBED_MIN_CH else "conv3"
-    encoded = bool(meta.get("fp_encoded", False))
+    # inline fingerprint (metadata may carry no fp_corr1, e.g. custom datasets)
+    corr1 = float(meta.get("fp_corr1")) if meta.get("fp_corr1") is not None else corr1_of(tr[0])
+    encoded = corr1 < ENCODED_CORR1
     base_op = "Conv3" if encoded else "DilatedConv3"   # v10 family default
+    # shape pre-filter: only ops that actually run on this dataset's grid
+    op_cands, dropped = filter_ops_by_shape(OP_CANDS, in_ch, nc, h, w, stem, device)
     S = Search(in_ch, nc, h, w, stem, (train_loader, val_loader), device)
     SE, VE, FE = args.screen_epochs, args.verify_epochs, args.final_epochs
-    print(f"[{code}] device={device} encoded={encoded} stem={stem} base_op={base_op} "
-          f"screen={SE} verify={VE} final={FE}", flush=True)
+    print(f"[{code}] device={device} corr1={corr1:+.4f} encoded={encoded} stem={stem} "
+          f"base_op={base_op} screen={SE} verify={VE} final={FE}", flush=True)
+    print(f"[{code}] op vocabulary={op_cands}"
+          + (f"  DROPPED(shape)={dropped}" if dropped else ""), flush=True)
 
     def test_acc(ops, width, key):
         if test_y is None:
@@ -246,7 +294,7 @@ def main():
         a, b = bounds[gi], bounds[gi + 1]
         cur = ops[a]
         cands = []
-        for op in OP_CANDS:
+        for op in op_cands:
             if op == cur:
                 continue
             trial = list(ops)
@@ -296,8 +344,9 @@ def main():
     adopt = win_val > v10_val + v10_noise
 
     rec = {"codename": code, "dataset": d.name, "device": str(device),
-           "search_mode": "v11.2_hillclimb_verify", "fp_corr1": meta.get("fp_corr1"),
-           "fp_encoded": encoded, "in_ch": in_ch, "h": h, "w": w, "num_classes": nc,
+           "search_mode": "v11.2_hillclimb_verify", "fp_corr1": round(corr1, 4),
+           "fp_encoded": bool(encoded), "op_vocab": op_cands, "ops_dropped_shape": dropped,
+           "in_ch": in_ch, "h": h, "w": w, "num_classes": nc,
            "stem": stem, "base_op": base_op, "seed": args.seed,
            "epochs": {"screen": SE, "verify": VE, "final": FE},
            "n_stages": args.n_stages, "trace": trace["steps"],
