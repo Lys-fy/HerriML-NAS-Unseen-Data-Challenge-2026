@@ -74,5 +74,5 @@ Violation crashes the entire submission for that dataset. Effects:
 ## Things often forgotten
 
 - `helpers.py` must exist even if empty. The starter kit imports from it.
-- The 4 files must work with the **starter kit's `requirements.txt`** in spirit, but that file is stale (pins `torch==1.10.1+cu113`). The actual eval environment is unspecified — write code against modern, widely-supported PyTorch idioms and avoid version-locked APIs. See [[Threats to Validity]].
+- ~~The 4 files must work with the **starter kit's `requirements.txt`** in spirit, but that file is stale (pins `torch==1.10.1+cu113`). The actual eval environment is unspecified — write code against modern, widely-supported PyTorch idioms and avoid version-locked APIs.~~ **RESOLVED (organisers, 2026-07-08): we supply our OWN `requirements.txt` with the submission** — the eval env installs it. So we control the torch/numpy versions. Packaging rule: ship a MINIMAL, loosely-pinned requirements (the submission imports only stdlib + numpy + torch; do NOT pin a CUDA-specific wheel — plain `torch>=2.4,<3` + `numpy>=1.26` lets their installer resolve the right build for the eval GPU). The version-agnostic-idioms discipline stays as defensive depth. See [[Threats to Validity]].
 - Do not rely on internet access at runtime. Bundle any pretrained weights as files inside the submission package.
