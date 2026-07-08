@@ -90,6 +90,16 @@ replacement for the odd-grid-crashy SpatialSelfAttn2D probe op (shape-robustness
 no-flip vs flip: GameOfLife 62.0 vs 88.3 (**flip carries +26** - horizontal flip is a symmetry of the CA
 rule), Sudoku 93.6 vs 94.7, Chesseract 56.3 vs 59.4. flip_h remains in the TA op set.
 
+### v12.1 DESIGN TARGET (decided 2026-07-08): build for L40S/H100 @ ~8h/dataset, lower rungs = fallback
+
+Eval hardware research: Newcastle's Comet has exactly two GPU tiers (L40S 48GB "gpu-s" numerous;
+H100 96GB "gpu-l" single node); Bede's V100s are ppc64le (pip-requirements flow cannot run there)
+-> eval is ~60% L40S / ~25% H100 / ~10% lab wildcard. L40S ~ A100-class for our nets; both are the
+upper anchors of the measured 2h hardware matrix. So: tune priors + validate hardest at the
+A100-to-H100 x 8h operating point; the throughput-keyed lower rungs (crash-proven to GB10-5min)
+ARE the worse-GPU fallback -- nothing is hardcoded to a GPU. Final paranoia check at packaging:
+one CPU-only smoke.
+
 ### v12.1 candidates -- DECIDED, waiting for current validation results (do NOT build yet)
 
 1. **More seeds on cap-bound fast datasets (Exception-1 residue spend).** On datasets where
