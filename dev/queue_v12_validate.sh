@@ -35,4 +35,12 @@ echo "[v12val] $(date) P3: 2h tier (4 sets; compare to T2 prototype + v10-real)"
 python dev/mock_harness.py --submission-dir "$SUB" --time-limit 2.0 --score \
     Chesseract Language CIFARTile Sudoku 2>&1 | tee "$OUT/p3_2h.log"
 
+echo "[v12val] $(date) P4: 6h tier (compare to prototype T4: Chesseract 67.25 / CIFARTile 82.36)"
+python dev/mock_harness.py --submission-dir "$SUB" --time-limit 6.0 --score \
+    Chesseract CIFARTile 2>&1 | tee "$OUT/p4_6h.log"
+
+echo "[v12val] $(date) P5: 8h tier (Phase-3 scale)"
+python dev/mock_harness.py --submission-dir "$SUB" --time-limit 8.0 --score \
+    Chesseract CIFARTile Language 2>&1 | tee "$OUT/p5_8h.log"
+
 echo "[v12val] $(date) V12 VALIDATION DONE"
