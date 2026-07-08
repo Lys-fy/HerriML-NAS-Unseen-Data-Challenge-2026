@@ -90,6 +90,24 @@ replacement for the odd-grid-crashy SpatialSelfAttn2D probe op (shape-robustness
 no-flip vs flip: GameOfLife 62.0 vs 88.3 (**flip carries +26** - horizontal flip is a symmetry of the CA
 rule), Sudoku 93.6 vs 94.7, Chesseract 56.3 vs 59.4. flip_h remains in the TA op set.
 
+### v12.1 candidates -- DECIDED, waiting for current validation results (do NOT build yet)
+
+1. **More seeds on cap-bound fast datasets (Exception-1 residue spend).** On datasets where
+   `remaining/K > CAP_EPOCHS x epoch_time`, the run ends early and the leftover budget is dead
+   (under per-dataset limits). Spend it on extra seeds: raise `V12_MAX_SEEDS` (env already exists;
+   planner only fires K>3 where the budget affords full trainings, slow sets untouched by
+   construction). Expected: diminishing (~log K) ensemble gains, a few tenths -- but free.
+2. **Top-m ensemble selection.** At K>=4 the all-K ensemble can be dragged by a weak seed; add
+   "ensemble of top-m seeds by val" (m=2..K-1) to the selection configs -- probs already cached,
+   ~10 lines, zero extra GPU.
+3. **The decisive A/B (run AFTER the current 2h fleet + budget grid land):** `V12_MAX_SEEDS=6`
+   on the cap-bound sets (Chesseract, Sudoku, GameOfLife) @2h vs tonight's K=3 numbers, same
+   hardware (~4h GPU). Adopt both changes if >= +0.3 mean, else keep the package simple.
+4. Open budget-model question for the organisers (with the next contact, same channel that
+   answered requirements.txt): Phase-3 = per-dataset limit or pooled? v12 is correct under both
+   (reads clock.check() per dataset, never assumes pooling); only the bookkeeping differs.
+   The old "24h pooled / ~8h per dataset" note is unverified.
+
 ### Net v12 build spec (all questions closed)
 1. v11.1 base (fingerprint -> family -> probes) + **TrivialAug default-on** (flip in).
 2. **Throughput-keyed rung selector**: calibrate step time -> effective_trainings; K=1 single full train
