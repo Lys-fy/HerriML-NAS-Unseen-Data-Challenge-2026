@@ -402,19 +402,173 @@ class _CrossAxisBiLSTM(nn.Module):
         return xt.transpose(2, 3)             # [B, C, H, W]
 
 
+class _LinearAttn2D(nn.Module):
+    """Bidirectional linear-attention spatial mixer (Dragon Hatchling, Eq. 8;
+    Kosowski 2025). A global spatial mixer LINEAR in H·W, vs
+    _SpatialSelfAttn2D's O((H·W)²) (which also crashed on odd grids). Positive
+    ReLU keys/queries make linear attention a valid high-dim kernel (FAVOR+
+    lineage): dropping the causal mask collapses attention to Q·(Kᵀ·V), so one
+    (rC × C) global-context matrix is formed once and reused for every position.
+
+    Signature / stride handling mirrors _SpatialSelfAttn2D — a depthwise
+    stride-2 downsample when stride > 1, a 1×1 proj_in to out_ch, then q/k/v
+    1×1 convs (q,k lifted to r·out_ch and ReLU'd), the linear-attention
+    context, an output projection, and a residual under BN. Shares its kernel
+    with the BDH B1 bidirectional attention (dev/bdh_bidir.py)."""
+
+    def __init__(self, in_ch: int, out_ch: int, stride: int, r: int = 2):
+        super().__init__()
+        self.down = (
+            nn.Conv2d(in_ch, in_ch, kernel_size=2, stride=2,
+                      groups=in_ch, bias=False)
+            if stride > 1 else nn.Identity()
+        )
+        self.proj_in = nn.Conv2d(in_ch, out_ch, 1, bias=False)
+        inner = r * out_ch
+        self.to_q = nn.Conv2d(out_ch, inner, 1, bias=False)
+        self.to_k = nn.Conv2d(out_ch, inner, 1, bias=False)
+        self.to_v = nn.Conv2d(out_ch, out_ch, 1, bias=False)
+        self.proj = nn.Conv2d(out_ch, out_ch, 1, bias=False)
+        self.bn = nn.BatchNorm2d(out_ch)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.proj_in(self.down(x))                        # [B, C, H, W]
+        B, C, H, W = x.shape
+        q = F.relu(self.to_q(x)).flatten(2).transpose(1, 2)   # [B, HW, rC]
+        k = F.relu(self.to_k(x)).flatten(2).transpose(1, 2)   # [B, HW, rC]
+        v = self.to_v(x).flatten(2).transpose(1, 2)           # [B, HW, C]
+        S = k.transpose(1, 2) @ v                              # [B, rC, C] once
+        num = q @ S                                           # [B, HW, C]
+        denom = q @ k.sum(1, keepdim=True).transpose(1, 2) + 1e-6   # [B, HW, 1]
+        ctx = (num / denom).transpose(1, 2).reshape(B, C, H, W)
+        return F.relu(self.bn(x + self.proj(ctx)))
+
+
+class _SparseGated(nn.Module):
+    """Sparse-positive gated inverted bottleneck (Dragon Hatchling denoiser
+    motif; Kosowski 2025 Claim 5 / Sec. 6.3). A ReLU·ReLU gate replaces
+    SwiGLU's SiLU gate; the up1 branch carries a LEARNED bias so its ReLU acts
+    as a learned negative threshold — the paper's denoiser that recovers sparse
+    in-cluster signal from low-rank noise, a robustness prior for small / unseen
+    data. Inverted-bottleneck ratio r=3, pointwise throughout. stride > 1 via a
+    depthwise stride-2 downsample first, then a residual under BN."""
+
+    def __init__(self, in_ch: int, out_ch: int, stride: int, r: int = 3):
+        super().__init__()
+        self.down = (
+            nn.Conv2d(in_ch, in_ch, kernel_size=2, stride=2,
+                      groups=in_ch, bias=False)
+            if stride > 1 else nn.Identity()
+        )
+        self.proj_in = nn.Conv2d(in_ch, out_ch, 1, bias=False)
+        hid = r * out_ch
+        self.up1 = nn.Conv2d(out_ch, hid, 1, bias=True)   # bias = learned neg threshold
+        self.up2 = nn.Conv2d(out_ch, hid, 1, bias=False)
+        self.down_proj = nn.Conv2d(hid, out_ch, 1, bias=False)
+        self.bn = nn.BatchNorm2d(out_ch)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.proj_in(self.down(x))
+        y = self.down_proj(F.relu(self.up1(x)) * F.relu(self.up2(x)))
+        return F.relu(self.bn(x + y))
+
+
+class _SharedRepeat(nn.Module):
+    """C4 — weight-shared depth (Universal-Transformer / BDH; Kosowski 2025
+    App. D): apply one residual block k times reusing the SAME weights, giving
+    many effective layers at one block's params. Only wrapped where the block
+    is shape-preserving (in_ch == out_ch, stride 1) so repeated application is
+    safe. Tailored to our ~1.7M-param / 1h regime."""
+
+    def __init__(self, block: nn.Module, k: int):
+        super().__init__()
+        self.block = block
+        self.k = k
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        for _ in range(self.k):
+            x = self.block(x)
+        return x
+
+
+class _RepConv3(nn.Module):
+    """RepVGG-style structural-reparameterization block (Ding 2021; the core
+    trick of RepViT / RepNeXt). Trains as a MULTI-BRANCH block -- 3x3 conv+BN,
+    1x1 conv+BN, and (when shape-preserving) an identity BN -- summed then
+    ReLU'd. The extra branches ease optimization / add capacity during training
+    (helps on small, short-budget data) but fold EXACTLY at inference into a
+    single 3x3 conv+bias (conv, 1x1, identity and BN are all affine), leaving a
+    plain conv graph that runs on ANY hardware with no exotic ops -- a good fit
+    for the competition's unknown-eval-hardware constraint. Accuracy is
+    identical folded or not; reparameterize() is a deploy-time speed/portability
+    optimization, not required for the A/B."""
+
+    def __init__(self, in_ch: int, out_ch: int, stride: int):
+        super().__init__()
+        self.in_ch, self.out_ch, self.stride = in_ch, out_ch, stride
+        self.conv3 = nn.Conv2d(in_ch, out_ch, 3, stride=stride, padding=1, bias=False)
+        self.bn3 = nn.BatchNorm2d(out_ch)
+        self.conv1 = nn.Conv2d(in_ch, out_ch, 1, stride=stride, padding=0, bias=False)
+        self.bn1 = nn.BatchNorm2d(out_ch)
+        self.bn_id = (nn.BatchNorm2d(in_ch)
+                      if (in_ch == out_ch and stride == 1) else None)
+        self.act = nn.ReLU(inplace=True)
+        self.fused: Optional[nn.Conv2d] = None   # set by reparameterize()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if self.fused is not None:
+            return self.act(self.fused(x))
+        y = self.bn3(self.conv3(x)) + self.bn1(self.conv1(x))
+        if self.bn_id is not None:
+            y = y + self.bn_id(x)
+        return self.act(y)
+
+    @staticmethod
+    def _fuse_conv_bn(conv: nn.Conv2d, bn: nn.BatchNorm2d):
+        std = (bn.running_var + bn.eps).sqrt()
+        t = bn.weight / std
+        return conv.weight * t.reshape(-1, 1, 1, 1), bn.bias - bn.running_mean * t
+
+    @torch.no_grad()
+    def reparameterize(self) -> "_RepConv3":
+        """Fold the 3 branches into one 3x3 conv+bias (RepVGG math). Idempotent."""
+        w, b = self._fuse_conv_bn(self.conv3, self.bn3)
+        w1, b1 = self._fuse_conv_bn(self.conv1, self.bn1)
+        w = w + F.pad(w1, [1, 1, 1, 1]); b = b + b1          # 1x1 -> centre of 3x3
+        if self.bn_id is not None:
+            idw = torch.zeros(self.out_ch, self.in_ch, 3, 3, device=w.device)
+            for c in range(self.in_ch):
+                idw[c, c, 1, 1] = 1.0                          # identity as a 3x3 conv
+            std = (self.bn_id.running_var + self.bn_id.eps).sqrt()
+            t = self.bn_id.weight / std
+            w = w + idw * t.reshape(-1, 1, 1, 1)
+            b = b + self.bn_id.bias - self.bn_id.running_mean * t
+        fused = nn.Conv2d(self.in_ch, self.out_ch, 3, stride=self.stride,
+                          padding=1, bias=True).to(w.device)
+        fused.weight.data = w; fused.bias.data = b
+        self.fused = fused
+        return self
+
+
 # The vocabulary used by the random op-type search. Each entry is a callable
 # (in_ch, out_ch, stride) -> nn.Module. v7 adds a recurrent op family on top
-# of v6's 9 swappable ops.
+# of v6's 9 swappable ops. The BDH-harvested ops (Kosowski 2025) extend it:
+# LinearAttn2D (C1, cheap global mixer) and SparseGated (C2, denoiser FFN);
+# RepConv3 (RepVGG/RepViT reparameterization) is a portable train-heavy op.
 OP_VOCAB = {
     "Conv3":          lambda i, o, s: _conv_bn_act(i, o, 3, s),
     "Conv5":          lambda i, o, s: _conv_bn_act(i, o, 5, s),
     "Conv7":          lambda i, o, s: _conv_bn_act(i, o, 7, s),       # v6
     "SepConv3":       lambda i, o, s: _sepconv_bn_act(i, o, 3, s),
+    "SepConv5":       lambda i, o, s: _sepconv_bn_act(i, o, 5, s),       # EGNAS 4-op vocab
     "GroupConv3":     lambda i, o, s: _grpconv_bn_act(i, o, 3, s),
     "ResNeXt":        lambda i, o, s: _ResNeXtOp(i, o, s),
     "DilatedConv3":   lambda i, o, s: _dilated_conv_bn_act(i, o, s),   # v6
     "SEConv3":        lambda i, o, s: _SEConv3(i, o, s),               # v6
     "SpatialSelfAttn2D": lambda i, o, s: _SpatialSelfAttn2D(i, o, s),  # v6
+    "LinearAttn2D":   lambda i, o, s: _LinearAttn2D(i, o, s),          # BDH C1
+    "SparseGated":    lambda i, o, s: _SparseGated(i, o, s),           # BDH C2
+    "RepConv3":       lambda i, o, s: _RepConv3(i, o, s),              # RepVGG/RepViT
     "RowBiLSTM":      lambda i, o, s: _RowBiLSTM(i, o, s),             # v7
     "CrossAxisBiLSTM": lambda i, o, s: _CrossAxisBiLSTM(i, o, s),      # v7
     "MaxPool":        lambda i, o, s: _pool_op(i, o, 3, s),
@@ -467,9 +621,13 @@ class ResConvBlock(nn.Module):
 
 def build_cnn(in_channels: int, num_classes: int, input_h: int, input_w: int,
               ops: Sequence[str], base_width: int = 48, drop_path_rate: float = 0.1,
-              stem: str = "conv3") -> nn.Sequential:
+              stem: str = "conv3", shared_repeat: Optional[int] = None) -> nn.Sequential:
     n_blocks = len(ops)
     plan = plan_downsamples(input_h, input_w, n_blocks)
+    # C4 — weight-shared depth: apply each shape-preserving block ×k with the
+    # SAME weights (env V11_SHARED_REPEAT overrides; default 1 = off).
+    if shared_repeat is None:
+        shared_repeat = int(os.environ.get("V11_SHARED_REPEAT", "1"))
 
     # Stem = the data-processor front-end (the "input interpretation"):
     #   "conv3"        — plain 3x3 conv: treat the input as a 2D image (default).
@@ -492,8 +650,11 @@ def build_cnn(in_channels: int, num_classes: int, input_h: int, input_w: int,
         op_name = ops[i]
         next_ch = ch * 2 if downsample else ch
         stride = 2 if downsample else 1
-        layers.append(ResConvBlock(ch, next_ch, stride=stride, op_name=op_name,
-                                   drop_path_rate=drop_path_rate))
+        block: nn.Module = ResConvBlock(ch, next_ch, stride=stride, op_name=op_name,
+                                        drop_path_rate=drop_path_rate)
+        if shared_repeat > 1 and stride == 1 and ch == next_ch:
+            block = _SharedRepeat(block, shared_repeat)
+        layers.append(block)
         ch = next_ch
 
     layers.append(nn.AdaptiveAvgPool2d(1))

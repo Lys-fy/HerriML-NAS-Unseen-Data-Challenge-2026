@@ -27,6 +27,7 @@ from typing import List, Optional, Tuple
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from helpers import ModelEMA, lr_for_epoch
 
@@ -47,6 +48,63 @@ PERFECT_ACC = float(os.environ.get("V10_PERFECT_ACC", "0.9995"))
 
 LABEL_SMOOTHING = 0.1
 EMA_DECAY = 0.999
+
+# --------------------------------------------------------------------------
+# Optional recipe experiments (second-wave A/B tests). ALL default OFF: with no
+# env var set, the training path is byte-for-byte the submission recipe (the RNG
+# stream is untouched, so default numerics are identical). Enable one at a time
+# to measure its marginal accuracy under the SAME train-to-budget clock.
+#   TRAIN_SAM=1          Sharpness-Aware Minimization (2 fwd/bwd per step; the
+#                        budget buys fewer-but-flatter-minima epochs).
+#   TRAIN_SELF_DISTILL=1 online self-distillation: KL(student || EMA-teacher).
+#   TRAIN_TRIVIAL_AUG=1  TrivialAugment-style single-random-op augmentation.
+# --------------------------------------------------------------------------
+#   TRAIN_ADAMW=1        AdamW (lr 1e-3, wd 0.05) instead of SGD+momentum --
+#                        the one optimizer axis never ablated at this scale.
+USE_SAM = os.environ.get("TRAIN_SAM") == "1"
+SAM_RHO = float(os.environ.get("TRAIN_SAM_RHO", "0.05"))
+USE_ADAMW = os.environ.get("TRAIN_ADAMW") == "1"
+ADAMW_LR = float(os.environ.get("TRAIN_ADAMW_LR", "1e-3"))
+ADAMW_WD = float(os.environ.get("TRAIN_ADAMW_WD", "0.05"))
+USE_SELF_DISTILL = os.environ.get("TRAIN_SELF_DISTILL") == "1"
+SD_ALPHA = float(os.environ.get("TRAIN_SD_ALPHA", "1.0"))
+SD_T = float(os.environ.get("TRAIN_SD_T", "2.0"))
+USE_TRIVIAL_AUG = os.environ.get("TRAIN_TRIVIAL_AUG") == "1"
+# ablation: drop flip_h from the TrivialAugment op set (the base aug policy
+# bans flips on principle; TA won Sudoku +2.9 WITH them -- which is it?)
+TA_NO_FLIP = os.environ.get("TRAIN_TA_NO_FLIP") == "1"
+
+
+def _trivial_augment(xb: torch.Tensor) -> torch.Tensor:
+    """TrivialAugment-style: pick ONE op at a random magnitude, apply to the
+    batch. Op set is restricted to transforms valid for ARBITRARY C x H x W
+    tensors, because the competition inputs are not all natural RGB images
+    (12-channel boards, spectrograms, byte grids). Batch-level for GPU speed."""
+    ops = ("identity", "flip_h", "translate", "brightness", "contrast",
+           "noise", "cutout")
+    if TA_NO_FLIP:
+        ops = tuple(o for o in ops if o != "flip_h")
+    op = ops[np.random.randint(len(ops))]
+    if op == "flip_h":
+        return torch.flip(xb, dims=[3])
+    if op == "translate":
+        return torch.roll(xb, shifts=int(np.random.randint(-3, 4)),
+                          dims=int(np.random.choice([2, 3])))
+    if op == "brightness":
+        return xb + float(np.random.uniform(-0.3, 0.3))
+    if op == "contrast":
+        m = xb.mean(dim=(2, 3), keepdim=True)
+        return (xb - m) * float(np.random.uniform(0.6, 1.4)) + m
+    if op == "noise":
+        return xb + torch.randn_like(xb) * float(np.random.uniform(0.0, 0.1))
+    if op == "cutout":
+        _, _, H, W = xb.shape
+        ch, cw = H // 4, W // 4
+        if ch > 0 and cw > 0:
+            y0 = int(np.random.randint(0, H - ch + 1))
+            x0 = int(np.random.randint(0, W - cw + 1))
+            xb = xb.clone(); xb[:, :, y0:y0 + ch, x0:x0 + cw] = 0.0
+    return xb
 
 
 def _open_csv_logger(metadata) -> Tuple[Optional[object], Optional[csv.writer]]:
@@ -127,27 +185,69 @@ class Trainer:
             xb = xb.to(self.device, non_blocking=True, memory_format=torch.channels_last)
             yb = yb.to(self.device, non_blocking=True)
 
+            # Optional TrivialAugment (default off — RNG untouched when disabled).
+            if USE_TRIVIAL_AUG:
+                xb = _trivial_augment(xb)
+
             if use_mixup:
                 lam = float(np.random.beta(self.mixup_alpha, self.mixup_alpha))
                 # Make λ at least 0.5 so the named "primary" sample dominates;
                 # standard convention from the Mixup paper.
                 lam = max(lam, 1.0 - lam)
                 perm = torch.randperm(xb.size(0), device=self.device)
-                xb_mixed = lam * xb + (1.0 - lam) * xb[perm]
+                xb_in = lam * xb + (1.0 - lam) * xb[perm]
                 yb_b = yb[perm]
-                optimizer.zero_grad(set_to_none=True)
-                logits = self.model(xb_mixed)
-                loss = lam * criterion(logits, yb) + (1.0 - lam) * criterion(logits, yb_b)
             else:
-                optimizer.zero_grad(set_to_none=True)
-                logits = self.model(xb)
-                loss = criterion(logits, yb)
+                lam, yb_b, xb_in = 1.0, yb, xb
 
+            # Loss recomputable at the CURRENT weights (SAM needs a 2nd pass).
+            def _compute_loss():
+                logits = self.model(xb_in)
+                if use_mixup:
+                    loss = lam * criterion(logits, yb) + (1.0 - lam) * criterion(logits, yb_b)
+                else:
+                    loss = criterion(logits, yb)
+                if USE_SELF_DISTILL and self.use_ema:
+                    with torch.no_grad():
+                        self.ema.ema.eval()
+                        t_logits = self.ema.ema(xb_in)
+                    kl = F.kl_div(F.log_softmax(logits / SD_T, dim=1),
+                                  F.softmax(t_logits / SD_T, dim=1),
+                                  reduction="batchmean") * (SD_T * SD_T)
+                    loss = loss + SD_ALPHA * kl
+                return loss
+
+            optimizer.zero_grad(set_to_none=True)
+            loss = _compute_loss()
             if not torch.isfinite(loss):
-                # NaN/inf — let outer loop handle recovery.
                 return float("nan")
-
             loss.backward()
+
+            if USE_SAM:
+                # Ascend to w + e(w) (e = rho * g/||g||), recompute grad there,
+                # restore w, then let the base optimizer step with the SAM grad.
+                with torch.no_grad():
+                    grads = [p.grad for p in self.model.parameters() if p.grad is not None]
+                    norm = torch.norm(torch.stack([g.norm() for g in grads]))
+                    scale = SAM_RHO / (norm + 1e-12)
+                    eps = []
+                    for p in self.model.parameters():
+                        if p.grad is None:
+                            continue
+                        e = p.grad * scale
+                        p.add_(e); eps.append((p, e))
+                optimizer.zero_grad(set_to_none=True)
+                loss2 = _compute_loss()
+                if not torch.isfinite(loss2):
+                    with torch.no_grad():
+                        for p, e in eps:
+                            p.sub_(e)                   # restore before bailing
+                    return float("nan")
+                loss2.backward()                        # grad at w+e (BEFORE restore)
+                with torch.no_grad():
+                    for p, e in eps:
+                        p.sub_(e)                       # restore w, then step below
+
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), 5.0)
             optimizer.step()
             if self.use_ema:
@@ -167,10 +267,16 @@ class Trainer:
         torch.backends.cudnn.benchmark = True
 
         criterion = nn.CrossEntropyLoss(label_smoothing=LABEL_SMOOTHING)
-        base_lr = 0.025 * LR_SCALE
-        optimizer = torch.optim.SGD(
-            self.model.parameters(), lr=base_lr, momentum=0.9, weight_decay=3e-4, nesterov=True
-        )
+        if USE_ADAMW:
+            base_lr = ADAMW_LR * LR_SCALE
+            optimizer = torch.optim.AdamW(
+                self.model.parameters(), lr=base_lr, weight_decay=ADAMW_WD
+            )
+        else:
+            base_lr = 0.025 * LR_SCALE
+            optimizer = torch.optim.SGD(
+                self.model.parameters(), lr=base_lr, momentum=0.9, weight_decay=3e-4, nesterov=True
+            )
 
         # Deferred LR-schedule sizing: epoch 0 always runs at the warmup-step-1
         # LR (computed by lr_for_epoch with provisional total). After epoch 0
