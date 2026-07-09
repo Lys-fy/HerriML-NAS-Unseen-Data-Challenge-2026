@@ -55,6 +55,40 @@ v12 = **throughput-keyed budget-adaptive ladder** (rungs from measured effective
 2. Probe rung: aug-safety + verified attention probes (v11.1) + C1/C4 only if the in-pipeline test clears them.
 3. Surplus rung: K-seed training -> **val-gated final selection** (single vs logit-ensemble, each +/- flip-TTA - ship the val winner; catches Windspeed/TA, Language/TTA failures by construction). BDH arm on viability-passing boards.
 
+## ⭐ v12 @2h MASTER TABLE (final, 2026-07-09) -- all 16 datasets x 4 GPUs, raw test %
+
+Full grader-mirror runs at 2h/dataset. GB10 = spark (P3 + grid tier); cluster = shard runs
+2026-07-08/09. Bold = best v12 column. References: ResNet = metadata benchmark (~71.1 Cryptic
+backed out of the 2025 winner's adj score; self-made sets use our ResNet protocol); winner =
+best past competition submission (Geada T3 + 2025 results page); all-time = best external
+published (mostly budget-unconstrained).
+
+| Dataset | ResNet | v10 | v12 GB10 | V100 | A100 | H100 | Winner | All-time ext. |
+|---|---|---|---|---|---|---|---|---|
+| Chesseract | 57.83 | 57.66 | 66.69 | 62.33 | **66.86** | 61.96 | 62.98 | 68.83 (RandSearch) |
+| Sudoku (ours) | - | 97.70 | 97.22 | 96.54 | 96.68 | 97.14 | - | - |
+| Language | 85.20 | 90.03 | 89.64 | 90.21 | 88.95 | **91.49** | 89.71 | 93.97 (ResNeXt-50) |
+| Cryptic | ~71.1 | 72.08 | **73.82** | 72.77 | 73.13 | 72.04 | 76.15 ('25) | 76.15 |
+| GeoClassing | 80.33 | 95.36 | 95.40 | 95.72 | 95.47 | **96.22** | 96.08 | 96.08 -> ours |
+| CIFARTile | 47.01 | 73.65 | 80.01 | 78.71 | 82.79 | **84.95** | 73.08 | 92.28 (PC-DARTS) |
+| AddNIST | 89.85 | 96.33 | 96.54 | 96.37 | 96.77 | **97.63** | 95.06 | 97.91 (Bonsai) |
+| MultNIST | 90.87 | 95.52 | 95.90 | 95.36 | 95.73 | **96.47** | 95.45 | 98.10 (DrNAS) |
+| Gutenberg | 40.98 | 47.28 | 46.85 | 47.90 | **50.13** | 49.08 | 50.85 | 50.85 |
+| GameOfLife | 47.53 | 100.0 | 99.98 | 99.96 | 99.99 | 99.99 | 99.99 ('25) | 99.99 |
+| Myofibre | 87.93 | 91.09 | 90.52 | 90.60 | 92.81 | **93.23** | - | - |
+| Windspeed | 13.49 | 19.36 | 17.35 | 17.43 | 19.09 | 18.96 | 17.38 ('25) | 17.38 -> ours (v10) |
+| Sedol/Go (ours) | 53.92 | 56.55 | 58.16 | **59.58** | 58.77 | 58.90 | - | - |
+| Sloan/Photometric (ours) | 84.17 | 84.60 | 84.55 | **84.63** | 84.59 | 84.59 | - | - |
+| Cauchy/Solver (ours) | 92.21 | 93.91 | **95.14** | 94.91 | 95.01 | 94.71 | - | - |
+| Voxel | 71.35 | 81.56 | 82.86 | 83.27 | 83.22 | **83.55** | - | - |
+
+Headlines: v12 best-of-hardware beats v10 on 12/16 (mean +2.3 at matched budget); beats past
+competition winners 7/10 comparable; holds/takes all-time on GeoClassing + Windspeed(v10);
+adj totals scale with throughput (V100 +69.5 < A100 +73.5 < H100 +76.4; GB10 grid-12 +49.7
+excl. its P3 four). GB10 Cryptic 73.82 = best Cryptic ever (plateau ~72.5 -> ~73.8 with
+seeds/budget; 2025 winner 76.15 still open). GB10-Sedol CUDA-kernel wedge did NOT reproduce
+on retry (transient). Raw rows: dev/logs/v12_matrix/.
+
 ## v12 integration test results (T1-T4, 2026-07-06 to 07-08 - ALL DONE)
 
 Runner: `dev/v12_integration.py` (exact grader sequence + TrivialAug + K=3 shared-init seeds
