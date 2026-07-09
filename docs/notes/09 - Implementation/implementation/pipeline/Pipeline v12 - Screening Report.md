@@ -1,5 +1,33 @@
 # Pipeline v12 - Screening Report (all tests, 2026-07-01 to 07-06)
 
+## ⏱ STATUS 2026-07-09 evening + v12.2 TESTING (overnight)
+
+**v12.1(b) built** (`baselines/v12_1`; v12 frozen as reference): hardened probes (retry +
+LinearAttn2D fallback + [120s,420s] floors/caps + probe_error logging), alt-family seed on
+sub-noise gates, reactive top-up seeds (measured releases only, cap 8), top-m + noise-band
+selection, W96 capacity arm, env knobs V12_INDEP_INIT / V12_SPLIT_FACTOR.
+**Validation in flight:** A100 2h all-16 tier; A100 8h {Chesseract done: 8 seeds, top3+ val 67+;
+CIFARTile; Cryptic}; H200 8h {CIFARTile done: val ~95 (!); Sudoku seed 0.9733 running; Language};
+spark 8h finals trio (GameOfLife/Windspeed/Cryptic, capacity-arm first exercise) then
+Gutenberg/MultNIST/GeoClassing. Early wins: alt-seed ensemble +1.3 over same-family top2 on
+Chesseract even with a weaker alt; GameOfLife top-ups to the 8-seed hard cap.
+
+**v12.2 overnight battery** (`dev/run_v122_overnight.sh`, 1x H100, ~9h, no new code):
+1. **T1 indep-init A/B** (`V12_INDEP_INIT=1`, Chesseract/Sudoku/GameOfLife @2h) vs the
+   shared-init tier -- settles the seeds-diversity question (deep-ensembles vs soup-leftover).
+2. **T2 split-threshold** (`V12_FULL_EPOCHS=250`, CIFARTile @2h -> K=2x~350) vs the tier's
+   K=1x~700 -- is the 1.5xFULL split rule too conservative on ensemble-friendly data?
+3. **T3 BDH mult-128 retry** (batch 16, Sudoku @2h, full H100) -- the paper-scale bet, after
+   the MIG OOM (batch formula ignores the wide-N bidir activations).
+
+**Good FURTHER v12.2+ tests (need code / pending results):** recipe-diverse seeds (one SAM or
+AdamW seed in the roster, val-gated -- the theoretically-correct role for the rejected recipes);
+born-again self-distill (2-pass, needs 2x budget); capacity-arm width ladder (W96 vs W128, and
+a K=1+capacity variant for slow sets where top-ups never fire); TA-strength arm (2 ops/batch)
+at 8h; probe-fraction trim if v12.1 logs show probes finishing early inside caps; BDH as
+viability-gated specialist arm IF T3 pays; L40S-proxy run (eval-hardware fidelity) if Comet
+access or an Ada card materialises.
+
 > **Status:** COMPLETE - 93 runs on the GB10, zero failures | **Purpose:** the comprehensive evidence base for designing v12. Every technique screened, with BOTH anchors: delta vs its own controlled baseline AND vs v10-real (the deployed 3-seed pipeline). | **Raw data:** `dev/logs/harvest_screen/*.json` (synced from spark `~/local/harvest/`), per-epoch curves on spark in `~/local/harvest/{tag}/{codename}.csv` | **Related:** [[v11.1]], [[Pipeline v10 - Design + Idea Ledger]], [[Key Learnings]], [[2025 - Dragon Hatchling (BDH)]]
 
 ## Design of the screen (read this before the numbers)
