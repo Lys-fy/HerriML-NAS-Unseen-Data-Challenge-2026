@@ -181,6 +181,11 @@ class Trainer:
         self.alt_family: Optional[str] = meta_sc.get("alt_family")
         if self.alt_model is not None:
             self.alt_init = copy.deepcopy(self.alt_model.state_dict())
+        # v12.1b capacity arm (wider twin of the final arch), val-gated seed
+        self.cap_model: Optional[nn.Module] = meta_sc.get("cap_model")
+        if self.cap_model is not None:
+            self.cap_init = copy.deepcopy(self.cap_model.state_dict())
+        self._cap_used = False
         # controller outputs. seed_models[i] is the MODULE that seed i's state
         # belongs to (heterogeneous seeds have a different architecture).
         self.seed_states: List[Dict[str, torch.Tensor]] = []
@@ -450,6 +455,10 @@ class Trainer:
             if self.alt_model is not None and k >= 2:
                 roster[k - 1] = (self.alt_model, self.alt_init)
                 print(f"  v12.1 heterogeneous seed: slot {k-1} -> {self.alt_family}")
+            if self.cap_model is not None and k >= 3:
+                roster[k - 2] = (self.cap_model, self.cap_init)
+                self._cap_used = True
+                print(f"  v12.1b capacity seed: slot {k-2} -> wide twin")
 
             i = 0
             while i < len(roster):
@@ -488,9 +497,16 @@ class Trainer:
                         LR_WARMUP_EPOCHS + 2,
                         (self.clock.check() - SAFETY_MARGIN_SECONDS)
                         / max(self._last_epoch_s, 1e-3))))
-                    roster.append((self.model, self.init_state))
-                    print(f"  v12.1 top-up: surplus affords seed {i} "
-                          f"({target}-epoch schedule)")
+                    if self.cap_model is not None and not self._cap_used:
+                        # surplus funds the capacity arm first (wider twin)
+                        roster.append((self.cap_model, self.cap_init))
+                        self._cap_used = True
+                        print(f"  v12.1b top-up: surplus funds the CAPACITY seed "
+                              f"{i} ({target}-epoch schedule)")
+                    else:
+                        roster.append((self.model, self.init_state))
+                        print(f"  v12.1 top-up: surplus affords seed {i} "
+                              f"({target}-epoch schedule)")
         finally:
             if csv_file is not None:
                 csv_file.close()

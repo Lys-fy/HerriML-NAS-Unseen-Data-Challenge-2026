@@ -46,11 +46,13 @@ def check(name, clock_s, want_min_seeds, alt=False, indep=False):
     try:
         tr, va, te = loaders()
         m = build_cnn(3, 4, 9, 9, ops=["Conv3"] * 4, base_width=16)
-        if alt:  # heterogeneous alt-family seed via the NAS side-channel
+        if alt:  # heterogeneous alt-family + capacity seeds via the side-channel
             m._v12_meta = {"family": "conv", "alt_family": "toy-alt",
                            "gate_margin": 0.01, "gate_noise": 0.02,
                            "alt_model": build_cnn(3, 4, 9, 9, ops=["SepConv3"] * 3,
-                                                  base_width=12)}
+                                                  base_width=12),
+                           "cap_model": build_cnn(3, 4, 9, 9, ops=["Conv3"] * 4,
+                                                  base_width=32)}
         t = T.Trainer(m, dev, tr, va, {"num_classes": 4, "codename": "toy",
                                        "mixup_alpha": 0.0}, Clock(clock_s))
         t.train()
@@ -61,7 +63,7 @@ def check(name, clock_s, want_min_seeds, alt=False, indep=False):
         distinct_models = len({id(mm) for mm in t.seed_models})
         ok = k >= want_min_seeds
         if alt:
-            ok = ok and distinct_models >= 2
+            ok = ok and distinct_models >= 3   # primary + alt-family + capacity
         print(f"  {'OK ' if ok else 'FAIL'} {name:16s} seeds={k} models={distinct_models} "
               f"topm_cfgs={n_topm} chosen={t.chosen[0]}/{t.chosen[2]} "
               f"best_val={t.best_val_acc:.3f} n_scores={len(t.val_scores)}")

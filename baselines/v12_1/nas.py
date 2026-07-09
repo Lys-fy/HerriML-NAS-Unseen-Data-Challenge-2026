@@ -75,6 +75,14 @@ PROBE_LO_S = float(os.environ.get("V12_PROBE_LO_S", "120"))
 PROBE_HI_S = float(os.environ.get("V12_PROBE_HI_S", "420"))
 PROBE_FLOOR_BUDGET_S = float(os.environ.get("V12_PROBE_FLOOR_BUDGET_S", str(4 * 3600)))
 
+# v12.1b capacity arm: hand the trainer a WIDER build of the final architecture
+# as one val-gated ensemble seed at large budgets. Width search was a verified
+# no-op at 2h/<=W64, but nothing >W64 was ever trained, CIFARTile keeps scaling,
+# and Language's external best is a stock ResNeXt-50 -- capacity is the one
+# untested axis. Never probed, never predicted: one seed, val decides.
+CAP_ARM = os.environ.get("V12_CAP_ARM", "1") == "1"
+CAP_ARM_WIDTH = int(os.environ.get("V12_CAP_ARM_WIDTH", "96"))
+
 # low-budget collapse thresholds (seconds remaining at search start)
 # env-overridable for testing the non-collapse path at small budgets
 COLLAPSE_FULL_S = int(os.environ.get("V11_COLLAPSE_FULL_S", 35 * 60))  # below: no gate/depth/attn
@@ -623,8 +631,31 @@ class NAS:
                 self._log("alt_seed", family=alt_family,
                           probe_error=type(ex).__name__)
                 alt_model = None
+        # v12.1b: wider twin of the FINAL architecture (whatever stage won)
+        cap_model = None
+        if CAP_ARM and not collapse:
+            try:
+                if attn_pick is not None:
+                    ops_c, _, stem_c = attn_pick
+                    cap_model = build_cnn(in_ch, nc, h, w, ops=ops_c,
+                                          base_width=CAP_ARM_WIDTH,
+                                          drop_path_rate=0.1, stem=stem_c)
+                elif macro_pick is not None:
+                    cap_model = build_cnn(in_ch, nc, h, w, ops=macro_pick,
+                                          base_width=CAP_ARM_WIDTH,
+                                          drop_path_rate=0.1,
+                                          stem="channel_embed" if in_ch >= STEM_EMBED_MIN_CH else "conv3")
+                else:
+                    cap_model = self._build(family, in_ch, nc, h, w,
+                                            depth=depth, width=CAP_ARM_WIDTH)
+                self._log("cap_arm", width=CAP_ARM_WIDTH,
+                          params_M=round(sum(pp.numel() for pp in
+                                             cap_model.parameters()) / 1e6, 2))
+            except Exception as ex:
+                self._log("cap_arm", probe_error=type(ex).__name__)
+                cap_model = None
         final._v12_meta = {"family": family, "alt_family": alt_family,
                            "gate_margin": gate_margin, "gate_noise": noise,
-                           "alt_model": alt_model}
+                           "alt_model": alt_model, "cap_model": cap_model}
         self._dump_record()
         return final
