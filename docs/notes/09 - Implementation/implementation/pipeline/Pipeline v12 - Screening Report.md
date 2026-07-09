@@ -113,6 +113,18 @@ one CPU-only smoke.
 3. **The decisive A/B (run AFTER the current 2h fleet + budget grid land):** `V12_MAX_SEEDS=6`
    on the cap-bound sets (Chesseract, Sudoku, GameOfLife) @2h vs tonight's K=3 numbers, same
    hardware (~4h GPU). Adopt both changes if >= +0.3 mean, else keep the package simple.
+   **Second factor: shared vs INDEPENDENT init** (`V12_INDEP_INIT`) -- shared init is a
+   weight-soup leftover; logit ensembles want basin diversity; top-m selection absorbs the
+   extra seed-quality variance. 2x2 cells, same runs.
+3b. **Saturation-adaptive K: REJECTED as prediction, ACCEPTED as reaction (decided 2026-07-09).**
+   Predicting "this seed is saturated" mid-run is the proxy wall again (cosine anneal makes
+   mid-run val misleading -- late-anneal jumps; GameOfLife-class oscillation defeats plateau
+   detectors). Instead: planned-K from throughput stays the backbone; a seed RELEASES budget
+   only via measured stops (perfect-stop, already built; optionally conservative patience),
+   and released time starts another correctly-sized seed. No curve forecasting anywhere.
+3c. **Split-threshold check (orphaned by the grid-tier cancellation, needs its own slot):**
+   CIFARTile @6h as K=1 x ~680 (current rule) vs K=3 x ~227 (prototype, scored 82.36) --
+   if K=3 wins, the 1.5xFULL split threshold is too conservative on ensemble-friendly data.
 4. ~~Open budget-model question~~ **ANSWERED (David Towers, Discord 2026-07):** time limit is
    PER DATASET; Phase 3 = 24h across THREE hidden datasets, ~8h each; Phase 2 = 7 manual email
    submissions on dummy data at ~30min; LAST successful Phase-2 email advances. See the
