@@ -20,6 +20,11 @@ PY=${PY:-.venv/bin/python}
 OUT=$HOME/local/v123_gb10
 mkdir -p "$OUT"
 
+echo "[v123] $(date) T3: Cryptic token-specialist (5h)"
+$PY -u dev/cryptic_specialist.py \
+  --dataset-dir "$DATASETS_DIR/Cryptic" \
+  --out-dir "$OUT/cryptic_spec" --hours 5 2>&1 | tee "$OUT/t3_cryptic_spec.log"
+
 echo "[v123] $(date) T1a: MultNIST @2h OLD split rule (expect K=1)"
 BASELINE_LOG_DIR=$OUT/curves_t1a V12_MIN_SEED_EPOCHS=99999 \
   $PY -u dev/mock_harness.py --submission-dir baselines/v12_1 \
@@ -45,10 +50,5 @@ for R in 1 2; do
     --predictions-dir "$OUT/pred_t2_r${R}_on" --time-limit 2.0 --score \
     Chesseract 2>&1 | tee "$OUT/t2_r${R}_on.log"
 done
-
-echo "[v123] $(date) T3: Cryptic token-specialist (5h)"
-$PY -u dev/cryptic_specialist.py \
-  --dataset-dir "$DATASETS_DIR/Cryptic" \
-  --out-dir "$OUT/cryptic_spec" --hours 5 2>&1 | tee "$OUT/t3_cryptic_spec.log"
 
 echo "[v123] $(date) BATTERY DONE"
