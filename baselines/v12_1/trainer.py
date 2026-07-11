@@ -279,7 +279,13 @@ class Trainer:
             model.load_state_dict(init_state)
         ema = ModelEMA(model, decay=EMA_DECAY) if self.use_ema else None
         criterion = nn.CrossEntropyLoss(label_smoothing=LABEL_SMOOTHING)
-        if USE_ADAMW:
+        if getattr(model, "_v12_recipe", "") == "adamw":
+            # v12.3 token family carries its own recipe: the excursion-
+            # validated AdamW(3e-4, wd 0.05); SGD 0.025 diverges on it.
+            base_lr = 3e-4 * LR_SCALE
+            optimizer = torch.optim.AdamW(model.parameters(), lr=base_lr,
+                                          weight_decay=0.05)
+        elif USE_ADAMW:
             base_lr = ADAMW_LR * LR_SCALE
             optimizer = torch.optim.AdamW(model.parameters(), lr=base_lr,
                                           weight_decay=ADAMW_WD)

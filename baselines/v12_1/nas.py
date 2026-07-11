@@ -56,6 +56,7 @@ from helpers import (
     OP_NAMES,
     TCN1D,
     TCN2D,
+    TokenSeqNet,
     build_cnn,
     build_default_cnn,
 )
@@ -79,6 +80,13 @@ PROBE_FLOOR_BUDGET_S = float(os.environ.get("V12_PROBE_FLOOR_BUDGET_S", str(4 * 
 # clock affords it, CONTINUE the top-2 arms for 2x the base slice each and
 # re-measure -- longer arms have lower val noise, so most races resolve.
 GATE_TIEBREAK = os.environ.get("V12_GATE_TIEBREAK", "1") != "0"
+# v12.3 TOKEN family (Cryptic-class specialist). Trigger is SHAPE-based, not
+# fingerprint-based: Cryptic fingerprints as image-like (corr1 0.38), so the
+# encoded-only gate never sees it. Among all 16 known datasets only Cryptic
+# (1x6x768, ratio 128) matches ratio>=16 & long side>=64 & in_ch==1 -- every
+# other set never builds this code path. Kill: V12_TOKEN_ARM=0.
+TOKEN_ARM = os.environ.get("V12_TOKEN_ARM", "1") != "0"
+TOKEN_RATIO_MIN = float(os.environ.get("V12_TOKEN_RATIO_MIN", "16"))
 
 # v12.1b capacity arm: hand the trainer a WIDER build of the final architecture
 # as one val-gated ensemble seed at large budgets. Width search was a verified
@@ -188,8 +196,14 @@ class NAS:
         deadline = time.perf_counter() + budget_s
         model = model.to(device)
         crit = nn.CrossEntropyLoss(label_smoothing=0.1)
-        opt = torch.optim.SGD(model.parameters(), lr=0.025, momentum=0.9,
-                              weight_decay=3e-4, nesterov=True)
+        if getattr(model, "_v12_recipe", "") == "adamw":
+            # token family: constant-lr SGD is the wrong probe optimizer for
+            # transformers -- use the recipe the excursion validated.
+            opt = torch.optim.AdamW(model.parameters(), lr=3e-4,
+                                    weight_decay=0.05)
+        else:
+            opt = torch.optim.SGD(model.parameters(), lr=0.025, momentum=0.9,
+                                  weight_decay=3e-4, nesterov=True)
         vals: List[float] = []
         epoch = 0
         while epoch < max_epochs and time.perf_counter() < deadline:
@@ -231,6 +245,12 @@ class NAS:
         if family == "tcn2d":
             return TCN2D(in_ch, nc, h, w, base_width=width, n_blocks=depth,
                          stem=stem)
+        if family == "token":
+            # width doubles as the capacity knob: the cap arm passes a wider
+            # value and gets the excursion's tok384 twin, default gets tok256.
+            big = width > 48
+            return TokenSeqNet(in_ch, nc, h, w, dim=384 if big else 256,
+                               depth=6 if big else 4)
         raise ValueError(family)
 
     def _build_small(self, family: str, in_ch, nc, h, w):
@@ -353,10 +373,46 @@ class NAS:
             self._log("backbone_skip", picked=family,
                       reason="image-like" if not encoded else "low budget")
 
+        # ---- v12.3: token-family gate (embedding-shaped boards only) ----------
+        # Shape trigger, NOT fingerprint: Cryptic reads corr1=0.38 -> "image-
+        # like" -> the encoded gate above never runs on it. 2-arm bake-off vs
+        # whatever family is currently picked, same abstain-to-incumbent
+        # contract as every other probe: adopt token only when it wins beyond
+        # noise; a sub-noise race keeps the incumbent and spends the hedge
+        # seed on token instead (val-gated downstream, can only help).
+        token_like = (TOKEN_ARM and not collapse and in_ch == 1
+                      and max(h, w) >= TOKEN_RATIO_MIN * min(h, w)
+                      and max(h, w) >= 64)
+        if token_like:
+            arm_budget = self._slice(t0, GATE_FRAC, 2.0)
+            try:
+                tok_vals = self._timed_train(
+                    self._build("token", in_ch, nc, h, w), device, arm_budget,
+                    max_epochs=400)
+                base_vals = self._timed_train(
+                    self._build(family, in_ch, nc, h, w), device, arm_budget,
+                    max_epochs=400)
+                tok_best, base_best = max(tok_vals), max(base_vals)
+                tnoise = (self._noise(tok_vals) + self._noise(base_vals)) / 2.0
+                if tok_best - base_best > tnoise:
+                    family, alt_family = "token", family
+                    gate_margin, noise = tok_best - base_best, tnoise
+                elif base_best - tok_best <= tnoise:
+                    alt_family = "token"
+                    gate_margin, noise = abs(tok_best - base_best), tnoise
+                self._log("token_gate", token=round(tok_best, 4),
+                          incumbent=round(base_best, 4),
+                          noise=round(tnoise, 4), picked=family,
+                          alt_family=alt_family)
+            except Exception as ex:
+                self._log("token_gate", probe_error=type(ex).__name__)
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+
         # ---- stage 3: aug probe, family-matched arms --------------------------
         ds = self.train_loader.dataset
         policy = getattr(ds, "policy", None)
-        if policy is not None and policy.any_input_aug() \
+        if policy is not None and policy.any_input_aug() and family != "token" \
                 and self.clock.check() > COLLAPSE_AUG_S:
             saved = (policy.flip, policy.crop_pad, policy.cutout_size)
             arm_budget = self._slice(t0, AUG_FRAC, 2.0)
@@ -400,7 +456,7 @@ class NAS:
         # ---- stage 4: depth, default-incumbent --------------------------------
         depth = DEFAULT_DEPTH
         incumbent_short: Optional[float] = gate_best.get(family)
-        if not collapse and family != "tcn1d":
+        if not collapse and family not in ("tcn1d", "token"):
             cand_s = self._slice(t0, DEPTH_FRAC, len(DEPTH_CANDS) + 1.5)  # shorts + verify
             if incumbent_short is None:
                 model = self._build(family, in_ch, nc, h, w, depth=DEFAULT_DEPTH)
@@ -444,7 +500,7 @@ class NAS:
 
         # ---- stage 4b: width, default-incumbent (optional, env-gated) ----------
         width = DEFAULT_WIDTH
-        if WIDTH_SEARCH and not collapse and family != "tcn1d":
+        if WIDTH_SEARCH and not collapse and family not in ("tcn1d", "token"):
             slice_s = t0 * WIDTH_FRAC
             cand_s = slice_s / (len(WIDTH_CANDS) + 1.5)  # shorts + verify
             model = self._build(family, in_ch, nc, h, w, depth=depth,
@@ -495,7 +551,7 @@ class NAS:
         # with default-incumbent + verify (worst case = the uniform arch, no
         # regression). Long-budget v11 experiment; default OFF.
         macro_pick = None
-        if MACRO_SEARCH and not collapse and family != "tcn1d":
+        if MACRO_SEARCH and not collapse and family not in ("tcn1d", "token"):
             mstem = "channel_embed" if in_ch >= STEM_EMBED_MIN_CH else "conv3"
             D = depth
             n_st = max(1, min(MACRO_STAGES, D))
@@ -578,7 +634,8 @@ class NAS:
         attn_pick = None
         astem = "channel_embed" if in_ch >= STEM_EMBED_MIN_CH else "conv3"
         ATTN_STAGES = int(os.environ.get("V11_ATTN_STAGES", "2"))
-        if encoded and not collapse and self.clock.check() > 0.45 * t0:
+        if encoded and not collapse and family != "token" \
+                and self.clock.check() > 0.45 * t0:
             base_op = "DilatedConv3" if family == "tcn2d" else "Conv3"
             cand_s = self._slice(t0, RAND_FRAC, 3.0)   # default-short + attn-short + verify
             # incumbent = the pipeline's ACTUAL chosen family default (tcn1d /

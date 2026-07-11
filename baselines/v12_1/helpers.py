@@ -827,6 +827,54 @@ class TCN2D(nn.Module):
         return self.head(self.blocks(self.stem(x)))
 
 
+class TokenSeqNet(nn.Module):
+    """v12.3 TOKEN family: treat an embedding-shaped board [1, h, w] as h
+    tokens of dim w instead of an image. Motivated by Cryptic (1x6x768, six
+    768-d rows): the conv pipeline plateaus at 72-73.8 there at ANY budget,
+    while this view reached 77.3 single / 78.7 ens in the standalone
+    excursion (dev/cryptic_specialist.py). Attention is over h<=~8 tokens,
+    so the usual transformer memory blowup (quadratic in token COUNT) does
+    not exist here: ~3.4M params at dim 256.
+
+    Carries its own recipe tag: transformers train badly under the
+    pipeline's constant-lr SGD probes; NAS._timed_train and
+    Trainer._train_one_seed switch to AdamW(3e-4, wd 0.05) when they see
+    _v12_recipe == "adamw". Token dropout is built into forward() so the
+    winning excursion recipe survives the pipeline's no-aug path on
+    encoded/embedding data."""
+
+    _v12_recipe = "adamw"
+
+    def __init__(self, in_channels: int, num_classes: int, input_h: int,
+                 input_w: int, dim: int = 256, depth: int = 4, heads: int = 8,
+                 token_drop: float = 0.1):
+        super().__init__()
+        assert in_channels == 1, "token family is gated to in_ch == 1 boards"
+        self.n_tok = input_h
+        self.token_drop = token_drop
+        self.inorm = nn.LayerNorm(input_w)   # per-token scale, data-independent
+        self.proj = nn.Linear(input_w, dim)
+        self.pos = nn.Parameter(torch.zeros(1, input_h, dim))
+        nn.init.trunc_normal_(self.pos, std=0.02)
+        layer = nn.TransformerEncoderLayer(
+            d_model=dim, nhead=heads, dim_feedforward=dim * 4, dropout=0.1,
+            activation="gelu", batch_first=True, norm_first=True)
+        self.enc = nn.TransformerEncoder(layer, num_layers=depth)
+        self.head = nn.Sequential(nn.LayerNorm(dim),
+                                  nn.Linear(dim, num_classes))
+
+    def forward(self, x):
+        if x.dim() == 4:                     # [B, 1, h, w] -> [B, h, w]
+            x = x.squeeze(1)
+        x = self.inorm(x)
+        if self.training and self.token_drop > 0:
+            drop = (torch.rand(x.size(0), self.n_tok, 1, device=x.device)
+                    < self.token_drop / self.n_tok)
+            x = x.masked_fill(drop, 0.0)
+        h = self.enc(self.proj(x) + self.pos)
+        return self.head(h.mean(dim=1))
+
+
 def build_tcn(kind: str, in_channels: int, num_classes: int, input_h: int, input_w: int,
               base_width: int = 48, n_blocks: int = 0, kernel: int = 0,
               stem: str = "conv3", block: str = "bn") -> nn.Module:
