@@ -73,6 +73,12 @@ SELECT_OFF = os.environ.get("V12_SELECT_OFF") == "1"     # ablation: skip select
 # split threshold as a flag (the CIFARTile-6h experiment): split into K seeds
 # only when proj >= SPLIT_FACTOR x FULL_EPOCHS x K-affordability.
 SPLIT_FACTOR = float(os.environ.get("V12_SPLIT_FACTOR", "1.5"))
+# v12.2 T2 verdict (CIFARTile H100 2h: K=2 x 346ep 85.68 > K=1 x 693ep 84.95):
+# the old rule left the whole [2 x MIN_SEED_EPOCHS, 2 x FULL_EPOCHS) band on a
+# single long seed. Half-split: take K=2 as soon as each seed still gets a
+# schedule of >= MIN_SEED_EPOCHS. Set V12_MIN_SEED_EPOCHS=99999 to restore the
+# pre-v12.2 rule.
+MIN_SEED_EPOCHS = int(os.environ.get("V12_MIN_SEED_EPOCHS", "300"))
 # reactive top-up seeds: after the planned K, spend MEASURED surplus (released
 # by perfect-stop or the epoch cap) on more seeds -- never predicted, only
 # reacted to. HARD_CAP bounds the roster.
@@ -231,13 +237,18 @@ class Trainer:
 
     def _plan(self, remaining_s: float, epoch_s: float) -> Tuple[int, int]:
         """Throughput-keyed rung selection: how many seeds, how long a schedule.
-        K > 1 only when every seed still gets >= one FULL training (the 2h
-        CIFARTile lesson); surplus beyond MAX_SEEDS full trainings goes into
+        Multi-full split when every seed gets >= one FULL training; below that,
+        the v12.2 half-split band takes K=2 while each seed still gets
+        >= MIN_SEED_EPOCHS (T2 verdict: two half-length seeds beat one long one
+        on scaler data); surplus beyond MAX_SEEDS full trainings goes into
         LONGER schedules (the uncapped-training lesson), up to CAP_EPOCHS."""
         proj = max(1.0, remaining_s / max(epoch_s, 1e-3))
-        if proj < SPLIT_FACTOR * FULL_EPOCHS:
-            return 1, int(min(proj, CAP_EPOCHS))
-        k = int(min(MAX_SEEDS, proj // FULL_EPOCHS))
+        k = 1
+        if proj >= SPLIT_FACTOR * FULL_EPOCHS:
+            k = int(min(MAX_SEEDS, proj // FULL_EPOCHS))
+        if k <= 1 and proj >= 2 * MIN_SEED_EPOCHS:
+            k = 2
+        k = max(1, k)
         return k, int(min(CAP_EPOCHS, proj / k))
 
     @staticmethod

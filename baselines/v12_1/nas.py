@@ -74,6 +74,11 @@ RAND_FRAC = float(os.environ.get("RAND_FRAC", "0.12"))  # random arm, encoded on
 PROBE_LO_S = float(os.environ.get("V12_PROBE_LO_S", "120"))
 PROBE_HI_S = float(os.environ.get("V12_PROBE_HI_S", "420"))
 PROBE_FLOOR_BUDGET_S = float(os.environ.get("V12_PROBE_FLOOR_BUDGET_S", str(4 * 3600)))
+# v12.3: a sub-noise family race is a coin flip worth ~5pp (Chesseract: 4 GPUs
+# picked 3 different families, margins 0.007-0.027 all under noise). When the
+# clock affords it, CONTINUE the top-2 arms for 2x the base slice each and
+# re-measure -- longer arms have lower val noise, so most races resolve.
+GATE_TIEBREAK = os.environ.get("V12_GATE_TIEBREAK", "1") != "0"
 
 # v12.1b capacity arm: hand the trainer a WIDER build of the final architecture
 # as one val-gated ensemble seed at large budgets. Width search was a verified
@@ -277,6 +282,7 @@ class NAS:
         if encoded and not collapse:
             arm_budget = self._slice(t0, GATE_FRAC, 3.0)
             noises = []
+            arm_models: Dict[str, nn.Module] = {}
             for fam in ("conv", "tcn1d", "tcn2d"):
                 model = self._build(fam, in_ch, nc, h, w)
                 try:
@@ -286,9 +292,7 @@ class NAS:
                     print(f"  v10 gate arm {fam} FAILED ({type(ex).__name__})")
                 gate_best[fam] = max(vals)
                 noises.append(self._noise(vals))
-                del model
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
+                arm_models[fam] = model  # kept alive for the v12.3 tie-break
             noise = sum(noises) / len(noises)
             leader = max(gate_best, key=gate_best.get)
             # abstain-to-default: deviate from conv only when clearly better
@@ -310,6 +314,41 @@ class NAS:
                       noise=round(noise, 4), leader=leader, picked=family,
                       alt_family=alt_family,
                       gate_margin=round(gate_margin, 4) if alt_family else None)
+            # ---- v12.3 gate tie-break: continue the top-2 arms, re-measure --
+            if (GATE_TIEBREAK and alt_family is not None
+                    and self.clock.check() > 8.0 * arm_budget):
+                pair = (family, alt_family)
+                ext_noises = []
+                for fam in pair:
+                    try:
+                        vals2 = self._timed_train(arm_models[fam], device,
+                                                  2.0 * arm_budget,
+                                                  max_epochs=400)
+                    except Exception as ex:
+                        vals2 = []
+                        print(f"  gate tie-break arm {fam} FAILED "
+                              f"({type(ex).__name__})")
+                    if vals2:
+                        gate_best[fam] = max(gate_best[fam], max(vals2))
+                        ext_noises.append(self._noise(vals2))
+                if ext_noises:
+                    noise = sum(ext_noises) / len(ext_noises)
+                cand = max(pair, key=lambda f: gate_best[f])
+                other = pair[0] if cand == pair[1] else pair[1]
+                gate_margin = gate_best[cand] - gate_best[other]
+                if gate_margin >= noise:
+                    # decisive after extension: adopt, drop the hedge seed
+                    family, alt_family = cand, None
+                # else: still a coin flip -> KEEP the conv-biased pick and the
+                # alt-family hedge; never flip on a sub-noise margin.
+                self._log("gate_tiebreak",
+                          arms={f: round(gate_best[f], 4) for f in pair},
+                          noise=round(noise, 4), picked=family,
+                          alt_family=alt_family,
+                          gate_margin=round(gate_margin, 4))
+            arm_models.clear()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
         else:
             self._log("backbone_skip", picked=family,
                       reason="image-like" if not encoded else "low budget")
