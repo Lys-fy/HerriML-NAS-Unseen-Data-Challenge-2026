@@ -17,10 +17,6 @@ Pipeline inside train():
      each extra val pass clock-guarded.
 predict() applies the chosen config, degrading to single-best if the clock
 would not fit the ensemble/TTA passes.
-
-Legacy env toggles (TRAIN_SAM / TRAIN_SELF_DISTILL / TRAIN_ADAMW /
-TIER1_EMA_OFF, default off) are preserved for ablations; V12_* knobs override
-the adaptive defaults.
 """
 
 from __future__ import annotations
@@ -34,58 +30,36 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from helpers import ModelEMA, lr_for_epoch
 
 
 SAFETY_MARGIN_SECONDS = 60.0
-# FULL_EPOCHS is the reference schedule length for one full training;
-# CAP_EPOCHS bounds any single seed's schedule.
-FULL_EPOCHS = int(os.environ.get("V12_FULL_EPOCHS", "600"))
-CAP_EPOCHS = int(os.environ.get("V12_CAP_EPOCHS", "2400"))
-MAX_SEEDS = int(os.environ.get("V12_MAX_SEEDS", "3"))
-SELECT_OFF = os.environ.get("V12_SELECT_OFF") == "1"     # ablation: skip selection
-# plan knobs -------------------------------------------------------------------
-# split threshold: multi-seed split only when proj >= SPLIT_FACTOR x FULL_EPOCHS.
-SPLIT_FACTOR = float(os.environ.get("V12_SPLIT_FACTOR", "1.5"))
-# half-split: take K=2 as soon as each seed still gets a schedule of
-# >= MIN_SEED_EPOCHS. Set V12_MIN_SEED_EPOCHS=99999 to disable.
-MIN_SEED_EPOCHS = int(os.environ.get("V12_MIN_SEED_EPOCHS", "300"))
-# reactive top-up seeds: after the planned K, spend measured surplus (released
-# by perfect-stop or the epoch cap) on more seeds. HARD_CAP bounds the roster.
-HARD_CAP_SEEDS = int(os.environ.get("V12_HARD_CAP_SEEDS", "8"))
-# selection: prefer an ensemble config when its val is within SEL_BAND (pp) of
-# the argmax single.
-SEL_BAND = float(os.environ.get("V12_SEL_BAND", "0.25"))
-# independent per-seed inits; default OFF uses the shared init.
-INDEP_INIT = os.environ.get("V12_INDEP_INIT") == "1"
-WARMUP_EPOCHS = 20
-PATIENCE = int(os.environ.get("TRAIN_PATIENCE", "999"))
-LR_SCALE = float(os.environ.get("TRAIN_LR_SCALE", "1.0"))
-LR_WARMUP_EPOCHS = 5
-SEED = int(os.environ.get("BASELINE_SEED", "42"))
 
+# ---- seed roster and schedule ----------------------------------------------
+FULL_EPOCHS = 600       # reference schedule length for one full training
+CAP_EPOCHS = 2400       # bound on any single seed's schedule
+MAX_SEEDS = 3           # planned seeds before reactive top-ups
+HARD_CAP_SEEDS = 8      # bound on the roster after reactive top-ups
+SPLIT_FACTOR = 1.5      # multi-seed split only when proj >= SPLIT_FACTOR x FULL_EPOCHS
+MIN_SEED_EPOCHS = 300   # half-split to K=2 once each seed still gets this many epochs
+
+# ---- early stops -----------------------------------------------------------
+WARMUP_EPOCHS = 20
+PATIENCE = 999
+PERFECT_ACC = 0.9995    # a seed stops after val >= this on two epochs in a row
+
+# ---- selection -------------------------------------------------------------
+# prefer an ensemble config when its val is within SEL_BAND (pp) of the argmax single
+SEL_BAND = 0.25
+
+# ---- optimisation ----------------------------------------------------------
+LR_SCALE = 1.0
+LR_WARMUP_EPOCHS = 5
 LABEL_SMOOTHING = 0.1
 EMA_DECAY = 0.999
-# perfect-seed early stop: a seed stops after val >= PERFECT_ACC on two
-# consecutive epochs, releasing its remaining slice to later seeds/selection.
-PERFECT_ACC = float(os.environ.get("V12_PERFECT_ACC", "0.9995"))
-
-# --------------------------------------------------------------------------
-# Recipe toggles. TrivialAugment is ON by default; the optional toggles
-# (SAM / self-distill / AdamW) all default OFF.
-# --------------------------------------------------------------------------
-USE_TRIVIAL_AUG = os.environ.get("TRAIN_TRIVIAL_AUG", "1") == "1"
-TA_NO_FLIP = os.environ.get("TRAIN_TA_NO_FLIP") == "1"
-USE_SAM = os.environ.get("TRAIN_SAM") == "1"
-SAM_RHO = float(os.environ.get("TRAIN_SAM_RHO", "0.05"))
-USE_SELF_DISTILL = os.environ.get("TRAIN_SELF_DISTILL") == "1"
-SD_ALPHA = float(os.environ.get("TRAIN_SD_ALPHA", "1.0"))
-SD_T = float(os.environ.get("TRAIN_SD_T", "2.0"))
-USE_ADAMW = os.environ.get("TRAIN_ADAMW") == "1"
-ADAMW_LR = float(os.environ.get("TRAIN_ADAMW_LR", "1e-3"))
-ADAMW_WD = float(os.environ.get("TRAIN_ADAMW_WD", "0.05"))
+SEED = 42
+USE_TRIVIAL_AUG = True   # one random augmentation op at a random magnitude per batch
 
 
 def _trivial_augment(xb: torch.Tensor) -> torch.Tensor:
@@ -93,8 +67,6 @@ def _trivial_augment(xb: torch.Tensor) -> torch.Tensor:
     restricted to transforms valid for arbitrary C x H x W tensors."""
     ops = ("identity", "flip_h", "translate", "brightness", "contrast",
            "noise", "cutout")
-    if TA_NO_FLIP:
-        ops = tuple(o for o in ops if o != "flip_h")
     op = ops[np.random.randint(len(ops))]
     if op == "flip_h":
         return torch.flip(xb, dims=[3])
@@ -144,9 +116,8 @@ class Trainer:
         self.metadata = metadata
         self.clock = clock
         self.mixup_alpha = float(metadata.get("mixup_alpha", 0.0))
-        self.use_ema = os.environ.get("TIER1_EMA_OFF") != "1"
-        # shared init for all seeds; V12_INDEP_INIT=1 switches to per-seed
-        # re-initialisation.
+        self.use_ema = True
+        # Shared init reused by every seed.
         self.init_state = copy.deepcopy(model.state_dict())
         # NAS side-channel: optional runner-up-family model for one
         # heterogeneous ensemble seed.
@@ -218,17 +189,6 @@ class Trainer:
         k = max(1, k)
         return k, int(min(CAP_EPOCHS, proj / k))
 
-    @staticmethod
-    def _reinit(model: nn.Module, seed: int) -> None:
-        """Independent-init mode: re-randomise every module in place under a
-        per-seed torch seed."""
-        torch.manual_seed(seed)
-        if torch.cuda.is_available():
-            torch.cuda.manual_seed_all(seed)
-        for m in model.modules():
-            if hasattr(m, "reset_parameters"):
-                m.reset_parameters()
-
     # ---------------------------------------------------------- one seed train
 
     def _train_one_seed(self, model: nn.Module, init_state, seed_idx: int,
@@ -240,10 +200,7 @@ class Trainer:
             torch.cuda.manual_seed_all(SEED + seed_idx)
 
         model = model.to(self.device, memory_format=torch.channels_last)
-        if INDEP_INIT:
-            self._reinit(model, SEED + 1000 + seed_idx)   # deep-ensembles mode
-        else:
-            model.load_state_dict(init_state)
+        model.load_state_dict(init_state)
         ema = ModelEMA(model, decay=EMA_DECAY) if self.use_ema else None
         criterion = nn.CrossEntropyLoss(label_smoothing=LABEL_SMOOTHING)
         if getattr(model, "_v12_recipe", "") == "adamw":
@@ -252,10 +209,6 @@ class Trainer:
             base_lr = 3e-4 * LR_SCALE
             optimizer = torch.optim.AdamW(model.parameters(), lr=base_lr,
                                           weight_decay=0.05)
-        elif USE_ADAMW:
-            base_lr = ADAMW_LR * LR_SCALE
-            optimizer = torch.optim.AdamW(model.parameters(), lr=base_lr,
-                                          weight_decay=ADAMW_WD)
         else:
             base_lr = 0.025 * LR_SCALE
             optimizer = torch.optim.SGD(model.parameters(), lr=base_lr,
@@ -360,14 +313,6 @@ class Trainer:
                     loss = lam * criterion(logits, yb) + (1.0 - lam) * criterion(logits, yb_b)
                 else:
                     loss = criterion(logits, yb)
-                if USE_SELF_DISTILL and ema is not None:
-                    with torch.no_grad():
-                        ema.ema.eval()
-                        t_logits = ema.ema(xb_in)
-                    kl = F.kl_div(F.log_softmax(logits / SD_T, dim=1),
-                                  F.softmax(t_logits / SD_T, dim=1),
-                                  reduction="batchmean") * (SD_T * SD_T)
-                    loss = loss + SD_ALPHA * kl
                 return loss
 
             optimizer.zero_grad(set_to_none=True)
@@ -375,30 +320,6 @@ class Trainer:
             if not torch.isfinite(loss):
                 return float("nan")
             loss.backward()
-
-            if USE_SAM:
-                with torch.no_grad():
-                    grads = [p.grad for p in model.parameters() if p.grad is not None]
-                    norm = torch.norm(torch.stack([g.norm() for g in grads]))
-                    scale = SAM_RHO / (norm + 1e-12)
-                    eps = []
-                    for p in model.parameters():
-                        if p.grad is None:
-                            continue
-                        e = p.grad * scale
-                        p.add_(e); eps.append((p, e))
-                optimizer.zero_grad(set_to_none=True)
-                loss2 = compute_loss()
-                if not torch.isfinite(loss2):
-                    with torch.no_grad():
-                        for p, e in eps:
-                            p.sub_(e)
-                    return float("nan")
-                loss2.backward()
-                with torch.no_grad():
-                    for p, e in eps:
-                        p.sub_(e)
-
             torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)
             optimizer.step()
             if ema is not None:
@@ -532,8 +453,6 @@ class Trainer:
         best-val single seed (which costs nothing extra)."""
         best_i = int(np.argmax(self.seed_vals))
         self.chosen = ("single", best_i, False)
-        if SELECT_OFF:
-            return
         yv = torch.cat([yb for _, yb in self.valid_loader])
         n_seeds = len(self.seed_states)
 
