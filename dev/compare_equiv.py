@@ -12,6 +12,7 @@ PAIRS = [
     ("v13a_chess", "v2_chess",   "v2 EQUIVALENCE  (v13 vs clean-v2, Chesseract)"),
     ("v13_cryptic", "v2_cryptic", "v2 TOKEN EQUIVALENCE  (v13 vs clean-v2, Cryptic)"),
     ("v121_sudoku", "v1_sudoku", "v1 EQUIVALENCE  (v12_1 vs clean-v1, Sudoku)"),
+    ("v13_cifar", "v2_cifar", "v2 SCALER EQUIVALENCE  (v13 vs clean-v2, CIFARTile)"),
 ]
 DEC_KEYS = ("fingerprint", "backbone_gate", "backbone_skip", "final:", "token_gate")
 
