@@ -45,56 +45,37 @@ from helpers import (
     build_default_cnn,
 )
 
-# ---- budget fractions (of clock remaining at search start) -----------------
-GATE_FRAC = 0.18          # 3-arm bake-off, encoded data only
+# ---- search budget: fractions of the clock remaining at search start -------
+GATE_FRAC = 0.18          # 3-arm family bake-off, encoded data only
 AUG_FRAC = 0.08           # two-arm aug probe, family-matched
 DEPTH_FRAC = 0.14         # 2 candidate shorts + 1 verification
-RAND_FRAC = float(os.environ.get("RAND_FRAC", "0.12"))  # random arm, encoded only
+RAND_FRAC = 0.12          # random arm, encoded only
 
-# Per-leg probe floor/cap in seconds; the floor applies only when the
-# search budget affords it.
-PROBE_LO_S = float(os.environ.get("V12_PROBE_LO_S", "120"))
-PROBE_HI_S = float(os.environ.get("V12_PROBE_HI_S", "420"))
-PROBE_FLOOR_BUDGET_S = float(os.environ.get("V12_PROBE_FLOOR_BUDGET_S", str(4 * 3600)))
-# Optional gate tie-break: when the clock affords it, continue the top-2 arms
-# for 2x the base slice each and re-measure.
-GATE_TIEBREAK = os.environ.get("V12_GATE_TIEBREAK", "1") != "0"
-# Token family: selected by input shape (few tokens x wide embedding), not
-# by fingerprint.
-TOKEN_ARM = os.environ.get("V12_TOKEN_ARM", "1") != "0"
-TOKEN_RATIO_MIN = float(os.environ.get("V12_TOKEN_RATIO_MIN", "16"))
+# ---- probe sizing: per-leg floor/cap in seconds ----------------------------
+# The floor applies only when the search budget exceeds PROBE_FLOOR_BUDGET_S.
+PROBE_LO_S = 120.0
+PROBE_HI_S = 420.0
+PROBE_FLOOR_BUDGET_S = 4 * 3600
 
-# Capacity arm: hand the trainer a wider build of the final architecture as
-# one val-gated ensemble seed at large budgets.
-CAP_ARM = os.environ.get("V12_CAP_ARM", "1") == "1"
-CAP_ARM_WIDTH = int(os.environ.get("V12_CAP_ARM_WIDTH", "96"))
+# ---- feature toggles -------------------------------------------------------
+GATE_TIEBREAK = True      # re-measure the top-2 gate arms at 2x slice
+TOKEN_ARM = True          # token family for embedding-shaped inputs
+TOKEN_RATIO_MIN = 16.0    # min long/short side ratio to try the token family
+CAP_ARM = True            # wider twin of the final arch as one val-gated seed
+CAP_ARM_WIDTH = 96
 
-# low-budget collapse thresholds (seconds remaining at search start)
-# env-overridable for testing the non-collapse path at small budgets
-COLLAPSE_FULL_S = int(os.environ.get("V11_COLLAPSE_FULL_S", 35 * 60))  # below: no gate/depth/attn
-COLLAPSE_AUG_S = int(os.environ.get("V11_COLLAPSE_AUG_S", 15 * 60))    # below: not even the aug probe
+# ---- low-budget collapse thresholds (seconds remaining at search start) ----
+COLLAPSE_FULL_S = 35 * 60   # below: no gate/depth/attn probes
+COLLAPSE_AUG_S = 15 * 60    # below: not even the aug probe
 
-DEFAULT_DEPTH = 6             # incumbent depth
+# ---- architecture defaults -------------------------------------------------
+DEFAULT_DEPTH = 6
 DEPTH_CANDS = (4, 8)
-DEFAULT_WIDTH = 48           # incumbent width
-WIDTH_CANDS = (32, 64)
-# Width-search stage: default-incumbent W=48 vs candidates, short-train +
-# re-train verification before adopting. Env-gated; default OFF.
-WIDTH_SEARCH = os.environ.get("WIDTH_SEARCH", "0") == "1"
-WIDTH_FRAC = float(os.environ.get("WIDTH_FRAC", "0.12"))
-# Macro search: per-stage heterogeneous ops. Split the net into MACRO_STAGES
-# contiguous stages; greedily swap each stage's op to a candidate,
-# default-incumbent + verify before adopting. Env-gated, default OFF.
-MACRO_SEARCH = os.environ.get("MACRO_SEARCH", "0") == "1"
-MACRO_FRAC = float(os.environ.get("MACRO_FRAC", "0.25"))
-MACRO_STAGES = int(os.environ.get("MACRO_STAGES", "3"))
-MACRO_DEFAULT_OP = os.environ.get("MACRO_DEFAULT_OP", "DilatedConv3")
-MACRO_OPS = [o for o in os.environ.get("MACRO_OPS", "SpatialSelfAttn2D,SEConv3").split(",") if o]
-STEM_EMBED_MIN_CH = 8         # min input channels for the channel-embed stem
-ENCODED_CORR1 = 0.2           # corr1 threshold below which data counts as encoded
-RAND_K = int(os.environ.get("RAND_K", "6"))
-# random-arm width pool (env-configurable)
-RAND_WIDTHS = [int(x) for x in os.environ.get("RAND_WIDTHS", "16,24,32,48").split(",")]
+DEFAULT_WIDTH = 48
+STEM_EMBED_MIN_CH = 8       # min input channels for the channel-embed stem
+ENCODED_CORR1 = 0.2         # corr1 below which data counts as encoded
+RAND_K = 6                  # random arm: number of candidate architectures
+RAND_WIDTHS = [16, 24, 32, 48]
 WIDE_VOCAB = tuple(o for o in OP_NAMES
                    if o not in ("RowBiLSTM", "CrossAxisBiLSTM"))
 
@@ -454,126 +435,10 @@ class NAS:
         else:
             self._log("depth_search", skipped=True, picked=depth)
 
-        # ---- stage 4b: width, default-incumbent (optional, env-gated) ----------
+        # ---- stage 4b: width -------------------------------------------------
         width = DEFAULT_WIDTH
-        if WIDTH_SEARCH and not collapse and family not in ("tcn1d", "token"):
-            slice_s = t0 * WIDTH_FRAC
-            cand_s = slice_s / (len(WIDTH_CANDS) + 1.5)  # shorts + verify
-            model = self._build(family, in_ch, nc, h, w, depth=depth,
-                                width=DEFAULT_WIDTH)
-            vals = self._timed_train(model, device, cand_s)
-            inc_w = max(vals)
-            wnoise = self._noise(vals)
-            del model
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-            best_wc, best_wv = None, inc_w
-            wres = {}
-            for wd in WIDTH_CANDS:
-                model = self._build(family, in_ch, nc, h, w, depth=depth, width=wd)
-                try:
-                    vals = self._timed_train(model, device, cand_s)
-                    v = max(vals)
-                except Exception:
-                    v = 0.0
-                wres[wd] = round(v, 4)
-                if v > best_wv + wnoise:
-                    best_wc, best_wv = wd, v
-                del model
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
-            wverified = None
-            if best_wc is not None:
-                # verification: re-train the challenger fresh, longer horizon
-                model = self._build(family, in_ch, nc, h, w, depth=depth, width=best_wc)
-                try:
-                    vv = self._timed_train(model, device, cand_s * 1.5)
-                    wverified = round(max(vv), 4)
-                except Exception:
-                    wverified = 0.0
-                del model
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
-                if wverified > inc_w + wnoise:
-                    width = best_wc
-            self._log("width_search", incumbent=round(inc_w, 4), candidates=wres,
-                      noise=round(wnoise, 4), challenger=best_wc,
-                      verified=wverified, picked=width)
-        else:
-            self._log("width_search", skipped=True, picked=width)
 
-        # ---- stage 4c: per-stage macro (heterogeneous) search (env-gated) ------
-        # Let stages use different ops, found greedily with default-incumbent
-        # + verify; default OFF.
         macro_pick = None
-        if MACRO_SEARCH and not collapse and family not in ("tcn1d", "token"):
-            mstem = "channel_embed" if in_ch >= STEM_EMBED_MIN_CH else "conv3"
-            D = depth
-            n_st = max(1, min(MACRO_STAGES, D))
-            bounds = [round(i * D / n_st) for i in range(n_st + 1)]
-            stage_ops = [MACRO_DEFAULT_OP] * D
-            slice_s = t0 * MACRO_FRAC
-            n_short = n_st * len(MACRO_OPS) + n_st * 1.5
-            cand_s = slice_s / max(n_short, 1.0)
-            model = build_cnn(in_ch, nc, h, w, ops=stage_ops, base_width=width,
-                              drop_path_rate=0.0, stem=mstem)
-            vals = self._timed_train(model, device, cand_s)
-            inc = max(vals)
-            mnoise = self._noise(vals)
-            del model
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-            stages_log = []
-            for gi in range(n_st):
-                a, b = bounds[gi], bounds[gi + 1]
-                cur = stage_ops[a]
-                best_op, best_v = cur, inc
-                for cop in MACRO_OPS:
-                    if cop == cur:
-                        continue
-                    trial = list(stage_ops)
-                    for k in range(a, b):
-                        trial[k] = cop
-                    model = build_cnn(in_ch, nc, h, w, ops=trial, base_width=width,
-                                      drop_path_rate=0.0, stem=mstem)
-                    try:
-                        v = max(self._timed_train(model, device, cand_s))
-                    except Exception:
-                        v = 0.0
-                    del model
-                    if torch.cuda.is_available():
-                        torch.cuda.empty_cache()
-                    if v > best_v + mnoise:
-                        best_op, best_v = cop, v
-                accepted = False
-                if best_op != cur and best_v > inc + mnoise:
-                    # verification: re-train the swapped arch fresh, longer horizon
-                    trial = list(stage_ops)
-                    for k in range(a, b):
-                        trial[k] = best_op
-                    model = build_cnn(in_ch, nc, h, w, ops=trial, base_width=width,
-                                      drop_path_rate=0.0, stem=mstem)
-                    try:
-                        vv = max(self._timed_train(model, device, cand_s * 1.5))
-                    except Exception:
-                        vv = 0.0
-                    del model
-                    if torch.cuda.is_available():
-                        torch.cuda.empty_cache()
-                    if vv > inc + mnoise:
-                        for k in range(a, b):
-                            stage_ops[k] = best_op
-                        inc = vv
-                        accepted = True
-                stages_log.append({"stage": gi, "picked": stage_ops[a],
-                                   "best_short": round(best_v, 4), "accepted": accepted})
-            if any(o != MACRO_DEFAULT_OP for o in stage_ops):
-                macro_pick = stage_ops
-            self._log("macro_search", default_op=MACRO_DEFAULT_OP, n_stages=n_st,
-                      cand_ops=list(MACRO_OPS), stages=stages_log,
-                      final_ops=stage_ops, adopted=bool(macro_pick))
-        elif MACRO_SEARCH:
-            self._log("macro_search", skipped=True)
 
         # ---- stage 5: verified attention probe, encoded/board data only -------
         # Build the family default as a uniform build_cnn stack, and a
