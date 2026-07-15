@@ -1,47 +1,24 @@
-"""v12.1 Trainer -- the budget-adaptive controller (v12 + probe-informed upgrades).
+"""Budget-adaptive training controller.
 
-Delta vs v12: heterogeneous alt-family seed (sub-noise gate flips), reactive
-top-up seeds from MEASURED released budget (no saturation prediction), top-m
-ensemble selection + noise-banded ensemble preference, optional independent
-seed inits (V12_INDEP_INIT), split threshold as V12_SPLIT_FACTOR.
-
-v11.1's recipe (SGD warmup+cosine train-to-budget, EMA, label smoothing, NaN
-recovery, channels_last) wrapped in a THROUGHPUT-KEYED plan that adapts every
-component to the measured speed of THIS model on THIS data on THIS hardware.
-Nothing is keyed on wall-clock hours or GPU names -- only on what a short
-calibration actually measures, re-projected between stages, so a B300 at 2h
-lands on the same rung a slower GPU needs 8h for and slow datasets demote
-themselves mid-run instead of overrunning.
-
-The evidence base is the v12 screening campaign (see the vault note
-"Pipeline v12 - Screening Report"; runner dev/v12_integration.py):
-  - TrivialAugment: +2.3 mean over 9 datasets, biggest single win -> DEFAULT ON
-    (flip stays: removing it collapses GameOfLife 88->62).
-  - K-seed logit-ensemble: +1.5 mean, 8/9 -> the surplus-budget conversion, but
-    ONLY when each seed still gets a full training (at 2h total, 3-way splitting
-    lost CIFARTile -5.6) -> ADAPTIVE K from measured throughput.
-  - Uncapped longer training: CIFARTile plain-6h +2.8 over v10 (it was
-    undertrained at 600 epochs) -> budget-aware epoch target up to CAP_EPOCHS.
-  - flip-TTA: helps flip-tolerant grids, wrecks text -> never deployed blind,
-    only via VAL-GATED SELECTION over {each seed, ensemble} x {no-TTA, TTA}
-    (measure-then-decide; the proxy wall forbids predicting it).
+Wraps an SGD warmup+cosine recipe (EMA, label smoothing, NaN recovery,
+channels_last) in a throughput-keyed plan: everything is derived from a short
+calibration of measured step time, re-projected between stages, never from
+wall-clock hours or GPU names.
 
 Pipeline inside train():
   1. calibrate (~few batches): measured step time -> projected epoch time.
-  2. plan: proj_epochs = usable_clock / epoch_time;
-       K = 1                 while proj_epochs < 1.5 x FULL_EPOCHS (a split
-                             would cut seeds below one full training)
-       K = min(MAX_SEEDS, proj_epochs // FULL_EPOCHS) otherwise;
+  2. plan: proj_epochs = usable_clock / epoch_time; choose K seeds and a
      per-seed schedule target = min(CAP_EPOCHS, proj_epochs / K).
-  3. train K seeds from the SAME init (the validated shared-init regime),
-     re-planning after each seed from its MEASURED duration (graceful
-     demotion: a slow seed shrinks or drops the ones after it). A seed that
-     reaches ~perfect val twice in a row stops early and donates its slice.
-  4. val-gated selection, each extra val pass clock-guarded.
+  3. train K seeds from the same init, re-planning after each seed from its
+     measured duration (a slow seed shrinks or drops the ones after it); a
+     seed that reaches ~perfect val twice in a row stops early and donates
+     its slice.
+  4. val-gated selection over {each seed, ensemble} x {no-TTA, flip-TTA},
+     each extra val pass clock-guarded.
 predict() applies the chosen config, degrading to single-best if the clock
-would not fit the ensemble/TTA passes (predictions must always complete).
+would not fit the ensemble/TTA passes.
 
-All legacy env toggles (TRAIN_SAM / TRAIN_SELF_DISTILL / TRAIN_ADAMW /
+Legacy env toggles (TRAIN_SAM / TRAIN_SELF_DISTILL / TRAIN_ADAMW /
 TIER1_EMA_OFF, default off) are preserved for ablations; V12_* knobs override
 the adaptive defaults.
 """
@@ -64,45 +41,32 @@ from helpers import ModelEMA, lr_for_epoch
 
 
 SAFETY_MARGIN_SECONDS = 60.0
-# one "full training" = the schedule length every screening verdict was
-# measured at; CAP is the validated ceiling for surplus single-seed budget.
+# FULL_EPOCHS is the reference schedule length for one full training;
+# CAP_EPOCHS bounds any single seed's schedule.
 FULL_EPOCHS = int(os.environ.get("V12_FULL_EPOCHS", "600"))
 CAP_EPOCHS = int(os.environ.get("V12_CAP_EPOCHS", "2400"))
 MAX_SEEDS = int(os.environ.get("V12_MAX_SEEDS", "3"))
 SELECT_OFF = os.environ.get("V12_SELECT_OFF") == "1"     # ablation: skip selection
-# v12.1 knobs -----------------------------------------------------------------
-# split threshold as a flag (the CIFARTile-6h experiment): split into K seeds
-# only when proj >= SPLIT_FACTOR x FULL_EPOCHS x K-affordability.
+# plan knobs -------------------------------------------------------------------
+# split threshold: multi-seed split only when proj >= SPLIT_FACTOR x FULL_EPOCHS.
 SPLIT_FACTOR = float(os.environ.get("V12_SPLIT_FACTOR", "1.5"))
-# v12.2 T2 verdict (CIFARTile H100 2h: K=2 x 346ep 85.68 > K=1 x 693ep 84.95):
-# the old rule left the whole [2 x MIN_SEED_EPOCHS, 2 x FULL_EPOCHS) band on a
-# single long seed. Half-split: take K=2 as soon as each seed still gets a
-# schedule of >= MIN_SEED_EPOCHS. Set V12_MIN_SEED_EPOCHS=99999 to restore the
-# pre-v12.2 rule.
+# half-split: take K=2 as soon as each seed still gets a schedule of
+# >= MIN_SEED_EPOCHS. Set V12_MIN_SEED_EPOCHS=99999 to disable.
 MIN_SEED_EPOCHS = int(os.environ.get("V12_MIN_SEED_EPOCHS", "300"))
-# reactive top-up seeds: after the planned K, spend MEASURED surplus (released
-# by perfect-stop or the epoch cap) on more seeds -- never predicted, only
-# reacted to. HARD_CAP bounds the roster.
+# reactive top-up seeds: after the planned K, spend measured surplus (released
+# by perfect-stop or the epoch cap) on more seeds. HARD_CAP bounds the roster.
 HARD_CAP_SEEDS = int(os.environ.get("V12_HARD_CAP_SEEDS", "8"))
 # selection: prefer an ensemble config when its val is within SEL_BAND (pp) of
-# the argmax single (variance reduction is free insurance inside the noise band)
+# the argmax single.
 SEL_BAND = float(os.environ.get("V12_SEL_BAND", "0.25"))
-# independent seed inits (A/B pending; default OFF = validated shared-init)
+# independent per-seed inits; default OFF uses the shared init.
 INDEP_INIT = os.environ.get("V12_INDEP_INIT") == "1"
 WARMUP_EPOCHS = 20
 PATIENCE = int(os.environ.get("TRAIN_PATIENCE", "999"))
-# v13 saturation stop (dataset-AGNOSTIC): v12.4 T3 found that on a fast GPU a
-# small/hard board runs the full CAP_EPOCHS schedule and overfits -- Chesseract
-# @8h GB10 landed 63.2, WORSE than @2h (65-66) and -3.8 vs the slower A100
-# (67.0). The cause is general, not Chesseract-specific: the patience anchor
-# reset on ANY improvement, so a long low-LR tail micro-wobbles val upward and
-# never stops. Fix uses only the run's OWN val trajectory -- no board size, no
-# dataset id, nothing tuned to the known 16. The patience anchor advances only
-# on improvement beyond the run's self-measured val noise (std of a recent
-# window); once val plateaus the anchor freezes and the seed stops after a
-# schedule-RELATIVE plateau window. Datasets that keep genuinely improving
-# clear their own noise and train on; saturated ones release the slice to more
-# seeds (ensemble diversity, which we know helps). V13_SATURATE=0 disables.
+# saturation stop: the patience anchor advances only on a val gain that
+# clears the run's own measured noise (std of a recent window); once val
+# plateaus the anchor freezes and the seed stops after a schedule-relative
+# plateau window, releasing its slice. V13_SATURATE=0 disables.
 SATURATE = os.environ.get("V13_SATURATE", "1") != "0"
 SATURATE_FRAC = float(os.environ.get("V13_SATURATE_FRAC", "0.25"))
 SATURATE_WINDOW = int(os.environ.get("V13_SATURATE_WINDOW", "15"))
@@ -117,10 +81,8 @@ EMA_DECAY = 0.999
 PERFECT_ACC = float(os.environ.get("V12_PERFECT_ACC", "0.9995"))
 
 # --------------------------------------------------------------------------
-# Recipe toggles. TrivialAugment is ON by default in v12 (screen: +2.34 mean,
-# 8/9 non-negative; flip kept -- the ablation showed it carries GameOfLife).
-# The rejected-but-kept toggles (SAM / self-distill / AdamW) stay for future
-# val-gated arms; all default OFF.
+# Recipe toggles. TrivialAugment is ON by default; the optional toggles
+# (SAM / self-distill / AdamW) all default OFF.
 # --------------------------------------------------------------------------
 USE_TRIVIAL_AUG = os.environ.get("TRAIN_TRIVIAL_AUG", "1") == "1"
 TA_NO_FLIP = os.environ.get("TRAIN_TA_NO_FLIP") == "1"
@@ -135,9 +97,8 @@ ADAMW_WD = float(os.environ.get("TRAIN_ADAMW_WD", "0.05"))
 
 
 def _trivial_augment(xb: torch.Tensor) -> torch.Tensor:
-    """TrivialAugment-style: ONE op at a random magnitude per batch. Op set is
-    restricted to transforms valid for ARBITRARY C x H x W tensors (the inputs
-    are not all natural RGB: 12-channel boards, spectrograms, byte grids)."""
+    """TrivialAugment-style: one op at a random magnitude per batch. Op set is
+    restricted to transforms valid for arbitrary C x H x W tensors."""
     ops = ("identity", "flip_h", "translate", "brightness", "contrast",
            "noise", "cutout")
     if TA_NO_FLIP:
@@ -192,18 +153,17 @@ class Trainer:
         self.clock = clock
         self.mixup_alpha = float(metadata.get("mixup_alpha", 0.0))
         self.use_ema = os.environ.get("TIER1_EMA_OFF") != "1"
-        # SHARED init for all seeds -- the regime where the K-seed ensemble was
-        # validated. V12_INDEP_INIT=1 switches to per-seed re-initialisation
-        # (deep-ensembles diversity; A/B pending).
+        # shared init for all seeds; V12_INDEP_INIT=1 switches to per-seed
+        # re-initialisation.
         self.init_state = copy.deepcopy(model.state_dict())
-        # v12.1: NAS side-channel -- possible runner-up-family model for one
-        # heterogeneous ensemble seed (sub-noise family gate).
+        # NAS side-channel: optional runner-up-family model for one
+        # heterogeneous ensemble seed.
         meta_sc = getattr(model, "_v12_meta", {}) or {}
         self.alt_model: Optional[nn.Module] = meta_sc.get("alt_model")
         self.alt_family: Optional[str] = meta_sc.get("alt_family")
         if self.alt_model is not None:
             self.alt_init = copy.deepcopy(self.alt_model.state_dict())
-        # v12.1b capacity arm (wider twin of the final arch), val-gated seed
+        # capacity arm: wider twin of the final arch, used as a val-gated seed
         self.cap_model: Optional[nn.Module] = meta_sc.get("cap_model")
         if self.cap_model is not None:
             self.cap_init = copy.deepcopy(self.cap_model.state_dict())
@@ -253,11 +213,10 @@ class Trainer:
 
     def _plan(self, remaining_s: float, epoch_s: float) -> Tuple[int, int]:
         """Throughput-keyed rung selection: how many seeds, how long a schedule.
-        Multi-full split when every seed gets >= one FULL training; below that,
-        the v12.2 half-split band takes K=2 while each seed still gets
-        >= MIN_SEED_EPOCHS (T2 verdict: two half-length seeds beat one long one
-        on scaler data); surplus beyond MAX_SEEDS full trainings goes into
-        LONGER schedules (the uncapped-training lesson), up to CAP_EPOCHS."""
+        Multi-full split when every seed gets >= one full training; below that,
+        a half-split takes K=2 while each seed still gets >= MIN_SEED_EPOCHS;
+        surplus beyond MAX_SEEDS full trainings goes into longer schedules, up
+        to CAP_EPOCHS."""
         proj = max(1.0, remaining_s / max(epoch_s, 1e-3))
         k = 1
         if proj >= SPLIT_FACTOR * FULL_EPOCHS:
@@ -270,7 +229,7 @@ class Trainer:
     @staticmethod
     def _reinit(model: nn.Module, seed: int) -> None:
         """Independent-init mode: re-randomise every module in place under a
-        per-seed torch seed (we hold a built model, not its constructor)."""
+        per-seed torch seed."""
         torch.manual_seed(seed)
         if torch.cuda.is_available():
             torch.cuda.manual_seed_all(seed)
@@ -296,8 +255,8 @@ class Trainer:
         ema = ModelEMA(model, decay=EMA_DECAY) if self.use_ema else None
         criterion = nn.CrossEntropyLoss(label_smoothing=LABEL_SMOOTHING)
         if getattr(model, "_v12_recipe", "") == "adamw":
-            # v12.3 token family carries its own recipe: the excursion-
-            # validated AdamW(3e-4, wd 0.05); SGD 0.025 diverges on it.
+            # token-family models carry their own recipe: AdamW with a fixed
+            # lr and weight decay.
             base_lr = 3e-4 * LR_SCALE
             optimizer = torch.optim.AdamW(model.parameters(), lr=base_lr,
                                           weight_decay=0.05)
@@ -323,10 +282,10 @@ class Trainer:
         total_epochs = target_epochs
         nan_strikes = 0
         perfect_streak = 0
-        # v13 saturation stop: patience anchor (advances only on a MEANINGFUL,
-        # noise-clearing gain) is tracked separately from best_val (which always
-        # keeps the true-best checkpoint). val_window feeds the self-measured
-        # noise floor -- nothing here knows the dataset.
+        # saturation stop: the patience anchor (advances only on a
+        # noise-clearing gain) is tracked separately from best_val (which
+        # always keeps the true-best checkpoint); val_window feeds the
+        # self-measured noise floor.
         anchor_val, anchor_epoch = -1.0, 0
         val_window: deque = deque(maxlen=SATURATE_WINDOW)
         epoch = 0
@@ -356,10 +315,8 @@ class Trainer:
                 src = ema.state_dict() if (ema is not None and val_ema > val) else model.state_dict()
                 best_state = copy.deepcopy(src)
                 best_epoch = epoch
-            # v13: advance the patience anchor only on a gain that clears the
-            # run's own recent val noise (std of the window). A true plateau
-            # wobbles within noise -> anchor freezes; genuine improvement (the
-            # window's mean is still rising) clears it -> anchor keeps moving.
+            # advance the patience anchor only on a gain that clears the run's
+            # own recent val noise (std of the window).
             val_window.append(cand)
             val_noise = float(np.std(val_window)) if len(val_window) >= 8 else 0.0
             if cand > anchor_val + val_noise:
@@ -367,8 +324,8 @@ class Trainer:
 
             elapsed = time.perf_counter() - t0
             if epoch == 0:
-                # re-anchor the schedule to what THIS seed's slice actually
-                # affords (never above the planned target -> anneal completes)
+                # re-anchor the schedule to what this seed's slice actually
+                # affords, never above the planned target
                 afford = max(LR_WARMUP_EPOCHS + 2,
                              int((remaining() - SAFETY_MARGIN_SECONDS) / max(elapsed, 1e-3)))
                 total_epochs = min(target_epochs, afford)
@@ -390,11 +347,9 @@ class Trainer:
                 break
             if epoch >= WARMUP_EPOCHS and epoch - best_epoch >= PATIENCE:
                 break
-            # v13 saturation stop: no noise-clearing gain for a schedule-
-            # RELATIVE window (25% of this seed's own schedule) -> the seed has
-            # saturated; stop and hand the slice to more seeds. Relative so it
-            # scales to any budget/dataset; absolute floor keeps short seeds
-            # from stopping in the warmup transient.
+            # saturation stop: no noise-clearing gain within a schedule-
+            # relative plateau window (with an absolute floor) -> stop this
+            # seed and release its slice.
             if SATURATE:
                 plateau_limit = max(2 * WARMUP_EPOCHS,
                                     int(SATURATE_FRAC * total_epochs))
@@ -547,9 +502,8 @@ class Trainer:
                 print(f"  seed {i} done: best_val={val:.4f} "
                       f"({self._last_seed_s/60:.1f}min)", flush=True)
                 i += 1
-                # v12.1 reactive top-up: spend MEASURED surplus (epoch-cap or
-                # perfect-stop releases) on another primary seed. Reaction to
-                # released time only -- saturation is never predicted.
+                # reactive top-up: spend measured surplus (epoch-cap or
+                # perfect-stop releases) on another seed.
                 if (i == len(roster) and len(roster) < HARD_CAP_SEEDS
                         and self.clock.check() - SAFETY_MARGIN_SECONDS
                         > 0.9 * self._last_seed_s + 3.0 * self._pass_s):
@@ -644,8 +598,8 @@ class Trainer:
                 configs[name] = ("single", i, tta)
                 scores[name] = acc(val_p[(i, tta)])
             if len(have) == n_seeds and n_seeds > 1:
-                # v12.1 top-m: full ensemble AND every top-m subset by seed val
-                # (m = K-1 is "discard worst"). All from cached probs, zero GPU.
+                # top-m: score the full ensemble and every top-m subset by
+                # seed val, all from cached probs.
                 for m in range(2, n_seeds + 1):
                     members = tuple(sorted(rank[:m]))
                     name = (f"ensemble{suf}" if m == n_seeds else f"top{m}{suf}")
@@ -653,9 +607,8 @@ class Trainer:
                     scores[name] = acc(torch.stack(
                         [val_p[(i, tta)] for i in members]).mean(0))
         chosen_name = max(configs, key=lambda nm: scores[nm])
-        # v12.1 noise band: if the argmax is a single but an ensemble config is
-        # within SEL_BAND of it, prefer the ensemble (variance reduction is free
-        # insurance inside the noise band -- the Chesseract/H100 lesson).
+        # noise band: if the argmax is a single but an ensemble config is
+        # within SEL_BAND of it, prefer the ensemble.
         if configs[chosen_name][0] == "single":
             ens = [nm for nm in configs if configs[nm][0] == "ensemble"
                    and scores[chosen_name] - scores[nm] <= SEL_BAND]

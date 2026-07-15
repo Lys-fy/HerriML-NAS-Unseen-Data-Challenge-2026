@@ -1,42 +1,26 @@
-"""v11.1 NAS: the measure-gate-train pipeline (v10 + verified attention probe).
+"""NAS: the measure-gate-train pipeline.
 
-v11.1 = v10 with one change: stage 5's fragile random arm is replaced by a
-NARROW, verified spatial-self-attention probe for board/encoded data -- the one
-architectural lever confirmed three independent ways (v10 random arm, v11.2
-hill-climb, v11.3 evolution all find early attention worth ~+4 on Chesseract).
-Everything else (fingerprint routing, family gate, family-matched aug probe,
-default-incumbent depth, train-to-budget with cosine-to-0) is v10 unchanged.
-
-Phase-A-validated routing (see notes: v10 - Design + Idea Ledger):
+Stages:
 
   1. FINGERPRINT (computed in DataProcessor, flags in metadata):
-     corr1 < 0.2  -> encoded data, the image prior is wrong.
+     corr1 < 0.2 -> encoded data.
   2. BACKBONE:
-     image-like -> TCN-2d, NO bake-off (the skip is load-bearing: gating
-     every dataset falls into the Myofibre/GeoClassing early-leader traps;
-     A1 totals: fixed +59.2, gate-everywhere +58.5, fingerprint+gate +61.2).
+     image-like -> TCN-2d, no bake-off.
      encoded    -> 3-arm gate (conv / tcn1d / tcn2d short-train at matched
-     budget); pick the leader only if it beats the CONV arm by more than
-     the measured noise, else abstain to conv (the robust encoded default).
-  3. AUG PROBE moved here, AFTER the backbone choice, with arms of the
-     chosen family (A5b: the conv-derived decision does NOT transfer:
-     Language tcn1d aug-on 89.3 vs probe's aug-off 86.6).
+     budget); pick the leader only if it beats the conv arm by more than
+     the measured noise, else abstain to conv.
+  3. AUG PROBE, after the backbone choice, with arms of the chosen family.
   4. DEPTH: default-incumbent. The family default (D=6) is the incumbent;
-     candidates {4, 8} must beat it by more than noise at short-train AND
-     survive verification at a longer horizon (v9: 13 verification fires,
-     real rescues; v9's grow-from-minimum mis-picked depth on encoded data
-     in both directions, the incumbent rule blocks that).
-  5. RANDOM ARM: encoded data only, only if budget remains: K wide samples
-     (validated: Chesseract +0.90 vs conv +0.30, all seeds; loses on
-     normal data, hence gated).
+     candidates {4, 8} must beat it by more than noise at short-train and
+     survive verification at a longer horizon.
+  5. ATTENTION PROBE: encoded data only, only if budget remains.
   6. Trainer trains the winner to the full remaining budget (LR -> 0).
 
 Every stage appends to a decision record:
   <BASELINE_LOG_DIR>/<codename>_decisions.json
 
 Budget fractions of the clock remaining at search start; at low budgets
-the pipeline collapses to fingerprint + default backbone + train-to-budget
-(the metadata time_limit default is 30 MINUTES; Phase 3 budget is unknown).
+the pipeline collapses to fingerprint + default backbone + train-to-budget.
 """
 
 from __future__ import annotations
@@ -67,37 +51,21 @@ AUG_FRAC = 0.08           # two-arm aug probe, family-matched
 DEPTH_FRAC = 0.14         # 2 candidate shorts + 1 verification
 RAND_FRAC = float(os.environ.get("RAND_FRAC", "0.12"))  # random arm, encoded only
 
-# v12.1 probe floors/caps: pure clock FRACTIONS made probes indecisive at
-# small budgets (Chesseract attn verify missed adoption by 0.0006 on the V100)
-# and wasteful at big ones (8h -> 19min per probe leg). The floor applies only
-# when the search budget affords it; the cap binds only above ~2h, so the
-# validated <=2h behavior is unchanged.
+# Per-leg probe floor/cap in seconds; the floor applies only when the
+# search budget affords it.
 PROBE_LO_S = float(os.environ.get("V12_PROBE_LO_S", "120"))
 PROBE_HI_S = float(os.environ.get("V12_PROBE_HI_S", "420"))
 PROBE_FLOOR_BUDGET_S = float(os.environ.get("V12_PROBE_FLOOR_BUDGET_S", str(4 * 3600)))
-# v12.3: a sub-noise family race is a coin flip worth ~5pp (Chesseract: 4 GPUs
-# picked 3 different families, margins 0.007-0.027 all under noise). When the
-# clock affords it, CONTINUE the top-2 arms for 2x the base slice each and
-# re-measure -- longer arms have lower val noise, so most races resolve.
-# v12.4 verdict (Chesseract @2h, n=6 OFF vs n=4 ON): the sub-noise family race
-# is a val->test MISMATCH -- buying probe resolution buys a more confident WRONG
-# family (OFF 65.42 vs ON 63.35 mean). Default OFF in v13; V12_GATE_TIEBREAK=1
-# restores it. The abstain-to-incumbent + alt-family hedge already covers the
-# race far more cheaply.
+# Optional gate tie-break: when the clock affords it, continue the top-2 arms
+# for 2x the base slice each and re-measure.
 GATE_TIEBREAK = os.environ.get("V12_GATE_TIEBREAK", "0") != "0"
-# v12.3 TOKEN family (Cryptic-class specialist). Trigger is SHAPE-based, not
-# fingerprint-based: Cryptic fingerprints as image-like (corr1 0.38), so the
-# encoded-only gate never sees it. Among all 16 known datasets only Cryptic
-# (1x6x768, ratio 128) matches ratio>=16 & long side>=64 & in_ch==1 -- every
-# other set never builds this code path. Kill: V12_TOKEN_ARM=0.
+# Token family: selected by input shape (few tokens x wide embedding), not
+# by fingerprint.
 TOKEN_ARM = os.environ.get("V12_TOKEN_ARM", "1") != "0"
 TOKEN_RATIO_MIN = float(os.environ.get("V12_TOKEN_RATIO_MIN", "16"))
 
-# v12.1b capacity arm: hand the trainer a WIDER build of the final architecture
-# as one val-gated ensemble seed at large budgets. Width search was a verified
-# no-op at 2h/<=W64, but nothing >W64 was ever trained, CIFARTile keeps scaling,
-# and Language's external best is a stock ResNeXt-50 -- capacity is the one
-# untested axis. Never probed, never predicted: one seed, val decides.
+# Capacity arm: hand the trainer a wider build of the final architecture as
+# one val-gated ensemble seed at large budgets.
 CAP_ARM = os.environ.get("V12_CAP_ARM", "1") == "1"
 CAP_ARM_WIDTH = int(os.environ.get("V12_CAP_ARM_WIDTH", "96"))
 
@@ -106,32 +74,26 @@ CAP_ARM_WIDTH = int(os.environ.get("V12_CAP_ARM_WIDTH", "96"))
 COLLAPSE_FULL_S = int(os.environ.get("V11_COLLAPSE_FULL_S", 35 * 60))  # below: no gate/depth/attn
 COLLAPSE_AUG_S = int(os.environ.get("V11_COLLAPSE_AUG_S", 15 * 60))    # below: not even the aug probe
 
-DEFAULT_DEPTH = 6             # the validated incumbent (fixed tcn2d D=6 = +59.2)
+DEFAULT_DEPTH = 6             # incumbent depth
 DEPTH_CANDS = (4, 8)
-DEFAULT_WIDTH = 48           # the validated incumbent width
+DEFAULT_WIDTH = 48           # incumbent width
 WIDTH_CANDS = (32, 64)
-# Verified width-search stage (default-incumbent W=48 vs candidates, short-train
-# + re-train verification before adopting) -- the systematic, protected version
-# of "search width again" (width-prune cratered in v9 only because it had no
-# verification). Env-gated; default OFF so the submission/main v10 is unchanged.
+# Width-search stage: default-incumbent W=48 vs candidates, short-train +
+# re-train verification before adopting. Env-gated; default OFF.
 WIDTH_SEARCH = os.environ.get("WIDTH_SEARCH", "0") == "1"
 WIDTH_FRAC = float(os.environ.get("WIDTH_FRAC", "0.12"))
-# Real "macro" search (BLOX sense): per-stage HETEROGENEOUS ops. Split the net
-# into MACRO_STAGES contiguous stages; greedily swap each stage's op to a
-# candidate, default-incumbent + verify before adopting (never below the
-# uniform arch). Env-gated, default OFF; a long-budget v11 experiment. The
-# candidate ops are a first guess, to be refined from the arch gauntlet.
+# Macro search: per-stage heterogeneous ops. Split the net into MACRO_STAGES
+# contiguous stages; greedily swap each stage's op to a candidate,
+# default-incumbent + verify before adopting. Env-gated, default OFF.
 MACRO_SEARCH = os.environ.get("MACRO_SEARCH", "0") == "1"
 MACRO_FRAC = float(os.environ.get("MACRO_FRAC", "0.25"))
 MACRO_STAGES = int(os.environ.get("MACRO_STAGES", "3"))
 MACRO_DEFAULT_OP = os.environ.get("MACRO_DEFAULT_OP", "DilatedConv3")
 MACRO_OPS = [o for o in os.environ.get("MACRO_OPS", "SpatialSelfAttn2D,SEConv3").split(",") if o]
-STEM_EMBED_MIN_CH = 8         # A5a: channel-embed wins on the dilated family
-ENCODED_CORR1 = 0.2           # fingerprint gap is 0.07 vs 0.38 (5x)
+STEM_EMBED_MIN_CH = 8         # min input channels for the channel-embed stem
+ENCODED_CORR1 = 0.2           # corr1 threshold below which data counts as encoded
 RAND_K = int(os.environ.get("RAND_K", "6"))
-# random-arm width pool (env-configurable for the micro-search-expansion study;
-# default unchanged). Verification (added 2026-06-15) makes a bigger search
-# safe to revisit -- a short-train mirage no longer gets adopted.
+# random-arm width pool (env-configurable)
 RAND_WIDTHS = [int(x) for x in os.environ.get("RAND_WIDTHS", "16,24,32,48").split(",")]
 WIDE_VOCAB = tuple(o for o in OP_NAMES
                    if o not in ("RowBiLSTM", "CrossAxisBiLSTM"))
@@ -187,8 +149,8 @@ class NAS:
 
     @staticmethod
     def _slice(t0: float, frac: float, parts: float) -> float:
-        """Per-leg probe budget: clock fraction with a decisiveness FLOOR (only
-        when the total budget affords it) and a waste CAP (binds only >~2h)."""
+        """Per-leg probe budget: clock fraction with a floor (only when the
+        total budget affords it) and a cap."""
         s = t0 * frac / parts
         if t0 > PROBE_FLOOR_BUDGET_S:
             s = max(s, PROBE_LO_S)
@@ -202,8 +164,7 @@ class NAS:
         model = model.to(device)
         crit = nn.CrossEntropyLoss(label_smoothing=0.1)
         if getattr(model, "_v12_recipe", "") == "adamw":
-            # token family: constant-lr SGD is the wrong probe optimizer for
-            # transformers -- use the recipe the excursion validated.
+            # token family trains with AdamW
             opt = torch.optim.AdamW(model.parameters(), lr=3e-4,
                                     weight_decay=0.05)
         else:
@@ -251,15 +212,15 @@ class NAS:
             return TCN2D(in_ch, nc, h, w, base_width=width, n_blocks=depth,
                          stem=stem)
         if family == "token":
-            # width doubles as the capacity knob: the cap arm passes a wider
-            # value and gets the excursion's tok384 twin, default gets tok256.
+            # width doubles as the capacity knob: wider builds get the larger
+            # token configuration.
             big = width > 48
             return TokenSeqNet(in_ch, nc, h, w, dim=384 if big else 256,
                                depth=6 if big else 4)
         raise ValueError(family)
 
     def _build_small(self, family: str, in_ch, nc, h, w):
-        """Aug-probe arm: a small net OF THE CHOSEN FAMILY (A5b)."""
+        """Aug-probe arm: a small net of the chosen family."""
         if family == "conv":
             return build_default_cnn(in_ch, nc, h, w, base_width=16,
                                      n_blocks=3, drop_path_rate=0.0)
@@ -298,11 +259,10 @@ class NAS:
 
         # ---- stage 2: backbone ------------------------------------------------
         # defaults: image-like -> tcn2d; encoded under collapse -> conv
-        # (the robust encoded default, same fallback the gate abstains to)
         family = "conv" if (encoded and collapse) else "tcn2d"
         gate_best: Dict[str, float] = {}
         noise = 0.02
-        alt_family = None          # v12.1 heterogeneous-seed candidate
+        alt_family = None          # runner-up family for the hedge ensemble seed
         gate_margin = None
         if encoded and not collapse:
             arm_budget = self._slice(t0, GATE_FRAC, 3.0)
@@ -317,17 +277,15 @@ class NAS:
                     print(f"  v10 gate arm {fam} FAILED ({type(ex).__name__})")
                 gate_best[fam] = max(vals)
                 noises.append(self._noise(vals))
-                arm_models[fam] = model  # kept alive for the v12.3 tie-break
+                arm_models[fam] = model  # kept alive for the tie-break
             noise = sum(noises) / len(noises)
             leader = max(gate_best, key=gate_best.get)
             # abstain-to-default: deviate from conv only when clearly better
             family = leader if gate_best[leader] - gate_best["conv"] > noise \
                 else "conv"
-            # v12.1: when the family race is INSIDE the noise band, remember the
-            # best non-picked family -- the trainer can spend one ensemble seed
-            # on it (heterogeneous seed) and let validation settle the coin flip.
-            # Evidence: 4 GPUs picked 3 different families on Chesseract, worth
-            # ~5pp; the gate margins there (0.007-0.027) were all sub-noise.
+            # When the family race is inside the noise band, remember the best
+            # non-picked family; the trainer can spend one val-gated ensemble
+            # seed on it.
             others = {f: v for f, v in gate_best.items() if f != family}
             if others:
                 alt_family = max(others, key=others.get)
@@ -339,7 +297,7 @@ class NAS:
                       noise=round(noise, 4), leader=leader, picked=family,
                       alt_family=alt_family,
                       gate_margin=round(gate_margin, 4) if alt_family else None)
-            # ---- v12.3 gate tie-break: continue the top-2 arms, re-measure --
+            # ---- gate tie-break: continue the top-2 arms, re-measure --------
             if (GATE_TIEBREAK and alt_family is not None
                     and self.clock.check() > 8.0 * arm_budget):
                 pair = (family, alt_family)
@@ -364,8 +322,8 @@ class NAS:
                 if gate_margin >= noise:
                     # decisive after extension: adopt, drop the hedge seed
                     family, alt_family = cand, None
-                # else: still a coin flip -> KEEP the conv-biased pick and the
-                # alt-family hedge; never flip on a sub-noise margin.
+                # else: still within noise -> keep the current pick and the
+                # alt-family hedge.
                 self._log("gate_tiebreak",
                           arms={f: round(gate_best[f], 4) for f in pair},
                           noise=round(noise, 4), picked=family,
@@ -378,13 +336,10 @@ class NAS:
             self._log("backbone_skip", picked=family,
                       reason="image-like" if not encoded else "low budget")
 
-        # ---- v12.3: token-family gate (embedding-shaped boards only) ----------
-        # Shape trigger, NOT fingerprint: Cryptic reads corr1=0.38 -> "image-
-        # like" -> the encoded gate above never runs on it. 2-arm bake-off vs
-        # whatever family is currently picked, same abstain-to-incumbent
-        # contract as every other probe: adopt token only when it wins beyond
-        # noise; a sub-noise race keeps the incumbent and spends the hedge
-        # seed on token instead (val-gated downstream, can only help).
+        # ---- token-family gate (embedding-shaped inputs only) -----------------
+        # Shape-triggered 2-arm bake-off vs the currently picked family: adopt
+        # token only when it wins beyond noise; a sub-noise race keeps the
+        # incumbent and spends the hedge seed on token instead.
         token_like = (TOKEN_ARM and not collapse and in_ch == 1
                       and max(h, w) >= TOKEN_RATIO_MIN * min(h, w)
                       and max(h, w) >= 64)
@@ -436,11 +391,8 @@ class NAS:
                 except Exception:
                     results[arm] = 0.0
                 del model
-            # Asymmetric, conservative rule (the validated P1 shape): aug is
-            # regularization, so at probe horizons OFF leads even where ON
-            # pays at full budget (A6: full-size tcn2d arms at 0.3h voted OFF
-            # broadly, contradicting known-good 2h ON results). Deviate from
-            # the metadata default (ON) only on a CLEAR off-margin.
+            # Conservative rule: deviate from the metadata default (ON) only
+            # on a clear off-margin.
             off_margin = float(os.environ.get("AUG_OFF_MARGIN", "0.02"))
             use_aug = results["off"] - results["on"] < off_margin
             if use_aug:
@@ -487,7 +439,6 @@ class NAS:
             verified = None
             if best_cand is not None:
                 # verification: re-train the challenger fresh, longer horizon
-                # (v9 evidence: short-train alone mis-picks depth; 13 fires)
                 model = self._build(family, in_ch, nc, h, w, depth=best_cand)
                 try:
                     vvals = self._timed_train(model, device, cand_s * 1.5)
@@ -552,9 +503,8 @@ class NAS:
             self._log("width_search", skipped=True, picked=width)
 
         # ---- stage 4c: per-stage macro (heterogeneous) search (env-gated) ------
-        # The real "macro" search: let stages use DIFFERENT ops, found greedily
-        # with default-incumbent + verify (worst case = the uniform arch, no
-        # regression). Long-budget v11 experiment; default OFF.
+        # Let stages use different ops, found greedily with default-incumbent
+        # + verify; default OFF.
         macro_pick = None
         if MACRO_SEARCH and not collapse and family not in ("tcn1d", "token"):
             mstem = "channel_embed" if in_ch >= STEM_EMBED_MIN_CH else "conv3"
@@ -626,15 +576,11 @@ class NAS:
             self._log("macro_search", skipped=True)
 
         # ---- stage 5: verified attention probe, encoded/board data only -------
-        # v11.1: replace v10's fragile random arm with a NARROW, verified probe
-        # for the one confirmed architectural lever -- early spatial self-attention
-        # on board-like (encoded) data. Chesseract +4.3, confirmed THREE ways
-        # (v10 random arm, v11.2 hill-climb, v11.3 evolution). Build the family
-        # default as a uniform build_cnn stack, and a challenger with its first
-        # ATTN_STAGES blocks replaced by SpatialSelfAttn2D; short-train both, then
-        # VERIFY the challenger at a longer horizon, and adopt only if it beats the
-        # default beyond noise -- so it can only help, never regress. The attention
-        # op crashes on odd grids (e.g. Sedol 19x19) -> the try/except scores it
+        # Build the family default as a uniform build_cnn stack, and a
+        # challenger with its first ATTN_STAGES blocks replaced by
+        # SpatialSelfAttn2D; short-train both, then verify the challenger at a
+        # longer horizon, and adopt only if it beats the default beyond noise.
+        # The attention op can crash on odd grids -> the try/except scores it
         # 0.0 and the family default is kept.
         attn_pick = None
         astem = "channel_embed" if in_ch >= STEM_EMBED_MIN_CH else "conv3"
@@ -643,10 +589,8 @@ class NAS:
                 and self.clock.check() > 0.45 * t0:
             base_op = "DilatedConv3" if family == "tcn2d" else "Conv3"
             cand_s = self._slice(t0, RAND_FRAC, 3.0)   # default-short + attn-short + verify
-            # incumbent = the pipeline's ACTUAL chosen family default (tcn1d /
-            # tcn2d / conv), trained at the SAME horizon as the challenger, so the
-            # attention arm can only be adopted if it beats whatever the gate
-            # picked -- never a regression regardless of the (noisy) family choice.
+            # incumbent = the pipeline's chosen family default, trained at the
+            # same horizon as the challenger.
             try:
                 inc_vals = self._timed_train(
                     self._build(family, in_ch, nc, h, w, depth=depth, width=width),
@@ -655,11 +599,8 @@ class NAS:
             except Exception:
                 inc_short, anoise = (incumbent_short or 0.0), noise
             k = max(1, min(ATTN_STAGES, depth))
-            # v12.1 probe hardening: a swallowed exception here cost 4.9pp on
-            # Chesseract/H100 (verified=None -> silent reject). Retry once, and
-            # on repeated failure substitute the shape-robust LinearAttn2D
-            # (cannot crash on odd grids) instead of giving up. Every failure
-            # is logged in the decision record, never silent.
+            # Retry once; on repeated failure substitute the shape-robust
+            # LinearAttn2D. Every failure is logged in the decision record.
             probe_err = None
             attn_ops = None
             attn_short = 0.0
@@ -718,9 +659,9 @@ class NAS:
         else:
             final = self._build(family, in_ch, nc, h, w, depth=depth, width=width)
             self._log("final", arch=f"{family} D={depth} W={width}")
-        # v12.1 side-channel to the trainer (4-file contract untouched): when the
-        # family gate was a sub-noise coin flip, hand over a BUILT runner-up-family
-        # model so one ensemble seed can be spent on it, val-gated. Kept on CPU.
+        # Side-channel to the trainer: when the family gate was within noise,
+        # hand over a built runner-up-family model so one val-gated ensemble
+        # seed can be spent on it. Kept on CPU.
         alt_model = None
         if alt_family is not None and not collapse:
             try:
@@ -732,7 +673,7 @@ class NAS:
                 self._log("alt_seed", family=alt_family,
                           probe_error=type(ex).__name__)
                 alt_model = None
-        # v12.1b: wider twin of the FINAL architecture (whatever stage won)
+        # wider twin of the final architecture (whatever stage won)
         cap_model = None
         if CAP_ARM and not collapse:
             try:

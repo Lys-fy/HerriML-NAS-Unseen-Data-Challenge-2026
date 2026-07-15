@@ -1,34 +1,5 @@
-"""Tier 2a / P1 v4: 3-probe shadow comparison on top of full EGNAS.
-
-v3 verdict was honest negative: the K=4 single-trial probe's noise
-floor turned out to be ~±8 pp (wider than estimated), so threshold
-−6 pp still let AddNIST/MultNIST flip OFF wrongly on bad short-budget
-draws. v4 doesn't pick *one* fix — it runs THREE probes per dataset,
-logs all three decisions, and uses the most-robust one to drive main
-training. Post-sweep we get clean cross-probe agreement data.
-
-Three configs run per dataset (when aug applies):
-
-  A) MULTI-TRIAL K=4   (3 trials × K=4 each, unanimous-OFF rule, −6 pp)
-     → DRIVES main training. Averages out single-trial noise via the
-       √3-rule reduction; conservative even at the original threshold.
-  B) SINGLE-TRIAL K=8  (1 trial × K=8, single −6 pp rule)
-     → shadow. Tests: does longer K alone reduce noise enough?
-  C) MULTI-TRIAL K=8   (3 trials × K=8, unanimous-OFF rule, −6 pp)
-     → shadow. Tests: does longer K add anything beyond multi-trial?
-
-Each config produces (decision, per-trial Δscores, votes). All three
-get serialised to `<codename>_p1_probe.json` for later analysis. The
-driver (A) is the only one whose decision flows through to the
-DataProcessor's policy override.
-
-Total probe cost per dataset:
-  A: 3 × (2 × ~6s) ≈ 36 s
-  B:      2 × ~12s ≈ 24 s
-  C: 3 × (2 × ~12s) ≈ 72 s
-  TOTAL ≈ 132 s / dataset, ~15 min across 7 aug-applicable datasets,
-  still <1 % of the 2 h budget per dataset.
-"""
+"""Model and training utilities: op vocabulary, CNN/TCN builders,
+augmentation policy, EMA, LR schedule, and the aug-safety probe."""
 
 from __future__ import annotations
 
@@ -48,8 +19,8 @@ from torch.utils.data import DataLoader, TensorDataset
 
 
 # ---------------------------------------------------------------------------
-# Downsample planner — same as Tier 0. Spread max_ds stride-2 ops evenly
-# across n_blocks, never letting min spatial dim drop below min_spatial.
+# Downsample planner. Spread max_ds stride-2 ops evenly across n_blocks,
+# never letting min spatial dim drop below min_spatial.
 # ---------------------------------------------------------------------------
 
 
@@ -67,7 +38,7 @@ def plan_downsamples(h: int, w: int, n_blocks: int, min_spatial: int = 4) -> Lis
 
 
 # ---------------------------------------------------------------------------
-# Per-channel normalisation stats — same as Tier 0.
+# Per-channel normalisation stats.
 # ---------------------------------------------------------------------------
 
 
@@ -98,9 +69,8 @@ def drop_path(x: torch.Tensor, drop_prob: float, training: bool) -> torch.Tensor
 
 # ---------------------------------------------------------------------------
 # Op variants for the search space. Each is a small nn.Module mapping
-# (in_ch, out_ch, stride) → tensor with stride applied. Used both by the
-# fixed-arch builder (Tier 1 default starts with all Conv3) and the random
-# op-type search.
+# (in_ch, out_ch, stride) → tensor with stride applied. Used by both the
+# fixed-arch builder and the random op-type search.
 # ---------------------------------------------------------------------------
 
 
@@ -136,10 +106,8 @@ def _pool_op(in_ch: int, out_ch: int, kernel: int, stride: int) -> nn.Module:
 def _identity_op(in_ch: int, out_ch: int, stride: int) -> nn.Module:
     """Identity (when shapes match), 1x1 projection, or stride-2 avgpool.
 
-    ceil_mode=True on the AvgPool ensures odd input dims (e.g. Sudoku 9x9)
-    round up to match the Conv2d(stride=2, padding=1) path's spatial output
-    of ceil(H/2). Without ceil_mode, AvgPool floors and the residual add
-    fails with a shape mismatch.
+    The AvgPool uses ceil_mode=True so odd input dims produce the same
+    ceil(H/2) spatial output as the strided-conv path.
     """
     if stride == 1 and in_ch == out_ch:
         return nn.Identity()
@@ -153,28 +121,16 @@ def _identity_op(in_ch: int, out_ch: int, stride: int) -> nn.Module:
 
 
 # ---------------------------------------------------------------------------
-# Grouped-conv primitives — added in v5 to test the literature finding that
-# ResNeXt-style cardinality is the architectural lever for character-frequency-
-# like tasks (Language, possibly Cryptic). See Geada et al. arXiv:2404.02189
-# Table 1 — ResNeXt-50 hits 93.97% on Language vs Conv-only NAS ≤ 90.12%.
-#
-# Two flavours added to the vocabulary so EGNAS micro hill-climb can A/B them
-# per layer per dataset:
-#   - GroupConv3 — single 3x3 grouped conv, mid-cardinality (~8 groups for
-#       our small channel widths). Sits between Conv3 (no grouping, full
-#       mixing) and SepConv3 (max grouping, no cross-channel mixing).
-#   - ResNeXt    — true bottleneck-grouped-expand block, the published
-#       ResNeXt-50 building block: 1x1 reduce → 3x3 grouped (cardinality 8)
-#       → 1x1 expand. Higher fidelity to the literature recipe.
+# Grouped-conv primitives:
+#   - GroupConv3 — single 3x3 grouped conv (up to 8 groups).
+#   - ResNeXt    — bottleneck-grouped-expand block: 1x1 reduce →
+#       3x3 grouped → 1x1 expand.
 # ---------------------------------------------------------------------------
 
 
 def _safe_groups(in_ch: int, out_ch: int, max_groups: int = 8) -> int:
-    """Pick the largest valid `groups` value ≤ max_groups that divides both
-    in_ch and out_ch. Required because Conv2d demands groups | in_ch and
-    groups | out_ch. With our W ∈ {16,24,32,40,48} and downsampled doubles,
-    not every (in,out) pair is divisible by 8 — fall back to the largest
-    divisor available. Falls back to 1 (= ungrouped) as the worst case."""
+    """Pick the largest `groups` value ≤ max_groups that divides both
+    in_ch and out_ch, falling back to 1 (= ungrouped)."""
     g = min(max_groups, in_ch, out_ch)
     while g > 1 and (in_ch % g != 0 or out_ch % g != 0):
         g -= 1
@@ -182,15 +138,13 @@ def _safe_groups(in_ch: int, out_ch: int, max_groups: int = 8) -> int:
 
 
 # ---------------------------------------------------------------------------
-# v6 NEW OPS — Conv7, DilatedConv3, SE-Conv3, SpatialSelfAttn2D
+# Additional ops — Conv7, DilatedConv3, SE-Conv3, SpatialSelfAttn2D
 # ---------------------------------------------------------------------------
 
 
 def _dilated_conv_bn_act(in_ch: int, out_ch: int, stride: int,
                          kernel: int = 3, dilation: int = 2) -> nn.Sequential:
-    """Dilated 3×3 → BN → ReLU. Same param count as Conv3 but with larger
-    effective receptive field (5×5 at d=2). Useful where a layer needs more
-    global context without inflating params."""
+    """Dilated 3×3 conv → BN → ReLU (enlarged effective receptive field)."""
     pad = ((kernel - 1) * dilation) // 2
     return nn.Sequential(
         nn.Conv2d(in_ch, out_ch, kernel_size=kernel, stride=stride,
@@ -201,9 +155,8 @@ def _dilated_conv_bn_act(in_ch: int, out_ch: int, stride: int,
 
 
 class _SEConv3(nn.Module):
-    """Conv3 + Squeeze-and-Excitation channel attention. SE block applies
-    a per-channel gain learned from a global-average-pooled summary.
-    ~+5 % params vs Conv3, ~free FLOPs. Broadly useful regulariser."""
+    """Conv3 + Squeeze-and-Excitation channel attention: a per-channel gain
+    learned from a global-average-pooled summary."""
 
     def __init__(self, in_ch: int, out_ch: int, stride: int,
                  reduction: int = 16):
@@ -226,16 +179,10 @@ class _SEConv3(nn.Module):
 class _SpatialSelfAttn2D(nn.Module):
     """Multi-head self-attention over the flattened 2D spatial grid.
 
-    Adds non-local feature mixing in a single layer (vs many conv layers
-    needed to grow receptive field). Memory cost is O((H·W)²) per layer.
-
-    For inputs where (H·W) > MAX_ATTN_TOKENS (256 = 16×16), the input is
-    first adaptive-pooled down to 16×16, attention runs on the small grid,
-    then the output is bilinearly upsampled back and added as a residual
-    to the projected input. This keeps memory bounded for big inputs like
-    CIFARTile (32×32 = 1024 tokens × batch 128 × 4 heads ≈ 2 GB without
-    the cap) without changing the op's high-level "non-local mixing"
-    semantics. Stride > 1 handled by a stride-2 depthwise downsample first.
+    Inputs with (H·W) > MAX_ATTN_TOKENS are adaptive-pooled to 16×16,
+    attention runs on the small grid, and the output is bilinearly
+    upsampled back and added as a residual to the projected input.
+    Stride > 1 handled by a stride-2 depthwise downsample first.
     """
 
     MAX_ATTN_TOKENS = 256  # = 16×16 — caps memory for big inputs
@@ -280,9 +227,7 @@ class _SpatialSelfAttn2D(nn.Module):
 
 def _grpconv_bn_act(in_ch: int, out_ch: int, kernel: int, stride: int,
                     max_groups: int = 8) -> nn.Sequential:
-    """3x3 grouped conv → BN → ReLU. Replaces full channel mixing with
-    intra-group mixing only — the ResNeXt cardinality axis applied to a
-    single layer (Option A in the v5 design)."""
+    """3x3 grouped conv → BN → ReLU (intra-group channel mixing only)."""
     pad = kernel // 2
     g = _safe_groups(in_ch, out_ch, max_groups=max_groups)
     return nn.Sequential(
@@ -294,19 +239,14 @@ def _grpconv_bn_act(in_ch: int, out_ch: int, kernel: int, stride: int,
 
 
 class _ResNeXtOp(nn.Module):
-    """The true ResNeXt-50 bottleneck-grouped-expand block adapted to our
-    small-channel pipeline (Option B in the v5 design).
-
-    1x1 reduce → 3x3 grouped (cardinality 8) → 1x1 expand.
-    Bottleneck channels D = out_ch (no expansion vs full Conv3, so FLOPs are
-    comparable; cardinality 8 cuts the 3x3 conv FLOPs ~8x within the
-    bottleneck while preserving multi-branch representational diversity).
+    """ResNeXt-style bottleneck-grouped-expand block:
+    1x1 reduce → 3x3 grouped (cardinality up to 8) → 1x1 expand.
     """
 
     def __init__(self, in_ch: int, out_ch: int, stride: int,
                  max_cardinality: int = 8):
         super().__init__()
-        D = out_ch  # bottleneck width — keep == out_ch so block FLOPs ≈ Conv3
+        D = out_ch  # bottleneck width
         c = _safe_groups(D, D, max_groups=max_cardinality)
         self.body = nn.Sequential(
             # 1x1 reduce (in_ch → D) — channel mixing happens here
@@ -330,20 +270,14 @@ class _ResNeXtOp(nn.Module):
 
 class _RowBiLSTM(nn.Module):
     """Bidirectional LSTM applied row-wise: treat the width axis as a
-    sequence of length W and run a BiLSTM independently over each of the H
-    rows (B·H sequences of length W), then map the recurrent output back to
-    a feature map. Gives the network an explicit 1D sequence-modelling
-    primitive — the same inductive bias that let _SpatialSelfAttn2D win the
-    Language micro search in v6, but with recurrence instead of all-pairs
-    attention (and far cheaper per-step).
+    sequence of length W, run a BiLSTM over each of the H rows, and map
+    the recurrent output back to a feature map.
 
-    Cost is sequential in the time axis (W steps), so for wide inputs the
-    width is adaptive-pooled to MAX_LSTM_TIME, the LSTM runs on the short
-    sequence, and the output is bilinearly interpolated back and added as a
-    residual — mirroring _SpatialSelfAttn2D's cost cap. stride > 1 handled
-    by a depthwise stride-2 downsample first. Bidirectional hidden states
-    (2 × hidden) are projected back to out_ch and added as a residual under
-    a LayerNorm (sequence-model convention).
+    For wide inputs the width is adaptive-pooled to MAX_LSTM_TIME, the
+    LSTM runs on the short sequence, and the output is bilinearly
+    interpolated back and added as a residual. stride > 1 handled by a
+    depthwise stride-2 downsample first. Bidirectional hidden states are
+    projected back to out_ch and added as a residual under a LayerNorm.
     """
 
     MAX_LSTM_TIME = 16  # cap on the recurrent sequence length (W after pool)
@@ -384,11 +318,9 @@ class _RowBiLSTM(nn.Module):
 
 
 class _CrossAxisBiLSTM(nn.Module):
-    """Row-BiLSTM followed by column-BiLSTM (PixelRNN-lite). The first pass
-    sweeps the sequence model along W; the second sweeps along H (by
-    transposing the spatial axes and reusing the row machinery). Two cheap
-    recurrent passes give full 2D context — the recurrent analogue of
-    non-local attention. Stride is applied once, in the row pass."""
+    """Row-BiLSTM followed by column-BiLSTM: the first pass sweeps along W,
+    the second along H (by transposing the spatial axes and reusing the row
+    machinery). Stride is applied once, in the row pass."""
 
     def __init__(self, in_ch: int, out_ch: int, stride: int):
         super().__init__()
@@ -403,18 +335,13 @@ class _CrossAxisBiLSTM(nn.Module):
 
 
 class _LinearAttn2D(nn.Module):
-    """Bidirectional linear-attention spatial mixer (Dragon Hatchling, Eq. 8;
-    Kosowski 2025). A global spatial mixer LINEAR in H·W, vs
-    _SpatialSelfAttn2D's O((H·W)²) (which also crashed on odd grids). Positive
-    ReLU keys/queries make linear attention a valid high-dim kernel (FAVOR+
-    lineage): dropping the causal mask collapses attention to Q·(Kᵀ·V), so one
-    (rC × C) global-context matrix is formed once and reused for every position.
+    """Bidirectional linear-attention spatial mixer, linear in H·W:
+    attention computes Q·(Kᵀ·V), so one (rC × C) global-context matrix is
+    formed once and reused for every position.
 
-    Signature / stride handling mirrors _SpatialSelfAttn2D — a depthwise
-    stride-2 downsample when stride > 1, a 1×1 proj_in to out_ch, then q/k/v
-    1×1 convs (q,k lifted to r·out_ch and ReLU'd), the linear-attention
-    context, an output projection, and a residual under BN. Shares its kernel
-    with the BDH B1 bidirectional attention (dev/bdh_bidir.py)."""
+    Stride > 1 via a depthwise stride-2 downsample, then a 1×1 proj_in to
+    out_ch, q/k/v 1×1 convs (q,k lifted to r·out_ch and ReLU'd), the
+    linear-attention context, an output projection, and a residual under BN."""
 
     def __init__(self, in_ch: int, out_ch: int, stride: int, r: int = 2):
         super().__init__()
@@ -445,12 +372,9 @@ class _LinearAttn2D(nn.Module):
 
 
 class _SparseGated(nn.Module):
-    """Sparse-positive gated inverted bottleneck (Dragon Hatchling denoiser
-    motif; Kosowski 2025 Claim 5 / Sec. 6.3). A ReLU·ReLU gate replaces
-    SwiGLU's SiLU gate; the up1 branch carries a LEARNED bias so its ReLU acts
-    as a learned negative threshold — the paper's denoiser that recovers sparse
-    in-cluster signal from low-rank noise, a robustness prior for small / unseen
-    data. Inverted-bottleneck ratio r=3, pointwise throughout. stride > 1 via a
+    """Sparse-positive gated inverted bottleneck: a ReLU·ReLU gate with a
+    learned bias on the up1 branch acting as a negative threshold.
+    Inverted-bottleneck ratio r=3, pointwise throughout. stride > 1 via a
     depthwise stride-2 downsample first, then a residual under BN."""
 
     def __init__(self, in_ch: int, out_ch: int, stride: int, r: int = 3):
@@ -474,11 +398,9 @@ class _SparseGated(nn.Module):
 
 
 class _SharedRepeat(nn.Module):
-    """C4 — weight-shared depth (Universal-Transformer / BDH; Kosowski 2025
-    App. D): apply one residual block k times reusing the SAME weights, giving
-    many effective layers at one block's params. Only wrapped where the block
-    is shape-preserving (in_ch == out_ch, stride 1) so repeated application is
-    safe. Tailored to our ~1.7M-param / 1h regime."""
+    """Weight-shared depth: apply one residual block k times reusing the
+    same weights. Only wrapped where the block is shape-preserving
+    (in_ch == out_ch, stride 1) so repeated application is safe."""
 
     def __init__(self, block: nn.Module, k: int):
         super().__init__()
@@ -492,16 +414,11 @@ class _SharedRepeat(nn.Module):
 
 
 class _RepConv3(nn.Module):
-    """RepVGG-style structural-reparameterization block (Ding 2021; the core
-    trick of RepViT / RepNeXt). Trains as a MULTI-BRANCH block -- 3x3 conv+BN,
-    1x1 conv+BN, and (when shape-preserving) an identity BN -- summed then
-    ReLU'd. The extra branches ease optimization / add capacity during training
-    (helps on small, short-budget data) but fold EXACTLY at inference into a
-    single 3x3 conv+bias (conv, 1x1, identity and BN are all affine), leaving a
-    plain conv graph that runs on ANY hardware with no exotic ops -- a good fit
-    for the competition's unknown-eval-hardware constraint. Accuracy is
-    identical folded or not; reparameterize() is a deploy-time speed/portability
-    optimization, not required for the A/B."""
+    """RepVGG-style structural-reparameterization block. Trains as a
+    multi-branch block -- 3x3 conv+BN, 1x1 conv+BN, and (when
+    shape-preserving) an identity BN -- summed then ReLU'd.
+    reparameterize() folds the branches exactly into a single 3x3
+    conv+bias for inference."""
 
     def __init__(self, in_ch: int, out_ch: int, stride: int):
         super().__init__()
@@ -531,7 +448,7 @@ class _RepConv3(nn.Module):
 
     @torch.no_grad()
     def reparameterize(self) -> "_RepConv3":
-        """Fold the 3 branches into one 3x3 conv+bias (RepVGG math). Idempotent."""
+        """Fold the 3 branches into one 3x3 conv+bias. Idempotent."""
         w, b = self._fuse_conv_bn(self.conv3, self.bn3)
         w1, b1 = self._fuse_conv_bn(self.conv1, self.bn1)
         w = w + F.pad(w1, [1, 1, 1, 1]); b = b + b1          # 1x1 -> centre of 3x3
@@ -551,26 +468,23 @@ class _RepConv3(nn.Module):
 
 
 # The vocabulary used by the random op-type search. Each entry is a callable
-# (in_ch, out_ch, stride) -> nn.Module. v7 adds a recurrent op family on top
-# of v6's 9 swappable ops. The BDH-harvested ops (Kosowski 2025) extend it:
-# LinearAttn2D (C1, cheap global mixer) and SparseGated (C2, denoiser FFN);
-# RepConv3 (RepVGG/RepViT reparameterization) is a portable train-heavy op.
+# (in_ch, out_ch, stride) -> nn.Module.
 OP_VOCAB = {
     "Conv3":          lambda i, o, s: _conv_bn_act(i, o, 3, s),
     "Conv5":          lambda i, o, s: _conv_bn_act(i, o, 5, s),
-    "Conv7":          lambda i, o, s: _conv_bn_act(i, o, 7, s),       # v6
+    "Conv7":          lambda i, o, s: _conv_bn_act(i, o, 7, s),
     "SepConv3":       lambda i, o, s: _sepconv_bn_act(i, o, 3, s),
-    "SepConv5":       lambda i, o, s: _sepconv_bn_act(i, o, 5, s),       # EGNAS 4-op vocab
+    "SepConv5":       lambda i, o, s: _sepconv_bn_act(i, o, 5, s),
     "GroupConv3":     lambda i, o, s: _grpconv_bn_act(i, o, 3, s),
     "ResNeXt":        lambda i, o, s: _ResNeXtOp(i, o, s),
-    "DilatedConv3":   lambda i, o, s: _dilated_conv_bn_act(i, o, s),   # v6
-    "SEConv3":        lambda i, o, s: _SEConv3(i, o, s),               # v6
-    "SpatialSelfAttn2D": lambda i, o, s: _SpatialSelfAttn2D(i, o, s),  # v6
-    "LinearAttn2D":   lambda i, o, s: _LinearAttn2D(i, o, s),          # BDH C1
-    "SparseGated":    lambda i, o, s: _SparseGated(i, o, s),           # BDH C2
-    "RepConv3":       lambda i, o, s: _RepConv3(i, o, s),              # RepVGG/RepViT
-    "RowBiLSTM":      lambda i, o, s: _RowBiLSTM(i, o, s),             # v7
-    "CrossAxisBiLSTM": lambda i, o, s: _CrossAxisBiLSTM(i, o, s),      # v7
+    "DilatedConv3":   lambda i, o, s: _dilated_conv_bn_act(i, o, s),
+    "SEConv3":        lambda i, o, s: _SEConv3(i, o, s),
+    "SpatialSelfAttn2D": lambda i, o, s: _SpatialSelfAttn2D(i, o, s),
+    "LinearAttn2D":   lambda i, o, s: _LinearAttn2D(i, o, s),
+    "SparseGated":    lambda i, o, s: _SparseGated(i, o, s),
+    "RepConv3":       lambda i, o, s: _RepConv3(i, o, s),
+    "RowBiLSTM":      lambda i, o, s: _RowBiLSTM(i, o, s),
+    "CrossAxisBiLSTM": lambda i, o, s: _CrossAxisBiLSTM(i, o, s),
     "MaxPool":        lambda i, o, s: _pool_op(i, o, 3, s),
     "Identity":       lambda i, o, s: _identity_op(i, o, s),
 }
@@ -593,10 +507,8 @@ class ResConvBlock(nn.Module):
         self.op_name = op_name
         self.op = OP_VOCAB[op_name](in_ch, out_ch, stride)
         # Shortcut: identity when shapes match, else a 1x1 projection.
-        # When stride > 1 we use a stride-2 1x1 conv directly — same spatial
-        # output as the conv-3 branch (both compute ceil(H/2) on odd H, e.g.
-        # Sudoku 9x9 → 5x5). The previous AvgPool-then-1x1 approach floored
-        # and produced 4x4, which mismatched the conv branch's 5x5.
+        # When stride > 1 the 1x1 conv is strided — same ceil(H/2) spatial
+        # output as the op branch.
         if stride == 1 and in_ch == out_ch:
             self.shortcut: nn.Module = nn.Identity()
         else:
@@ -624,19 +536,15 @@ def build_cnn(in_channels: int, num_classes: int, input_h: int, input_w: int,
               stem: str = "conv3", shared_repeat: Optional[int] = None) -> nn.Sequential:
     n_blocks = len(ops)
     plan = plan_downsamples(input_h, input_w, n_blocks)
-    # C4 — weight-shared depth: apply each shape-preserving block ×k with the
-    # SAME weights (env V11_SHARED_REPEAT overrides; default 1 = off).
+    # Weight-shared depth: apply each shape-preserving block ×k with the
+    # same weights (env V11_SHARED_REPEAT overrides; default 1 = off).
     if shared_repeat is None:
         shared_repeat = int(os.environ.get("V11_SHARED_REPEAT", "1"))
 
-    # Stem = the data-processor front-end (the "input interpretation"):
-    #   "conv3"        — plain 3x3 conv: treat the input as a 2D image (default).
-    #   "channel_embed"— 1x1 conv first (mix ONLY the channels, per pixel, as
-    #                    features), then a 3x3 spatial conv. For inputs whose
-    #                    channels are semantic feature planes (Chesseract 12
-    #                    piece-types, Voxel 20 slices, Windspeed 12 frames)
-    #                    rather than colours. Separates channel-mixing from
-    #                    spatial-mixing — the bake-off's data-preprocessing arm.
+    # Stem variants:
+    #   "conv3"        — plain 3x3 conv (default).
+    #   "channel_embed"— 1x1 conv first (per-pixel channel mixing), then a
+    #                    3x3 spatial conv.
     if stem == "channel_embed":
         stem_layers: List[nn.Module] = [
             _conv_bn_act(in_channels, base_width, 1, 1),   # 1x1 channel embed
@@ -674,25 +582,17 @@ def build_default_cnn(in_channels: int, num_classes: int, input_h: int, input_w:
 
 
 # ---------------------------------------------------------------------------
-# TCN probes (excursion, suggested by a colleague): Temporal Convolutional
-# Networks — stacks of dilated convs + residuals whose receptive field grows
-# EXPONENTIALLY with depth. Two interpretations of "TCN on a C×H×W tensor":
+# Temporal Convolutional Networks — stacks of dilated convs + residuals
+# whose receptive field grows exponentially with depth. Two variants:
 #
-#   build_tcn_1d  — TRUE sequence TCN. Reshape the input to a 1-D signal
-#                   (C channels, length H*W) and run 1-D dilated convs. This
-#                   is a genuine sequence model — expected to shine on the
-#                   sequential datasets (Language, Cryptic) and to struggle on
-#                   the 2-D image sets (flattening discards spatial locality).
-#                   Crucially, being convolutional it trains under plain SGD,
-#                   so unlike the row-BiLSTM it is *searchable* in principle.
-#   build_tcn_2d  — 2-D dilated-conv "TCN-style" net. Keeps spatial structure,
-#                   adopts the TCN essence (exponential 2-D dilation + residual
-#                   blocks). A fair general-architecture test on all 13.
+#   tcn1d — reshape the input to a 1-D signal (C channels, length H*W) and
+#           run 1-D dilated convs.
+#   tcn2d — 2-D dilated-conv net that keeps spatial structure.
 #
-# Both: 1×1 stem → N residual dilated-conv blocks (each = two dilated convs +
-# residual, non-causal 'same' padding — classification needs no causality) →
-# global-avg-pool → linear. Dilation is capped to the relevant extent so it
-# never degenerates into all-padding on small inputs.
+# Both: stem → N residual dilated-conv blocks (two dilated convs + residual,
+# non-causal 'same' padding) → global-avg-pool → linear. Dilation is capped
+# to the relevant extent so it never degenerates into all-padding on small
+# inputs.
 # ---------------------------------------------------------------------------
 
 
@@ -758,10 +658,8 @@ def _wn_conv2d(ch: int, kernel: int, pad: int, dilation: int) -> nn.Module:
 
 
 class _TCNBlock2DCanonical(nn.Module):
-    """The canonical TCN residual block (Bai et al. 2018, as in the darts
-    library's TCNModel), adapted to 2-D: weight-normalized convs + ReLU +
-    dropout inside the block, NO BatchNorm. A/B candidate vs _TCNBlock2D
-    (low-priority ledger item)."""
+    """Canonical TCN residual block adapted to 2-D: weight-normalized
+    convs + ReLU + dropout inside the block, no BatchNorm."""
 
     def __init__(self, ch: int, kernel: int, dilation: int, p_drop: float = 0.1):
         super().__init__()
@@ -778,8 +676,7 @@ class _TCNBlock2DCanonical(nn.Module):
 
 
 class _TCNBlock2DGELU(nn.Module):
-    """Our block with GELU instead of ReLU (the modern-activation A/B arm,
-    ConvNeXt-style). Everything else identical to _TCNBlock2D."""
+    """Same as _TCNBlock2D but with GELU instead of ReLU."""
 
     def __init__(self, ch: int, kernel: int, dilation: int):
         super().__init__()
@@ -805,9 +702,7 @@ class TCN2D(nn.Module):
                  base_width: int = 48, n_blocks: int = 6, kernel: int = 3,
                  stem: str = "conv3", block: str = "bn"):
         super().__init__()
-        # Phase A5 retest: the channel-embed stem was validated on the CONV
-        # backbone only; this option tests whether it composes with the
-        # dilated backbone (high-channel inputs: Voxel, Chesseract).
+        # Optional channel-embed stem: 1x1 channel mixing, then 3x3 spatial.
         if stem == "channel_embed":
             self.stem = nn.Sequential(
                 _conv_bn_act(in_channels, base_width, 1, 1),
@@ -828,20 +723,11 @@ class TCN2D(nn.Module):
 
 
 class TokenSeqNet(nn.Module):
-    """v12.3 TOKEN family: treat an embedding-shaped board [1, h, w] as h
-    tokens of dim w instead of an image. Motivated by Cryptic (1x6x768, six
-    768-d rows): the conv pipeline plateaus at 72-73.8 there at ANY budget,
-    while this view reached 77.3 single / 78.7 ens in the standalone
-    excursion (dev/cryptic_specialist.py). Attention is over h<=~8 tokens,
-    so the usual transformer memory blowup (quadratic in token COUNT) does
-    not exist here: ~3.4M params at dim 256.
+    """Token-sequence model: treats an embedding-shaped board [1, h, w] as
+    h tokens of dim w and runs a transformer encoder with a mean-pool head.
 
-    Carries its own recipe tag: transformers train badly under the
-    pipeline's constant-lr SGD probes; NAS._timed_train and
-    Trainer._train_one_seed switch to AdamW(3e-4, wd 0.05) when they see
-    _v12_recipe == "adamw". Token dropout is built into forward() so the
-    winning excursion recipe survives the pipeline's no-aug path on
-    encoded/embedding data."""
+    Carries a recipe tag (class attribute below) that switches the trainer
+    to AdamW. Token dropout is built into forward()."""
 
     _v12_recipe = "adamw"
 
@@ -896,28 +782,9 @@ def build_tcn(kind: str, in_channels: int, num_classes: int, input_h: int, input
 
 
 # ---------------------------------------------------------------------------
-# Augmentation policy — metadata-only, no codename gates.
-#
-# The competition is the Unseen Data Challenge: Phase-2/3 datasets are
-# hidden and their codenames will be values we have never seen. So the
-# policy has to be decided from metadata at runtime (input_shape, classes,
-# benchmark) and default to conservative safe choices.
-#
-# Design principles:
-#   1. Only LABEL-PRESERVING augmentations are enabled by default.
-#      Cutout (zeros a patch) and small random crop (shifts by ≤ 2 px) are
-#      essentially label-preserving on standard image classification.
-#   2. Flip is NEVER enabled. Horizontal-flipping breaks orientation-
-#      sensitive datasets (digits, encoded text, board games). We cannot
-#      tell from metadata whether a dataset is flip-safe.
-#   3. Mixup is NEVER enabled. Mixing two samples breaks any task whose
-#      label is an arithmetic function of input identities (count, sum,
-#      product, presence — and we cannot detect those from metadata).
-#      Mixup may be reintroduced LATER via a runtime probe inside NAS
-#      that measures whether it helps on this specific dataset.
-#   4. Aug only when the input "looks image-like" (1 or 3 channels). Inputs
-#      with many channels usually encode non-spatial structure (Chesseract
-#      12-channel board, Voxel 20-channel 3D).
+# Augmentation policy — decided from metadata alone (no codename lookups).
+# Enables only cutout and small random crop, and only on image-like inputs
+# (1 or 3 channels); flip and mixup are never enabled.
 # ---------------------------------------------------------------------------
 
 
@@ -947,13 +814,8 @@ class AugPolicy:
 def aug_policy_for(metadata: dict) -> AugPolicy:
     """Pick the augmentation policy from metadata alone (no codename lookups).
 
-    Conservative, intentionally — false positives (applying aug to an unseen
-    dataset where it breaks the task) cost more than false negatives
-    (skipping aug on a standard image dataset).
-
-    Ablation hook: setting TIER1_AUG_OFF=1 in the environment forces the
-    empty policy regardless of metadata, used to isolate the contribution
-    of augmentation in tier-1 ablation runs.
+    Setting TIER1_AUG_OFF=1 in the environment forces the empty policy
+    regardless of metadata.
     """
     if os.environ.get("TIER1_AUG_OFF") == "1":
         return AugPolicy()
@@ -971,27 +833,22 @@ def aug_policy_for(metadata: dict) -> AugPolicy:
         return AugPolicy()
 
     # Aug only when the input is image-like (1-ch grayscale or 3-ch RGB).
-    # Other channel counts almost always encode non-spatial structure on this
-    # competition's datasets and shouldn't get spatial aug.
     if C not in (1, 3):
         return AugPolicy()
 
     p = AugPolicy()
 
     # Cutout — zeros a small patch. Length scales mildly with input size,
-    # capped at 16 for big inputs. ≤ 16x16 in a 64x64 input is 6 % of area,
-    # which is small enough to be safe on most reasonable tasks.
+    # capped at 16 for big inputs.
     if H >= 16 and W >= 16:
         p.cutout_size = min(16, max(4, H // 8))
 
-    # Small random crop — pad by 2 with reflection, then random-crop back.
-    # Only on square inputs ≥ 24 px (asymmetric shapes like 27×18 likely
-    # encode positional information; square ≥ 24 px is the standard image
-    # case). Pad=2 means at most a 2-pixel shift in any direction.
+    # Small random crop — pad by 2 with reflection, then random-crop back
+    # (at most a 2-pixel shift). Only on square inputs ≥ 24 px.
     if H >= 24 and W >= 24 and H == W:
         p.crop_pad = 2
 
-    # Flip and Mixup remain disabled (see module docstring above).
+    # Flip and Mixup remain disabled.
     return p
 
 
@@ -1049,7 +906,6 @@ class AugmentedTensorDataset(torch.utils.data.Dataset):
 
 # ---------------------------------------------------------------------------
 # EMA — exponential moving average of model weights, used for prediction.
-# Almost-free upgrade per the Tier 1 ideas list.
 # ---------------------------------------------------------------------------
 
 
@@ -1076,8 +932,6 @@ class ModelEMA:
 
 # ---------------------------------------------------------------------------
 # LR schedule helper — manual cosine + linear warmup. Used by trainer.
-# (Avoids torch's SequentialLR which is finicky when we want to construct
-# the schedule after epoch 0 from observed wall-clock.)
 # ---------------------------------------------------------------------------
 
 
@@ -1095,17 +949,13 @@ def lr_for_epoch(epoch: int, total_epochs: int, warmup_epochs: int = 5,
 
 
 # ---------------------------------------------------------------------------
-# P1 PROBE — aug-safety. The one thing that makes this baseline differ from
-# tier2b_egnas_full.
+# Aug-safety probe.
 # ---------------------------------------------------------------------------
 
 
 def _stratified_subset_indices(y: torch.Tensor, frac: float, generator: torch.Generator) -> torch.Tensor:
-    """Per-class sample `frac` of the indices in `y`, concatenated.
-
-    Stratified so the probe's two arms see the same class distribution as
-    the full dataset (a non-stratified subset can bias short trainings on
-    imbalanced datasets like Myofibre).
+    """Per-class sample `frac` of the indices in `y`, concatenated, so the
+    subset keeps the full dataset's class distribution.
     """
     y_np = y.numpy() if isinstance(y, torch.Tensor) else np.asarray(y)
     classes, counts = np.unique(y_np, return_counts=True)
@@ -1128,16 +978,8 @@ def _probe_train_one_arm(train_x: torch.Tensor, train_y: torch.Tensor,
     """Train a default CNN for `epochs` epochs with the given AugPolicy,
     return (best_val_acc, final_train_acc).
 
-    Minimal training loop — no EMA, no cosine schedule, no NaN recovery,
-    no CSV. Just SGD + label-smoothed CE. The whole point is *cheap*
-    signal on which aug arm wins, not a full Tier-1 training.
-
-    Returns *both* val and train acc so the caller can build a
-    gap-penalised score: a short-budget training where aug-off looks
-    better on raw val often has a much larger train-val gap (the
-    over-fitting signal that precedes the −10 floor we see at full
-    budget on e.g. AddNIST). Picking on raw val alone is fooled by this;
-    picking on (val − λ·gap) is not.
+    Minimal training loop — plain SGD + label-smoothed CE. Returns both
+    val and train acc so the caller can build a gap-penalised score.
     """
     # Decode input shape (4D ship-form or 3D NCHW).
     shape = metadata["input_shape"]
@@ -1187,7 +1029,7 @@ def _probe_train_one_arm(train_x: torch.Tensor, train_y: torch.Tensor,
             with torch.no_grad():
                 train_correct += (logits.argmax(dim=1) == yb).sum().item()
                 train_total += yb.size(0)
-        # Final-epoch train acc is the cheapest no-extra-pass proxy we get.
+        # Record the final-epoch train accuracy.
         if ep == epochs - 1 and train_total > 0:
             last_train_acc = train_correct / train_total
         model.eval()
@@ -1211,11 +1053,10 @@ def _run_one_trial(train_x: torch.Tensor, train_y: torch.Tensor,
                    base_policy: "AugPolicy", batch_size: int,
                    subset_frac: float, epochs: int,
                    sub_seed: int) -> Dict:
-    """One probe trial = (stratified subset, train aug-on K epochs,
-    train aug-off K epochs). Returns the trial's metrics + gap-penalised
-    Δscore. Each trial uses a different `sub_seed` so trials draw
-    independent subsets + model inits → multi-trial averaging actually
-    reduces noise (√N rule) rather than re-running the same draw."""
+    """One probe trial: draw a stratified subset, train an aug-on arm and
+    an aug-off arm for `epochs` each, return the trial's metrics plus a
+    gap-penalised Δscore. Each trial uses a different `sub_seed`, drawing
+    an independent subset and model init."""
     gen = torch.Generator()
     gen.manual_seed(sub_seed)
     idx = _stratified_subset_indices(train_y, subset_frac, gen)
@@ -1308,15 +1149,11 @@ def probe_aug_safety(train_x: torch.Tensor, train_y: torch.Tensor,
                      batch_size: int = 128,
                      subset_frac: float = 0.30,
                      off_threshold_pp: float = 6.0) -> Tuple[bool, Dict]:
-    """P1 v4 — 3-probe shadow comparison. Returns the *driver*'s
-    decision (A: multi-trial K=4 with the v3 asymmetric −6 pp threshold
-    + unanimous-OFF rule), but logs all three configs for analysis:
-      - A_multi_K4  (driver)
-      - B_single_K8 (shadow)
-      - C_multi_K8  (shadow)
-    See module docstring for full design. The whole `info` dict —
-    including each probe's per-trial Δscores — is serialised by
-    DataProcessor to `<codename>_p1_probe.json`.
+    """Aug-safety probe: run short aug-on vs aug-off trainings on a
+    stratified subset and decide whether to keep the metadata augmentation
+    policy. Returns (decision, info); the `info` dict — including
+    per-trial Δscores — is serialised by DataProcessor to
+    `<codename>_p1_probe.json`.
     """
     base_policy = aug_policy_for(metadata)
     off_threshold_pp = float(os.environ.get("P1_OFF_THRESHOLD_PP",
@@ -1325,7 +1162,7 @@ def probe_aug_safety(train_x: torch.Tensor, train_y: torch.Tensor,
 
     info: Dict = {
         "version": "v6",
-        "driver": "C_multi_K8",   # v4-shadow validated — keep only C in v6
+        "driver": "C_multi_K8",
         "skipped": False,
         "subset_frac": subset_frac,
         "off_threshold_pp": off_threshold_pp,
@@ -1338,10 +1175,7 @@ def probe_aug_safety(train_x: torch.Tensor, train_y: torch.Tensor,
         info["reason"] = "no aug applicable (metadata)"
         return True, info
 
-    # v6: just C. A and B were the shadow probes for the v4 design
-    # experiment that proved K=8 is the lever, not multi-trial. With
-    # K=8 validated, the K=4 (A) and single-trial K=8 (B) shadows add
-    # no decision value — drop for cleaner code + ~60 s saved per dataset.
+    # Run the multi-trial K=8 probe config; its decision drives training.
     _, info_C = _run_probe_config(
         "C_multi_K8", n_trials=3, epochs=8,
         off_threshold_pp=off_threshold_pp,

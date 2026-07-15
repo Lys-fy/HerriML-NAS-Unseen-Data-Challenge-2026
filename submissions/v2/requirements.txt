@@ -1,18 +1,5 @@
-# NAS-Unseen-Data 2026 submission — runtime dependencies.
-# The pipeline imports ONLY torch and numpy; everything else is Python stdlib.
-#
-# GPU portability is the whole point of these pins:
-#   1. NO CUDA-specific (+cuXXX) pin — let pip pick the wheel that matches the
-#      grader's platform (x86_64) and driver.
-#   2. Cap BELOW the CUDA-13 wheels. An open `torch<3` resolves to the newest
-#      build (torch 2.13+cu130 as of Jul 2026), whose bundled CUDA-13 runtime
-#      needs a very recent driver. A CUDA-12.x wheel is FORWARD-compatible — it
-#      runs on both CUDA-12 and CUDA-13 driver hosts — so it is strictly safer
-#      on an unknown grader box. On x86_64 this range resolves to torch
-#      2.8.x + cu128, which supports Volta (V100/sm70), Ada (L40S/sm89) and
-#      Hopper (H100/sm90).
-#
-# Fallback if a wheel's CUDA is still too new for an older driver:
-#   pip install "torch==2.7.1" "numpy<3"       # cu12.6, proven V100..H100
+# Only torch + numpy are needed; everything else is the Python standard library.
+# The upper bound keeps us on CUDA-12.x wheels, which run on both CUDA-12 and
+# CUDA-13 driver hosts (do not raise it without checking the target driver).
 torch>=2.4,<2.9
 numpy>=1.24,<3

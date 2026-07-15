@@ -1,17 +1,10 @@
-"""v10 DataProcessor: normalisation + FINGERPRINT measurement.
+"""DataProcessor: normalisation and fingerprint measurement.
 
-Changes vs the P1 lineage:
-  - The corr-decay fingerprint is computed here (raw tensors available,
-    seconds of CPU) and its flags ride to the NAS via metadata:
-    fp_corr1 (local pixel correlation) and fp_encoded (corr1 < 0.2:
-    encoded/symbolic data, the image prior is wrong). Validated: the
-    threshold splits the 4 encoded public datasets from the 9 image-like
-    ones with a 5x gap (0.07 vs 0.38).
-  - The aug-safety probe MOVED OUT of here into the NAS, where it runs
-    AFTER the backbone choice with arms of the chosen family (A5b: the
-    conv-derived decision does not transfer across families). The train
-    dataset is therefore always built with the metadata-derived policy on
-    a MUTABLE AugPolicy that the NAS toggles in place.
+Computes a correlation-decay fingerprint from the raw tensors and passes it to
+the NAS via metadata: fp_corr1 (local pixel correlation) and fp_encoded
+(corr1 < ENCODED_CORR1, flagging encoded/symbolic data where the image prior
+does not hold). The train dataset is built with the metadata-derived
+augmentation policy on a mutable AugPolicy that the NAS toggles in place.
 """
 
 from __future__ import annotations
