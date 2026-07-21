@@ -1,0 +1,777 @@
+rm -Rf scoring
+rm -Rf package
+rm -Rf package
+mkdir package
+mkdir package/predictions
+mkdir package/datasets
+rsync -ar --exclude='**/test_y.npy' datasets/* package/datasets/
+cp -R evaluation/main.py package/main.py
+cp -R herriml-1//* package
+cd package; python3 main.py
+==============================================================================
+=============    Your NAS Unseen-Data 2026 Submission is running     =============
+==============================================================================
+========== Dataset   Ganges   =============================================
+  Metadata:
+   - num_classes         : 6
+   - input_shape         : [4500, 1, 27, 18]
+   - codename            : Ganges
+   - benchmark           : 27.5
+   - time_limit          : 0.1
+   - time_remaining      : 359.9957397207618
+
+=== Processing Data ===
+  Allotted compute time remaining: ~5m,59s
+  v10 fingerprint: corr1=+0.062 -> ENCODED
+  base aug policy: cutout=4 (final decision made by the NAS aug probe, family-matched)
+
+=== Performing NAS ===
+  Allotted compute time remaining: ~5m,59s
+  v10 fingerprint: {'corr1': 0.0618, 'encoded': True, 'collapse': True, 'stem': 'conv3'}
+  v10 backbone_skip: {'picked': 'conv', 'reason': 'low budget'}
+  v10 aug_probe: {'skipped': True, 'reason': 'low budget'}
+  v10 depth_search: {'skipped': True, 'picked': 6}
+  v10 attn_probe: {'skipped': True}
+  v10 final: {'arch': 'conv D=6 W=48'}
+
+=== Training ===
+  Allotted compute time remaining: ~5m,58s
+  v12 plan: ~0.4s/epoch -> 545 projected epochs -> K=1 seeds x 545-epoch schedule (TA=on)
+  seed 0: schedule 319 epochs (epoch0 0.7s, slice 295s)
+  s0 e  0 loss=1.8030 val=0.1567 ema=0.1717 best=0.1717 lr=0.0050 t=0.7s clock=355s
+  s0 e  1 loss=1.7890 val=0.1883 ema=0.1550 best=0.1883 lr=0.0100 t=0.5s clock=355s
+  s0 e  2 loss=1.7815 val=0.1850 ema=0.1550 best=0.1883 lr=0.0150 t=0.5s clock=354s
+  s0 e  3 loss=1.7777 val=0.2350 ema=0.1550 best=0.2350 lr=0.0200 t=0.5s clock=354s
+  s0 e  4 loss=1.7605 val=0.2083 ema=0.1550 best=0.2350 lr=0.0250 t=0.5s clock=353s
+  s0 e  5 loss=1.7704 val=0.2067 ema=0.1550 best=0.2350 lr=0.0250 t=0.6s clock=352s
+  s0 e  6 loss=1.7594 val=0.1600 ema=0.1633 best=0.2350 lr=0.0250 t=0.5s clock=352s
+  s0 e  7 loss=1.7483 val=0.2233 ema=0.1767 best=0.2350 lr=0.0250 t=0.5s clock=351s
+  s0 e  8 loss=1.7397 val=0.2117 ema=0.1550 best=0.2350 lr=0.0250 t=0.5s clock=351s
+  s0 e  9 loss=1.7279 val=0.2183 ema=0.1550 best=0.2350 lr=0.0250 t=0.6s clock=350s
+  s0 e 10 loss=1.7104 val=0.2150 ema=0.1550 best=0.2350 lr=0.0250 t=0.5s clock=350s
+  s0 e 11 loss=1.7194 val=0.2600 ema=0.1617 best=0.2600 lr=0.0250 t=0.5s clock=349s
+  s0 e 12 loss=1.7249 val=0.2467 ema=0.1550 best=0.2600 lr=0.0250 t=0.5s clock=349s
+  s0 e 13 loss=1.6921 val=0.2517 ema=0.1550 best=0.2600 lr=0.0250 t=0.5s clock=348s
+  s0 e 14 loss=1.6846 val=0.2050 ema=0.1550 best=0.2600 lr=0.0249 t=0.6s clock=348s
+  s0 e 15 loss=1.6827 val=0.1933 ema=0.1550 best=0.2600 lr=0.0249 t=0.5s clock=347s
+  s0 e 16 loss=1.6715 val=0.1533 ema=0.1550 best=0.2600 lr=0.0249 t=0.5s clock=347s
+  s0 e 17 loss=1.6986 val=0.2133 ema=0.1550 best=0.2600 lr=0.0249 t=0.5s clock=346s
+  s0 e 18 loss=1.6551 val=0.2683 ema=0.2017 best=0.2683 lr=0.0249 t=0.6s clock=346s
+  s0 e 19 loss=1.6554 val=0.2117 ema=0.1850 best=0.2683 lr=0.0249 t=0.5s clock=345s
+  s0 e 20 loss=1.6818 val=0.1950 ema=0.2317 best=0.2683 lr=0.0249 t=0.5s clock=344s
+  s0 e 21 loss=1.6591 val=0.2500 ema=0.1583 best=0.2683 lr=0.0248 t=0.5s clock=344s
+  s0 e 22 loss=1.6548 val=0.2250 ema=0.1817 best=0.2683 lr=0.0248 t=0.6s clock=343s
+  s0 e 23 loss=1.6705 val=0.2300 ema=0.2167 best=0.2683 lr=0.0248 t=0.5s clock=343s
+  s0 e 24 loss=1.6514 val=0.2367 ema=0.1583 best=0.2683 lr=0.0248 t=0.5s clock=342s
+  s0 e 25 loss=1.5892 val=0.2050 ema=0.2750 best=0.2750 lr=0.0248 t=0.5s clock=342s
+  s0 e 26 loss=1.6126 val=0.2667 ema=0.1783 best=0.2750 lr=0.0247 t=0.5s clock=341s
+  s0 e 27 loss=1.5979 val=0.2517 ema=0.1667 best=0.2750 lr=0.0247 t=0.5s clock=341s
+  s0 e 28 loss=1.5999 val=0.2900 ema=0.2383 best=0.2900 lr=0.0247 t=0.5s clock=340s
+  s0 e 29 loss=1.5910 val=0.2733 ema=0.2233 best=0.2900 lr=0.0246 t=0.6s clock=340s
+  s0 e 30 loss=1.5334 val=0.2533 ema=0.2033 best=0.2900 lr=0.0246 t=0.5s clock=339s
+  s0 e 31 loss=1.5883 val=0.1933 ema=0.2317 best=0.2900 lr=0.0246 t=0.5s clock=339s
+  s0 e 32 loss=1.5434 val=0.2617 ema=0.1950 best=0.2900 lr=0.0245 t=0.5s clock=338s
+  s0 e 33 loss=1.5369 val=0.1967 ema=0.1717 best=0.2900 lr=0.0245 t=0.5s clock=338s
+  s0 e 34 loss=1.5817 val=0.1750 ema=0.2417 best=0.2900 lr=0.0245 t=0.5s clock=337s
+  s0 e 35 loss=1.5225 val=0.2417 ema=0.2383 best=0.2900 lr=0.0244 t=0.5s clock=337s
+  s0 e 36 loss=1.5083 val=0.2650 ema=0.1750 best=0.2900 lr=0.0244 t=0.5s clock=336s
+  s0 e 37 loss=1.5473 val=0.2700 ema=0.3083 best=0.3083 lr=0.0244 t=0.5s clock=336s
+  s0 e 38 loss=1.5293 val=0.2150 ema=0.2400 best=0.3083 lr=0.0243 t=0.6s clock=335s
+  s0 e 39 loss=1.5419 val=0.2400 ema=0.2683 best=0.3083 lr=0.0243 t=0.5s clock=335s
+  s0 e 40 loss=1.4161 val=0.2467 ema=0.2233 best=0.3083 lr=0.0242 t=0.5s clock=334s
+  s0 e 41 loss=1.4918 val=0.3033 ema=0.2283 best=0.3083 lr=0.0242 t=0.5s clock=333s
+  s0 e 42 loss=1.5088 val=0.2233 ema=0.2917 best=0.3083 lr=0.0242 t=0.5s clock=333s
+  s0 e 43 loss=1.5451 val=0.2033 ema=0.2333 best=0.3083 lr=0.0241 t=0.6s clock=332s
+  s0 e 44 loss=1.4890 val=0.2267 ema=0.1983 best=0.3083 lr=0.0241 t=0.5s clock=332s
+  s0 e 45 loss=1.4158 val=0.2250 ema=0.2467 best=0.3083 lr=0.0240 t=0.5s clock=331s
+  s0 e 46 loss=1.3663 val=0.2333 ema=0.2867 best=0.3083 lr=0.0240 t=0.6s clock=331s
+  s0 e 47 loss=1.4023 val=0.2400 ema=0.2800 best=0.3083 lr=0.0239 t=0.5s clock=330s
+  s0 e 48 loss=1.3763 val=0.2367 ema=0.2850 best=0.3083 lr=0.0239 t=0.6s clock=330s
+  s0 e 49 loss=1.4090 val=0.2150 ema=0.2300 best=0.3083 lr=0.0238 t=0.5s clock=329s
+  s0 e 50 loss=1.4499 val=0.2567 ema=0.2617 best=0.3083 lr=0.0238 t=0.5s clock=329s
+  s0 e 51 loss=1.4689 val=0.2667 ema=0.2733 best=0.3083 lr=0.0237 t=0.5s clock=328s
+  s0 e 52 loss=1.4733 val=0.2767 ema=0.2933 best=0.3083 lr=0.0236 t=0.5s clock=328s
+  s0 e 53 loss=1.3713 val=0.2217 ema=0.2550 best=0.3083 lr=0.0236 t=0.6s clock=327s
+  s0 e 54 loss=1.3652 val=0.2400 ema=0.2167 best=0.3083 lr=0.0235 t=0.6s clock=326s
+  s0 e 55 loss=1.3572 val=0.2383 ema=0.2967 best=0.3083 lr=0.0235 t=0.5s clock=326s
+  s0 e 56 loss=1.3995 val=0.2333 ema=0.3217 best=0.3217 lr=0.0234 t=0.5s clock=325s
+  s0 e 57 loss=1.4657 val=0.2200 ema=0.2400 best=0.3217 lr=0.0233 t=0.6s clock=325s
+  s0 e 58 loss=1.3837 val=0.2450 ema=0.3000 best=0.3217 lr=0.0233 t=0.5s clock=324s
+  s0 e 59 loss=1.3600 val=0.2283 ema=0.3117 best=0.3217 lr=0.0232 t=0.5s clock=324s
+  s0 e 60 loss=1.3626 val=0.3100 ema=0.3350 best=0.3350 lr=0.0232 t=0.5s clock=323s
+  s0 e 61 loss=1.3783 val=0.1933 ema=0.3000 best=0.3350 lr=0.0231 t=0.5s clock=323s
+  s0 e 62 loss=1.3600 val=0.2450 ema=0.3150 best=0.3350 lr=0.0230 t=0.5s clock=322s
+  s0 e 63 loss=1.3885 val=0.3117 ema=0.2833 best=0.3350 lr=0.0230 t=0.5s clock=322s
+  s0 e 64 loss=1.3652 val=0.2600 ema=0.2833 best=0.3350 lr=0.0229 t=0.5s clock=321s
+  s0 e 65 loss=1.2840 val=0.3033 ema=0.3300 best=0.3350 lr=0.0228 t=0.5s clock=321s
+  s0 e 66 loss=1.2740 val=0.2867 ema=0.3167 best=0.3350 lr=0.0227 t=0.5s clock=320s
+  s0 e 67 loss=1.2841 val=0.2033 ema=0.3483 best=0.3483 lr=0.0227 t=0.5s clock=320s
+  s0 e 68 loss=1.2976 val=0.2567 ema=0.3067 best=0.3483 lr=0.0226 t=0.5s clock=319s
+  s0 e 69 loss=1.2850 val=0.2300 ema=0.2750 best=0.3483 lr=0.0225 t=0.5s clock=319s
+  s0 e 70 loss=1.3844 val=0.2683 ema=0.3000 best=0.3483 lr=0.0224 t=0.6s clock=318s
+  s0 e 71 loss=1.3439 val=0.2400 ema=0.3100 best=0.3483 lr=0.0224 t=0.5s clock=317s
+  s0 e 72 loss=1.2676 val=0.2550 ema=0.3400 best=0.3483 lr=0.0223 t=0.5s clock=317s
+  s0 e 73 loss=1.1457 val=0.2600 ema=0.3267 best=0.3483 lr=0.0222 t=0.5s clock=316s
+  s0 e 74 loss=1.1627 val=0.3167 ema=0.2950 best=0.3483 lr=0.0221 t=0.6s clock=316s
+  s0 e 75 loss=1.2584 val=0.2667 ema=0.2967 best=0.3483 lr=0.0221 t=0.5s clock=315s
+  s0 e 76 loss=1.2979 val=0.3050 ema=0.3300 best=0.3483 lr=0.0220 t=0.5s clock=315s
+  s0 e 77 loss=1.2079 val=0.2367 ema=0.3250 best=0.3483 lr=0.0219 t=0.5s clock=314s
+  s0 e 78 loss=1.1255 val=0.2900 ema=0.3200 best=0.3483 lr=0.0218 t=0.6s clock=314s
+  s0 e 79 loss=1.1850 val=0.2533 ema=0.2983 best=0.3483 lr=0.0217 t=0.5s clock=313s
+  s0 e 80 loss=1.2728 val=0.2283 ema=0.3200 best=0.3483 lr=0.0216 t=0.5s clock=313s
+  s0 e 81 loss=1.2796 val=0.1933 ema=0.2750 best=0.3483 lr=0.0216 t=0.5s clock=312s
+  s0 e 82 loss=1.1394 val=0.2717 ema=0.2867 best=0.3483 lr=0.0215 t=0.5s clock=312s
+  s0 e 83 loss=1.2832 val=0.2700 ema=0.3267 best=0.3483 lr=0.0214 t=0.5s clock=311s
+  s0 e 84 loss=1.1486 val=0.2667 ema=0.3233 best=0.3483 lr=0.0213 t=0.5s clock=310s
+  s0 e 85 loss=1.1934 val=0.3083 ema=0.3317 best=0.3483 lr=0.0212 t=0.6s clock=310s
+  s0 e 86 loss=1.2064 val=0.2533 ema=0.3367 best=0.3483 lr=0.0211 t=0.5s clock=309s
+  s0 e 87 loss=1.2081 val=0.2817 ema=0.3017 best=0.3483 lr=0.0210 t=0.6s clock=309s
+  s0 e 88 loss=1.2410 val=0.3050 ema=0.3317 best=0.3483 lr=0.0209 t=0.5s clock=308s
+  s0 e 89 loss=1.2006 val=0.2800 ema=0.3350 best=0.3483 lr=0.0208 t=0.5s clock=308s
+  s0 e 90 loss=1.2267 val=0.2883 ema=0.3167 best=0.3483 lr=0.0207 t=0.5s clock=307s
+  s0 e 91 loss=1.1835 val=0.2833 ema=0.3100 best=0.3483 lr=0.0207 t=0.5s clock=307s
+  s0 e 92 loss=1.1106 val=0.2250 ema=0.3083 best=0.3483 lr=0.0206 t=0.5s clock=306s
+  s0 e 93 loss=1.2880 val=0.2317 ema=0.3050 best=0.3483 lr=0.0205 t=0.5s clock=306s
+  s0 e 94 loss=1.0935 val=0.2817 ema=0.3517 best=0.3517 lr=0.0204 t=0.5s clock=305s
+  s0 e 95 loss=1.0927 val=0.2300 ema=0.3333 best=0.3517 lr=0.0203 t=0.5s clock=305s
+  s0 e 96 loss=1.1871 val=0.2983 ema=0.2900 best=0.3517 lr=0.0202 t=0.5s clock=304s
+  s0 e 97 loss=1.1016 val=0.2567 ema=0.2917 best=0.3517 lr=0.0201 t=0.5s clock=304s
+  s0 e 98 loss=1.0909 val=0.3217 ema=0.3350 best=0.3517 lr=0.0200 t=0.5s clock=303s
+  s0 e 99 loss=1.0792 val=0.2633 ema=0.3167 best=0.3517 lr=0.0199 t=0.5s clock=302s
+  s0 e100 loss=1.1549 val=0.2967 ema=0.3233 best=0.3517 lr=0.0198 t=0.5s clock=302s
+  s0 e101 loss=1.1069 val=0.2650 ema=0.3367 best=0.3517 lr=0.0197 t=0.5s clock=301s
+  s0 e102 loss=1.0525 val=0.2783 ema=0.3067 best=0.3517 lr=0.0196 t=0.5s clock=301s
+  s0 e103 loss=1.0702 val=0.1733 ema=0.3167 best=0.3517 lr=0.0195 t=0.6s clock=300s
+  s0 e104 loss=1.1537 val=0.2783 ema=0.3350 best=0.3517 lr=0.0194 t=0.5s clock=300s
+  s0 e105 loss=1.1415 val=0.2950 ema=0.3067 best=0.3517 lr=0.0192 t=0.5s clock=299s
+  s0 e106 loss=1.0100 val=0.3050 ema=0.3167 best=0.3517 lr=0.0191 t=0.5s clock=299s
+  s0 e107 loss=1.0544 val=0.2283 ema=0.3233 best=0.3517 lr=0.0190 t=0.5s clock=298s
+  s0 e108 loss=1.0204 val=0.2750 ema=0.3183 best=0.3517 lr=0.0189 t=0.5s clock=298s
+  s0 e109 loss=1.0375 val=0.2633 ema=0.3300 best=0.3517 lr=0.0188 t=0.6s clock=297s
+  s0 e110 loss=0.9739 val=0.2633 ema=0.3250 best=0.3517 lr=0.0187 t=0.5s clock=297s
+  s0 e111 loss=1.0293 val=0.2617 ema=0.3367 best=0.3517 lr=0.0186 t=0.5s clock=296s
+  s0 e112 loss=1.1100 val=0.2100 ema=0.3400 best=0.3517 lr=0.0185 t=0.5s clock=296s
+  s0 e113 loss=1.0260 val=0.2850 ema=0.3450 best=0.3517 lr=0.0184 t=0.5s clock=295s
+  s0 e114 loss=0.9397 val=0.2517 ema=0.3283 best=0.3517 lr=0.0183 t=0.5s clock=295s
+  s0 e115 loss=1.1545 val=0.2683 ema=0.3533 best=0.3533 lr=0.0182 t=0.5s clock=294s
+  s0 e116 loss=0.9673 val=0.3167 ema=0.3400 best=0.3533 lr=0.0181 t=0.5s clock=294s
+  s0 e117 loss=0.9953 val=0.2583 ema=0.3400 best=0.3533 lr=0.0179 t=0.5s clock=293s
+  s0 e118 loss=1.0475 val=0.2133 ema=0.3183 best=0.3533 lr=0.0178 t=0.5s clock=292s
+  s0 e119 loss=1.1973 val=0.3000 ema=0.3400 best=0.3533 lr=0.0177 t=0.5s clock=292s
+  s0 e120 loss=1.0714 val=0.2883 ema=0.3500 best=0.3533 lr=0.0176 t=0.6s clock=291s
+  s0 e121 loss=1.1235 val=0.2800 ema=0.3217 best=0.3533 lr=0.0175 t=0.5s clock=291s
+  s0 e122 loss=1.1167 val=0.2217 ema=0.3433 best=0.3533 lr=0.0174 t=0.5s clock=290s
+  s0 e123 loss=1.1161 val=0.2883 ema=0.3433 best=0.3533 lr=0.0173 t=0.5s clock=290s
+  s0 e124 loss=1.0920 val=0.2683 ema=0.3400 best=0.3533 lr=0.0171 t=0.5s clock=289s
+  s0 e125 loss=1.0016 val=0.3133 ema=0.3367 best=0.3533 lr=0.0170 t=0.5s clock=289s
+  s0 e126 loss=1.0049 val=0.2867 ema=0.3417 best=0.3533 lr=0.0169 t=0.5s clock=288s
+  s0 e127 loss=1.0698 val=0.3150 ema=0.3200 best=0.3533 lr=0.0168 t=0.5s clock=288s
+  s0 e128 loss=0.9257 val=0.2883 ema=0.3350 best=0.3533 lr=0.0167 t=0.5s clock=287s
+  s0 e129 loss=1.0901 val=0.3200 ema=0.3183 best=0.3533 lr=0.0166 t=0.5s clock=287s
+  s0 e130 loss=1.0891 val=0.3083 ema=0.3167 best=0.3533 lr=0.0164 t=0.5s clock=286s
+  s0 e131 loss=0.8900 val=0.2900 ema=0.3300 best=0.3533 lr=0.0163 t=0.5s clock=286s
+  s0 e132 loss=1.1002 val=0.2550 ema=0.3633 best=0.3633 lr=0.0162 t=0.6s clock=285s
+  s0 e133 loss=0.9475 val=0.2800 ema=0.3017 best=0.3633 lr=0.0161 t=0.5s clock=285s
+  s0 e134 loss=1.1143 val=0.2833 ema=0.3317 best=0.3633 lr=0.0160 t=0.5s clock=284s
+  s0 e135 loss=0.9248 val=0.2933 ema=0.3533 best=0.3633 lr=0.0158 t=0.5s clock=284s
+  s0 e136 loss=0.8237 val=0.2933 ema=0.3117 best=0.3633 lr=0.0157 t=0.5s clock=283s
+  s0 e137 loss=1.0897 val=0.2867 ema=0.3350 best=0.3633 lr=0.0156 t=0.5s clock=282s
+  s0 e138 loss=0.9752 val=0.3167 ema=0.3250 best=0.3633 lr=0.0155 t=0.5s clock=282s
+  s0 e139 loss=0.9938 val=0.2750 ema=0.3383 best=0.3633 lr=0.0154 t=0.5s clock=281s
+  s0 e140 loss=1.0743 val=0.3033 ema=0.3367 best=0.3633 lr=0.0152 t=0.5s clock=281s
+  s0 e141 loss=0.9040 val=0.3000 ema=0.3300 best=0.3633 lr=0.0151 t=0.6s clock=280s
+  s0 e142 loss=1.1010 val=0.3000 ema=0.3100 best=0.3633 lr=0.0150 t=0.5s clock=280s
+  s0 e143 loss=1.0359 val=0.3150 ema=0.3533 best=0.3633 lr=0.0149 t=0.5s clock=279s
+  s0 e144 loss=0.9894 val=0.2917 ema=0.3317 best=0.3633 lr=0.0147 t=0.5s clock=279s
+  s0 e145 loss=0.8347 val=0.2833 ema=0.3533 best=0.3633 lr=0.0146 t=0.5s clock=278s
+  s0 e146 loss=0.9203 val=0.2867 ema=0.3217 best=0.3633 lr=0.0145 t=0.6s clock=278s
+  s0 e147 loss=1.0136 val=0.2833 ema=0.3383 best=0.3633 lr=0.0144 t=0.5s clock=277s
+  s0 e148 loss=0.8983 val=0.2917 ema=0.3433 best=0.3633 lr=0.0142 t=0.5s clock=277s
+  s0 e149 loss=1.0211 val=0.2600 ema=0.3017 best=0.3633 lr=0.0141 t=0.5s clock=276s
+  s0 e150 loss=0.9575 val=0.3000 ema=0.3217 best=0.3633 lr=0.0140 t=0.5s clock=275s
+  s0 e151 loss=1.0397 val=0.3033 ema=0.3200 best=0.3633 lr=0.0139 t=0.6s clock=275s
+  s0 e152 loss=0.9411 val=0.2783 ema=0.3267 best=0.3633 lr=0.0137 t=0.5s clock=274s
+  s0 e153 loss=0.8988 val=0.3050 ema=0.3217 best=0.3633 lr=0.0136 t=0.5s clock=274s
+  s0 e154 loss=0.9817 val=0.3300 ema=0.3183 best=0.3633 lr=0.0135 t=0.6s clock=273s
+  s0 e155 loss=1.1823 val=0.2867 ema=0.3267 best=0.3633 lr=0.0134 t=0.5s clock=273s
+  s0 e156 loss=0.8703 val=0.2983 ema=0.3300 best=0.3633 lr=0.0132 t=0.5s clock=272s
+  s0 e157 loss=0.9590 val=0.2917 ema=0.3217 best=0.3633 lr=0.0131 t=0.5s clock=272s
+  s0 e158 loss=0.9703 val=0.2400 ema=0.3333 best=0.3633 lr=0.0130 t=0.5s clock=271s
+  s0 e159 loss=0.8838 val=0.2967 ema=0.3350 best=0.3633 lr=0.0129 t=0.5s clock=271s
+  s0 e160 loss=1.0884 val=0.2717 ema=0.3500 best=0.3633 lr=0.0128 t=0.6s clock=270s
+  s0 e161 loss=1.0390 val=0.3117 ema=0.3383 best=0.3633 lr=0.0126 t=0.5s clock=270s
+  s0 e162 loss=0.9166 val=0.2933 ema=0.3233 best=0.3633 lr=0.0125 t=0.6s clock=269s
+  s0 e163 loss=0.9094 val=0.3050 ema=0.3333 best=0.3633 lr=0.0124 t=0.7s clock=268s
+  s0 e164 loss=1.0161 val=0.3050 ema=0.3317 best=0.3633 lr=0.0122 t=0.6s clock=268s
+  s0 e165 loss=0.8800 val=0.2517 ema=0.3283 best=0.3633 lr=0.0121 t=0.5s clock=267s
+  s0 e166 loss=0.9525 val=0.2100 ema=0.3350 best=0.3633 lr=0.0120 t=0.5s clock=267s
+  s0 e167 loss=0.9899 val=0.2850 ema=0.3400 best=0.3633 lr=0.0119 t=0.5s clock=266s
+  s0 e168 loss=1.0168 val=0.2883 ema=0.3433 best=0.3633 lr=0.0118 t=0.5s clock=266s
+  s0 e169 loss=0.8576 val=0.2700 ema=0.3267 best=0.3633 lr=0.0116 t=0.5s clock=265s
+  s0 e170 loss=0.9944 val=0.2750 ema=0.3217 best=0.3633 lr=0.0115 t=0.5s clock=265s
+  s0 e171 loss=0.9864 val=0.3267 ema=0.3300 best=0.3633 lr=0.0114 t=0.5s clock=264s
+  s0 e172 loss=0.9217 val=0.3000 ema=0.3317 best=0.3633 lr=0.0113 t=0.5s clock=264s
+  s0 e173 loss=0.8992 val=0.3167 ema=0.3350 best=0.3633 lr=0.0111 t=0.5s clock=263s
+  s0 e174 loss=0.9727 val=0.3183 ema=0.3400 best=0.3633 lr=0.0110 t=0.5s clock=263s
+  s0 e175 loss=1.0632 val=0.2917 ema=0.3333 best=0.3633 lr=0.0109 t=0.5s clock=262s
+  s0 e176 loss=0.9060 val=0.3050 ema=0.3133 best=0.3633 lr=0.0108 t=0.5s clock=261s
+  s0 e177 loss=0.9288 val=0.2917 ema=0.3317 best=0.3633 lr=0.0106 t=0.5s clock=261s
+  s0 e178 loss=0.7911 val=0.2833 ema=0.3317 best=0.3633 lr=0.0105 t=0.6s clock=260s
+  s0 e179 loss=0.9279 val=0.3200 ema=0.2850 best=0.3633 lr=0.0104 t=0.5s clock=260s
+  s0 e180 loss=0.9910 val=0.3000 ema=0.3183 best=0.3633 lr=0.0103 t=0.5s clock=259s
+  s0 e181 loss=0.9820 val=0.2983 ema=0.3350 best=0.3633 lr=0.0101 t=0.5s clock=259s
+  s0 e182 loss=0.9283 val=0.3050 ema=0.3350 best=0.3633 lr=0.0100 t=0.6s clock=258s
+  s0 e183 loss=0.8801 val=0.3067 ema=0.2983 best=0.3633 lr=0.0099 t=0.6s clock=258s
+  s0 e184 loss=0.8879 val=0.3017 ema=0.3317 best=0.3633 lr=0.0098 t=0.5s clock=257s
+  s0 e185 loss=0.8727 val=0.2900 ema=0.3333 best=0.3633 lr=0.0096 t=0.5s clock=257s
+  s0 e186 loss=0.7847 val=0.2967 ema=0.3400 best=0.3633 lr=0.0095 t=0.6s clock=256s
+  s0 e187 loss=0.7873 val=0.3100 ema=0.3083 best=0.3633 lr=0.0094 t=0.6s clock=256s
+  s0 e188 loss=0.7892 val=0.2667 ema=0.3350 best=0.3633 lr=0.0093 t=0.5s clock=255s
+  s0 e189 loss=0.8575 val=0.3217 ema=0.3317 best=0.3633 lr=0.0092 t=0.5s clock=254s
+  s0 e190 loss=0.9636 val=0.2950 ema=0.3250 best=0.3633 lr=0.0090 t=0.5s clock=254s
+  s0 e191 loss=0.8570 val=0.2950 ema=0.3300 best=0.3633 lr=0.0089 t=0.5s clock=253s
+  s0 e192 loss=1.0371 val=0.2900 ema=0.3117 best=0.3633 lr=0.0088 t=0.5s clock=253s
+  s0 e193 loss=0.8300 val=0.3267 ema=0.3283 best=0.3633 lr=0.0087 t=0.5s clock=252s
+  s0 e194 loss=1.0076 val=0.3283 ema=0.3000 best=0.3633 lr=0.0086 t=0.5s clock=252s
+  s0 e195 loss=0.8339 val=0.2367 ema=0.3150 best=0.3633 lr=0.0084 t=0.5s clock=251s
+  s0 e196 loss=0.8374 val=0.3267 ema=0.3300 best=0.3633 lr=0.0083 t=0.5s clock=251s
+  s0 e197 loss=0.7578 val=0.2767 ema=0.3217 best=0.3633 lr=0.0082 t=0.5s clock=250s
+  s0 e198 loss=0.8660 val=0.3200 ema=0.2867 best=0.3633 lr=0.0081 t=0.5s clock=250s
+  s0 e199 loss=0.9605 val=0.3117 ema=0.3033 best=0.3633 lr=0.0080 t=0.5s clock=249s
+  s0 e200 loss=0.9122 val=0.3000 ema=0.3117 best=0.3633 lr=0.0079 t=0.5s clock=249s
+  s0 e201 loss=0.9884 val=0.3050 ema=0.3100 best=0.3633 lr=0.0077 t=0.5s clock=248s
+  s0 e202 loss=0.9221 val=0.2933 ema=0.3117 best=0.3633 lr=0.0076 t=0.5s clock=248s
+  s0 e203 loss=0.8771 val=0.2967 ema=0.3000 best=0.3633 lr=0.0075 t=0.5s clock=247s
+  s0 e204 loss=0.8519 val=0.3150 ema=0.3083 best=0.3633 lr=0.0074 t=0.5s clock=247s
+  s0 e205 loss=0.7632 val=0.3133 ema=0.3200 best=0.3633 lr=0.0073 t=0.5s clock=246s
+  s0 e206 loss=0.8258 val=0.3117 ema=0.2900 best=0.3633 lr=0.0072 t=0.5s clock=246s
+  s0 e207 loss=0.8647 val=0.2950 ema=0.3117 best=0.3633 lr=0.0071 t=0.5s clock=245s
+  s0 e208 loss=0.9427 val=0.3100 ema=0.3033 best=0.3633 lr=0.0069 t=0.5s clock=245s
+  s0 e209 loss=0.9212 val=0.2700 ema=0.3200 best=0.3633 lr=0.0068 t=0.5s clock=244s
+  s0 e210 loss=0.8609 val=0.2667 ema=0.3317 best=0.3633 lr=0.0067 t=0.5s clock=243s
+  s0 e211 loss=0.8891 val=0.3150 ema=0.3233 best=0.3633 lr=0.0066 t=0.5s clock=243s
+  seed 0: saturated (no >noise gain in 79 ep, anchor e132 @0.3633), releasing slice
+  seed 0 done: best_val=0.3633 (1.9min)
+  v12.1 top-up: surplus affords seed 1 (883-epoch schedule)
+  seed 1: schedule 220 epochs (epoch0 0.6s, slice 182s)
+  s1 e  0 loss=1.8010 val=0.1933 ema=0.1733 best=0.1933 lr=0.0050 t=0.6s clock=242s
+  s1 e  1 loss=1.7893 val=0.1950 ema=0.1550 best=0.1950 lr=0.0100 t=0.5s clock=242s
+  s1 e  2 loss=1.7868 val=0.2217 ema=0.1733 best=0.2217 lr=0.0150 t=0.5s clock=241s
+  s1 e  3 loss=1.7813 val=0.1900 ema=0.1550 best=0.2217 lr=0.0200 t=0.6s clock=241s
+  s1 e  4 loss=1.7767 val=0.2083 ema=0.1550 best=0.2217 lr=0.0250 t=0.5s clock=240s
+  s1 e  5 loss=1.7730 val=0.1817 ema=0.1550 best=0.2217 lr=0.0250 t=0.6s clock=240s
+  s1 e  6 loss=1.7701 val=0.2617 ema=0.1550 best=0.2617 lr=0.0250 t=0.5s clock=239s
+  s1 e  7 loss=1.7576 val=0.2150 ema=0.1550 best=0.2617 lr=0.0250 t=0.6s clock=239s
+  s1 e  8 loss=1.7574 val=0.1867 ema=0.1550 best=0.2617 lr=0.0250 t=0.5s clock=238s
+  s1 e  9 loss=1.7361 val=0.2167 ema=0.1550 best=0.2617 lr=0.0250 t=0.5s clock=237s
+  s1 e 10 loss=1.7551 val=0.2000 ema=0.1550 best=0.2617 lr=0.0250 t=0.5s clock=237s
+  s1 e 11 loss=1.7377 val=0.2250 ema=0.1550 best=0.2617 lr=0.0250 t=0.5s clock=236s
+  s1 e 12 loss=1.7288 val=0.2567 ema=0.1633 best=0.2617 lr=0.0249 t=0.5s clock=236s
+  s1 e 13 loss=1.6991 val=0.2717 ema=0.1550 best=0.2717 lr=0.0249 t=0.5s clock=235s
+  s1 e 14 loss=1.6936 val=0.2267 ema=0.1550 best=0.2717 lr=0.0249 t=0.5s clock=235s
+  s1 e 15 loss=1.6887 val=0.2567 ema=0.1550 best=0.2717 lr=0.0249 t=0.5s clock=234s
+  s1 e 16 loss=1.6787 val=0.2050 ema=0.1550 best=0.2717 lr=0.0248 t=0.5s clock=234s
+  s1 e 17 loss=1.6791 val=0.2083 ema=0.1567 best=0.2717 lr=0.0248 t=0.5s clock=233s
+  s1 e 18 loss=1.6528 val=0.2267 ema=0.1550 best=0.2717 lr=0.0248 t=0.5s clock=233s
+  s1 e 19 loss=1.6901 val=0.1967 ema=0.1567 best=0.2717 lr=0.0247 t=0.5s clock=232s
+  s1 e 20 loss=1.6524 val=0.2450 ema=0.1550 best=0.2717 lr=0.0247 t=0.5s clock=232s
+  s1 e 21 loss=1.6497 val=0.2783 ema=0.1550 best=0.2783 lr=0.0247 t=0.5s clock=231s
+  s1 e 22 loss=1.6630 val=0.2367 ema=0.1550 best=0.2783 lr=0.0246 t=0.6s clock=231s
+  s1 e 23 loss=1.6235 val=0.2000 ema=0.1917 best=0.2783 lr=0.0246 t=0.5s clock=230s
+  s1 e 24 loss=1.6475 val=0.2533 ema=0.1667 best=0.2783 lr=0.0245 t=0.5s clock=230s
+  s1 e 25 loss=1.6158 val=0.2500 ema=0.2300 best=0.2783 lr=0.0245 t=0.5s clock=229s
+  s1 e 26 loss=1.6294 val=0.1917 ema=0.1750 best=0.2783 lr=0.0244 t=0.6s clock=229s
+  s1 e 27 loss=1.6082 val=0.2817 ema=0.1633 best=0.2817 lr=0.0244 t=0.5s clock=228s
+  s1 e 28 loss=1.6283 val=0.2367 ema=0.2117 best=0.2817 lr=0.0243 t=0.5s clock=228s
+  s1 e 29 loss=1.6162 val=0.1933 ema=0.2700 best=0.2817 lr=0.0242 t=0.5s clock=227s
+  s1 e 30 loss=1.6205 val=0.2133 ema=0.1750 best=0.2817 lr=0.0242 t=0.6s clock=226s
+  s1 e 31 loss=1.6035 val=0.1817 ema=0.1900 best=0.2817 lr=0.0241 t=0.5s clock=226s
+  s1 e 32 loss=1.6460 val=0.2333 ema=0.1567 best=0.2817 lr=0.0240 t=0.5s clock=225s
+  s1 e 33 loss=1.5921 val=0.2650 ema=0.2600 best=0.2817 lr=0.0240 t=0.5s clock=225s
+  s1 e 34 loss=1.5092 val=0.1750 ema=0.2350 best=0.2817 lr=0.0239 t=0.5s clock=224s
+  s1 e 35 loss=1.5233 val=0.2933 ema=0.2050 best=0.2933 lr=0.0238 t=0.5s clock=224s
+  s1 e 36 loss=1.5891 val=0.2333 ema=0.2233 best=0.2933 lr=0.0237 t=0.5s clock=223s
+  s1 e 37 loss=1.5734 val=0.2317 ema=0.1950 best=0.2933 lr=0.0237 t=0.5s clock=223s
+  s1 e 38 loss=1.5792 val=0.2083 ema=0.2233 best=0.2933 lr=0.0236 t=0.5s clock=222s
+  s1 e 39 loss=1.5419 val=0.2567 ema=0.2417 best=0.2933 lr=0.0235 t=0.5s clock=222s
+  s1 e 40 loss=1.5515 val=0.2433 ema=0.2483 best=0.2933 lr=0.0234 t=0.6s clock=221s
+  s1 e 41 loss=1.5511 val=0.2067 ema=0.2483 best=0.2933 lr=0.0233 t=0.5s clock=221s
+  s1 e 42 loss=1.5808 val=0.2433 ema=0.2183 best=0.2933 lr=0.0232 t=0.5s clock=220s
+  s1 e 43 loss=1.5630 val=0.2917 ema=0.2833 best=0.2933 lr=0.0231 t=0.5s clock=220s
+  s1 e 44 loss=1.5084 val=0.2317 ema=0.2317 best=0.2933 lr=0.0230 t=0.6s clock=219s
+  s1 e 45 loss=1.4754 val=0.2350 ema=0.2433 best=0.2933 lr=0.0229 t=0.5s clock=218s
+  s1 e 46 loss=1.4345 val=0.2183 ema=0.2417 best=0.2933 lr=0.0228 t=0.6s clock=218s
+  s1 e 47 loss=1.4750 val=0.2250 ema=0.2383 best=0.2933 lr=0.0227 t=0.5s clock=217s
+  s1 e 48 loss=1.5598 val=0.3050 ema=0.2617 best=0.3050 lr=0.0226 t=0.5s clock=217s
+  s1 e 49 loss=1.4315 val=0.2450 ema=0.2167 best=0.3050 lr=0.0225 t=0.6s clock=216s
+  s1 e 50 loss=1.4946 val=0.2633 ema=0.2800 best=0.3050 lr=0.0224 t=0.5s clock=216s
+  s1 e 51 loss=1.4756 val=0.2750 ema=0.2717 best=0.3050 lr=0.0223 t=0.5s clock=215s
+  s1 e 52 loss=1.4774 val=0.2333 ema=0.2150 best=0.3050 lr=0.0222 t=0.5s clock=215s
+  s1 e 53 loss=1.3806 val=0.2450 ema=0.1917 best=0.3050 lr=0.0220 t=0.5s clock=214s
+  s1 e 54 loss=1.4970 val=0.2000 ema=0.2517 best=0.3050 lr=0.0219 t=0.5s clock=214s
+  s1 e 55 loss=1.4522 val=0.2033 ema=0.2667 best=0.3050 lr=0.0218 t=0.5s clock=213s
+  s1 e 56 loss=1.3791 val=0.2117 ema=0.2917 best=0.3050 lr=0.0217 t=0.5s clock=213s
+  s1 e 57 loss=1.3073 val=0.2250 ema=0.2817 best=0.3050 lr=0.0216 t=0.5s clock=212s
+  s1 e 58 loss=1.3529 val=0.2850 ema=0.2333 best=0.3050 lr=0.0214 t=0.6s clock=212s
+  s1 e 59 loss=1.3730 val=0.2800 ema=0.2517 best=0.3050 lr=0.0213 t=0.5s clock=211s
+  s1 e 60 loss=1.4287 val=0.2183 ema=0.2850 best=0.3050 lr=0.0212 t=0.5s clock=211s
+  s1 e 61 loss=1.3877 val=0.2583 ema=0.2967 best=0.3050 lr=0.0210 t=0.5s clock=210s
+  s1 e 62 loss=1.4261 val=0.2333 ema=0.3200 best=0.3200 lr=0.0209 t=0.5s clock=209s
+  s1 e 63 loss=1.3791 val=0.3017 ema=0.3017 best=0.3200 lr=0.0208 t=0.5s clock=209s
+  s1 e 64 loss=1.3479 val=0.2033 ema=0.2433 best=0.3200 lr=0.0206 t=0.5s clock=208s
+  s1 e 65 loss=1.4152 val=0.2900 ema=0.2500 best=0.3200 lr=0.0205 t=0.5s clock=208s
+  s1 e 66 loss=1.4323 val=0.2717 ema=0.2950 best=0.3200 lr=0.0204 t=0.6s clock=207s
+  s1 e 67 loss=1.3041 val=0.2483 ema=0.2900 best=0.3200 lr=0.0202 t=0.5s clock=207s
+  s1 e 68 loss=1.3191 val=0.2817 ema=0.2700 best=0.3200 lr=0.0201 t=0.5s clock=206s
+  s1 e 69 loss=1.3925 val=0.2617 ema=0.3150 best=0.3200 lr=0.0199 t=0.5s clock=206s
+  s1 e 70 loss=1.3402 val=0.2417 ema=0.2900 best=0.3200 lr=0.0198 t=0.5s clock=205s
+  s1 e 71 loss=1.2602 val=0.2317 ema=0.2967 best=0.3200 lr=0.0196 t=0.5s clock=205s
+  s1 e 72 loss=1.2377 val=0.2550 ema=0.3050 best=0.3200 lr=0.0195 t=0.5s clock=204s
+  s1 e 73 loss=1.2940 val=0.2800 ema=0.3117 best=0.3200 lr=0.0193 t=0.5s clock=204s
+  s1 e 74 loss=1.3805 val=0.2850 ema=0.2850 best=0.3200 lr=0.0192 t=0.5s clock=203s
+  s1 e 75 loss=1.1909 val=0.2333 ema=0.3083 best=0.3200 lr=0.0190 t=0.5s clock=203s
+  s1 e 76 loss=1.2211 val=0.2033 ema=0.3133 best=0.3200 lr=0.0189 t=0.6s clock=202s
+  s1 e 77 loss=1.2537 val=0.2267 ema=0.3067 best=0.3200 lr=0.0187 t=0.5s clock=202s
+  s1 e 78 loss=1.1599 val=0.2883 ema=0.3200 best=0.3200 lr=0.0185 t=0.5s clock=201s
+  s1 e 79 loss=1.1921 val=0.2283 ema=0.2883 best=0.3200 lr=0.0184 t=0.5s clock=200s
+  s1 e 80 loss=1.2735 val=0.2817 ema=0.2783 best=0.3200 lr=0.0182 t=0.5s clock=200s
+  s1 e 81 loss=1.3209 val=0.2617 ema=0.2883 best=0.3200 lr=0.0181 t=0.6s clock=199s
+  s1 e 82 loss=1.2786 val=0.2467 ema=0.2967 best=0.3200 lr=0.0179 t=0.5s clock=199s
+  s1 e 83 loss=1.1123 val=0.2733 ema=0.3033 best=0.3200 lr=0.0177 t=0.5s clock=198s
+  s1 e 84 loss=1.1150 val=0.2650 ema=0.3167 best=0.3200 lr=0.0176 t=0.5s clock=198s
+  s1 e 85 loss=1.2244 val=0.2600 ema=0.3017 best=0.3200 lr=0.0174 t=0.5s clock=197s
+  s1 e 86 loss=1.0884 val=0.2033 ema=0.3267 best=0.3267 lr=0.0172 t=0.5s clock=197s
+  s1 e 87 loss=1.1606 val=0.2567 ema=0.3450 best=0.3450 lr=0.0171 t=0.6s clock=196s
+  s1 e 88 loss=1.1904 val=0.2333 ema=0.3250 best=0.3450 lr=0.0169 t=0.5s clock=196s
+  s1 e 89 loss=1.1434 val=0.2667 ema=0.3150 best=0.3450 lr=0.0167 t=0.5s clock=195s
+  s1 e 90 loss=1.0792 val=0.2883 ema=0.2983 best=0.3450 lr=0.0165 t=0.5s clock=195s
+  s1 e 91 loss=1.1512 val=0.2400 ema=0.3283 best=0.3450 lr=0.0164 t=0.5s clock=194s
+  s1 e 92 loss=1.1513 val=0.2117 ema=0.3250 best=0.3450 lr=0.0162 t=0.5s clock=193s
+  s1 e 93 loss=1.1480 val=0.2750 ema=0.3133 best=0.3450 lr=0.0160 t=0.5s clock=193s
+  s1 e 94 loss=1.0757 val=0.2817 ema=0.3217 best=0.3450 lr=0.0158 t=0.5s clock=192s
+  s1 e 95 loss=1.0765 val=0.3133 ema=0.2850 best=0.3450 lr=0.0157 t=0.5s clock=192s
+  s1 e 96 loss=1.0563 val=0.2483 ema=0.3233 best=0.3450 lr=0.0155 t=0.5s clock=191s
+  s1 e 97 loss=1.1028 val=0.3050 ema=0.2950 best=0.3450 lr=0.0153 t=0.5s clock=191s
+  s1 e 98 loss=1.0195 val=0.2900 ema=0.3183 best=0.3450 lr=0.0151 t=0.5s clock=190s
+  s1 e 99 loss=1.1204 val=0.2950 ema=0.3350 best=0.3450 lr=0.0149 t=0.5s clock=190s
+  s1 e100 loss=1.1358 val=0.2283 ema=0.3417 best=0.3450 lr=0.0148 t=0.5s clock=189s
+  s1 e101 loss=1.2365 val=0.1950 ema=0.3133 best=0.3450 lr=0.0146 t=0.5s clock=189s
+  s1 e102 loss=1.0934 val=0.3067 ema=0.3083 best=0.3450 lr=0.0144 t=0.6s clock=188s
+  s1 e103 loss=1.0416 val=0.2950 ema=0.3317 best=0.3450 lr=0.0142 t=0.5s clock=188s
+  s1 e104 loss=1.1968 val=0.2667 ema=0.3250 best=0.3450 lr=0.0140 t=0.5s clock=187s
+  s1 e105 loss=1.0751 val=0.2750 ema=0.3283 best=0.3450 lr=0.0139 t=0.5s clock=187s
+  s1 e106 loss=1.0530 val=0.3017 ema=0.3483 best=0.3483 lr=0.0137 t=0.5s clock=186s
+  s1 e107 loss=1.1028 val=0.3133 ema=0.3367 best=0.3483 lr=0.0135 t=0.5s clock=186s
+  s1 e108 loss=1.0773 val=0.2983 ema=0.3183 best=0.3483 lr=0.0133 t=0.5s clock=185s
+  s1 e109 loss=1.0861 val=0.2617 ema=0.3133 best=0.3483 lr=0.0131 t=0.5s clock=184s
+  s1 e110 loss=1.1681 val=0.2717 ema=0.3433 best=0.3483 lr=0.0130 t=0.5s clock=184s
+  s1 e111 loss=0.9874 val=0.2367 ema=0.3267 best=0.3483 lr=0.0128 t=0.5s clock=183s
+  s1 e112 loss=1.0290 val=0.2967 ema=0.3267 best=0.3483 lr=0.0126 t=0.5s clock=183s
+  s1 e113 loss=1.0300 val=0.2483 ema=0.2933 best=0.3483 lr=0.0124 t=0.5s clock=182s
+  s1 e114 loss=1.1248 val=0.3150 ema=0.3167 best=0.3483 lr=0.0122 t=0.5s clock=182s
+  s1 e115 loss=1.2059 val=0.3183 ema=0.3200 best=0.3483 lr=0.0120 t=0.5s clock=181s
+  s1 e116 loss=1.1972 val=0.2583 ema=0.3083 best=0.3483 lr=0.0119 t=0.5s clock=181s
+  s1 e117 loss=1.0227 val=0.2733 ema=0.3283 best=0.3483 lr=0.0117 t=0.5s clock=180s
+  s1 e118 loss=1.1360 val=0.2533 ema=0.3083 best=0.3483 lr=0.0115 t=0.6s clock=180s
+  s1 e119 loss=1.0013 val=0.2700 ema=0.3250 best=0.3483 lr=0.0113 t=0.5s clock=179s
+  s1 e120 loss=0.9960 val=0.2950 ema=0.3117 best=0.3483 lr=0.0111 t=0.5s clock=179s
+  s1 e121 loss=1.0687 val=0.2867 ema=0.3050 best=0.3483 lr=0.0110 t=0.5s clock=178s
+  s1 e122 loss=1.0918 val=0.3183 ema=0.3283 best=0.3483 lr=0.0108 t=0.6s clock=178s
+  s1 e123 loss=0.9811 val=0.2983 ema=0.3483 best=0.3483 lr=0.0106 t=0.5s clock=177s
+  s1 e124 loss=1.0048 val=0.2967 ema=0.3250 best=0.3483 lr=0.0104 t=0.5s clock=177s
+  s1 e125 loss=0.9567 val=0.2967 ema=0.3250 best=0.3483 lr=0.0102 t=0.6s clock=176s
+  s1 e126 loss=1.1025 val=0.3000 ema=0.3150 best=0.3483 lr=0.0101 t=0.5s clock=175s
+  s1 e127 loss=0.9441 val=0.2933 ema=0.3217 best=0.3483 lr=0.0099 t=0.5s clock=175s
+  s1 e128 loss=0.9813 val=0.3017 ema=0.3217 best=0.3483 lr=0.0097 t=0.5s clock=174s
+  s1 e129 loss=1.1187 val=0.3167 ema=0.3117 best=0.3483 lr=0.0095 t=0.6s clock=174s
+  s1 e130 loss=1.0158 val=0.3283 ema=0.3267 best=0.3483 lr=0.0093 t=0.5s clock=173s
+  s1 e131 loss=0.9363 val=0.2617 ema=0.3350 best=0.3483 lr=0.0092 t=0.5s clock=173s
+  s1 e132 loss=0.9664 val=0.2750 ema=0.3400 best=0.3483 lr=0.0090 t=0.5s clock=172s
+  s1 e133 loss=0.9206 val=0.3067 ema=0.3367 best=0.3483 lr=0.0088 t=0.5s clock=172s
+  s1 e134 loss=0.9557 val=0.3033 ema=0.3183 best=0.3483 lr=0.0086 t=0.5s clock=171s
+  s1 e135 loss=0.8992 val=0.3233 ema=0.3383 best=0.3483 lr=0.0085 t=0.6s clock=171s
+  s1 e136 loss=1.0059 val=0.3050 ema=0.3267 best=0.3483 lr=0.0083 t=0.5s clock=170s
+  s1 e137 loss=0.8785 val=0.3150 ema=0.3333 best=0.3483 lr=0.0081 t=0.5s clock=170s
+  s1 e138 loss=0.9698 val=0.2883 ema=0.3317 best=0.3483 lr=0.0079 t=0.5s clock=169s
+  s1 e139 loss=1.0230 val=0.3017 ema=0.3350 best=0.3483 lr=0.0078 t=0.5s clock=169s
+  s1 e140 loss=1.0667 val=0.2933 ema=0.3383 best=0.3483 lr=0.0076 t=0.5s clock=168s
+  s1 e141 loss=0.9505 val=0.3183 ema=0.3150 best=0.3483 lr=0.0074 t=0.5s clock=168s
+  s1 e142 loss=0.8936 val=0.3100 ema=0.3317 best=0.3483 lr=0.0073 t=0.5s clock=167s
+  seed 1: saturated (no >noise gain in 55 ep, anchor e87 @0.3450), releasing slice
+  seed 1 done: best_val=0.3483 (1.3min)
+  v12.1 top-up: surplus affords seed 2 (1243-epoch schedule)
+  seed 2: schedule 81 epochs (epoch0 0.6s, slice 106s)
+  s2 e  0 loss=1.8019 val=0.1750 ema=0.1550 best=0.1750 lr=0.0050 t=0.6s clock=166s
+  s2 e  1 loss=1.7900 val=0.2033 ema=0.1550 best=0.2033 lr=0.0100 t=0.5s clock=166s
+  s2 e  2 loss=1.7873 val=0.1750 ema=0.1550 best=0.2033 lr=0.0150 t=0.5s clock=165s
+  s2 e  3 loss=1.7816 val=0.1933 ema=0.1550 best=0.2033 lr=0.0200 t=0.5s clock=165s
+  s2 e  4 loss=1.7765 val=0.2417 ema=0.1600 best=0.2417 lr=0.0250 t=0.5s clock=164s
+  s2 e  5 loss=1.7702 val=0.2267 ema=0.1550 best=0.2417 lr=0.0250 t=0.5s clock=164s
+  s2 e  6 loss=1.7624 val=0.1800 ema=0.1550 best=0.2417 lr=0.0250 t=0.6s clock=163s
+  s2 e  7 loss=1.7520 val=0.2317 ema=0.1550 best=0.2417 lr=0.0250 t=0.5s clock=163s
+  s2 e  8 loss=1.7492 val=0.2517 ema=0.1550 best=0.2517 lr=0.0249 t=0.5s clock=162s
+  s2 e  9 loss=1.7347 val=0.1967 ema=0.1550 best=0.2517 lr=0.0248 t=0.5s clock=162s
+  s2 e 10 loss=1.7454 val=0.2667 ema=0.1550 best=0.2667 lr=0.0247 t=0.5s clock=161s
+  s2 e 11 loss=1.7372 val=0.2133 ema=0.1550 best=0.2667 lr=0.0246 t=0.6s clock=161s
+  s2 e 12 loss=1.7207 val=0.2500 ema=0.1550 best=0.2667 lr=0.0245 t=0.5s clock=160s
+  s2 e 13 loss=1.7110 val=0.2333 ema=0.1550 best=0.2667 lr=0.0243 t=0.5s clock=160s
+  s2 e 14 loss=1.7011 val=0.2817 ema=0.1983 best=0.2817 lr=0.0241 t=0.5s clock=159s
+  s2 e 15 loss=1.6761 val=0.2617 ema=0.1550 best=0.2817 lr=0.0239 t=0.5s clock=158s
+  s2 e 16 loss=1.7157 val=0.1933 ema=0.1550 best=0.2817 lr=0.0237 t=0.5s clock=158s
+  s2 e 17 loss=1.6751 val=0.2617 ema=0.1567 best=0.2817 lr=0.0235 t=0.5s clock=157s
+  s2 e 18 loss=1.6763 val=0.1700 ema=0.1550 best=0.2817 lr=0.0232 t=0.5s clock=157s
+  s2 e 19 loss=1.6524 val=0.2600 ema=0.1600 best=0.2817 lr=0.0230 t=0.5s clock=156s
+  s2 e 20 loss=1.6653 val=0.2683 ema=0.1550 best=0.2817 lr=0.0227 t=0.5s clock=156s
+  s2 e 21 loss=1.6426 val=0.2483 ema=0.1717 best=0.2817 lr=0.0224 t=0.5s clock=155s
+  s2 e 22 loss=1.6378 val=0.2100 ema=0.1550 best=0.2817 lr=0.0220 t=0.5s clock=155s
+  s2 e 23 loss=1.6098 val=0.2250 ema=0.1550 best=0.2817 lr=0.0217 t=0.5s clock=154s
+  s2 e 24 loss=1.6016 val=0.2033 ema=0.1967 best=0.2817 lr=0.0213 t=0.5s clock=154s
+  s2 e 25 loss=1.6048 val=0.2233 ema=0.1783 best=0.2817 lr=0.0210 t=0.5s clock=153s
+  s2 e 26 loss=1.6177 val=0.2150 ema=0.2100 best=0.2817 lr=0.0206 t=0.5s clock=153s
+  s2 e 27 loss=1.6266 val=0.2283 ema=0.1550 best=0.2817 lr=0.0202 t=0.5s clock=152s
+  s2 e 28 loss=1.6291 val=0.2333 ema=0.1917 best=0.2817 lr=0.0198 t=0.5s clock=152s
+  s2 e 29 loss=1.6019 val=0.2550 ema=0.2067 best=0.2817 lr=0.0193 t=0.5s clock=151s
+  s2 e 30 loss=1.5059 val=0.3000 ema=0.1883 best=0.3000 lr=0.0189 t=0.5s clock=151s
+  s2 e 31 loss=1.5651 val=0.2117 ema=0.1950 best=0.3000 lr=0.0184 t=0.5s clock=150s
+  s2 e 32 loss=1.5052 val=0.1850 ema=0.2267 best=0.3000 lr=0.0180 t=0.5s clock=150s
+  s2 e 33 loss=1.5582 val=0.2417 ema=0.2017 best=0.3000 lr=0.0175 t=0.5s clock=149s
+  s2 e 34 loss=1.5425 val=0.2583 ema=0.2283 best=0.3000 lr=0.0170 t=0.5s clock=148s
+  s2 e 35 loss=1.4977 val=0.1917 ema=0.1850 best=0.3000 lr=0.0166 t=0.5s clock=148s
+  s2 e 36 loss=1.4958 val=0.2400 ema=0.2500 best=0.3000 lr=0.0161 t=0.5s clock=147s
+  s2 e 37 loss=1.5211 val=0.2383 ema=0.2483 best=0.3000 lr=0.0156 t=0.5s clock=147s
+  s2 e 38 loss=1.5348 val=0.2833 ema=0.2467 best=0.3000 lr=0.0151 t=0.5s clock=146s
+  s2 e 39 loss=1.4729 val=0.2150 ema=0.1800 best=0.3000 lr=0.0146 t=0.5s clock=146s
+  s2 e 40 loss=1.5210 val=0.2133 ema=0.1983 best=0.3000 lr=0.0140 t=0.5s clock=145s
+  s2 e 41 loss=1.4615 val=0.2600 ema=0.2350 best=0.3000 lr=0.0135 t=0.5s clock=145s
+  s2 e 42 loss=1.4864 val=0.2033 ema=0.1883 best=0.3000 lr=0.0130 t=0.5s clock=144s
+  s2 e 43 loss=1.4213 val=0.2433 ema=0.2133 best=0.3000 lr=0.0125 t=0.5s clock=144s
+  s2 e 44 loss=1.3908 val=0.2250 ema=0.2300 best=0.3000 lr=0.0120 t=0.5s clock=143s
+  s2 e 45 loss=1.3916 val=0.2483 ema=0.2400 best=0.3000 lr=0.0115 t=0.5s clock=143s
+  s2 e 46 loss=1.3807 val=0.2200 ema=0.2483 best=0.3000 lr=0.0110 t=0.5s clock=142s
+  s2 e 47 loss=1.3987 val=0.2533 ema=0.2850 best=0.3000 lr=0.0104 t=0.6s clock=141s
+  s2 e 48 loss=1.3415 val=0.2917 ema=0.2800 best=0.3000 lr=0.0099 t=0.5s clock=141s
+  s2 e 49 loss=1.4174 val=0.2717 ema=0.3050 best=0.3050 lr=0.0094 t=0.5s clock=140s
+  s2 e 50 loss=1.4569 val=0.2733 ema=0.2517 best=0.3050 lr=0.0089 t=0.5s clock=140s
+  s2 e 51 loss=1.3958 val=0.2633 ema=0.2533 best=0.3050 lr=0.0084 t=0.5s clock=139s
+  s2 e 52 loss=1.3600 val=0.2967 ema=0.2750 best=0.3050 lr=0.0080 t=0.6s clock=139s
+  s2 e 53 loss=1.4464 val=0.3050 ema=0.3083 best=0.3083 lr=0.0075 t=0.5s clock=138s
+  s2 e 54 loss=1.3271 val=0.2917 ema=0.2783 best=0.3083 lr=0.0070 t=0.5s clock=138s
+  seed 2: saturated (no >noise gain in 40 ep, anchor e14 @0.2817), releasing slice
+  seed 2 done: best_val=0.3083 (0.5min)
+  v12.1 top-up: surplus affords seed 3 (2400-epoch schedule)
+  seed 3: schedule 31 epochs (epoch0 0.5s, slice 77s)
+  s3 e  0 loss=1.8041 val=0.1767 ema=0.1550 best=0.1767 lr=0.0050 t=0.5s clock=137s
+  s3 e  1 loss=1.7901 val=0.1983 ema=0.1667 best=0.1983 lr=0.0100 t=0.5s clock=137s
+  s3 e  2 loss=1.7837 val=0.2150 ema=0.1550 best=0.2150 lr=0.0150 t=0.5s clock=136s
+  s3 e  3 loss=1.7804 val=0.2450 ema=0.1550 best=0.2450 lr=0.0200 t=0.5s clock=136s
+  s3 e  4 loss=1.7706 val=0.1767 ema=0.1550 best=0.2450 lr=0.0250 t=0.5s clock=135s
+  s3 e  5 loss=1.7703 val=0.2550 ema=0.1550 best=0.2550 lr=0.0250 t=0.5s clock=135s
+  s3 e  6 loss=1.7600 val=0.2400 ema=0.1550 best=0.2550 lr=0.0249 t=0.6s clock=134s
+  s3 e  7 loss=1.7523 val=0.1717 ema=0.1550 best=0.2550 lr=0.0246 t=0.5s clock=133s
+  s3 e  8 loss=1.7472 val=0.1883 ema=0.1550 best=0.2550 lr=0.0242 t=0.5s clock=133s
+  s3 e  9 loss=1.7420 val=0.1783 ema=0.1550 best=0.2550 lr=0.0236 t=0.5s clock=132s
+  s3 e 10 loss=1.7406 val=0.2083 ema=0.1567 best=0.2550 lr=0.0228 t=0.6s clock=132s
+  s3 e 11 loss=1.7307 val=0.2150 ema=0.1650 best=0.2550 lr=0.0219 t=0.5s clock=131s
+  s3 e 12 loss=1.7161 val=0.2050 ema=0.1550 best=0.2550 lr=0.0208 t=0.5s clock=131s
+  s3 e 13 loss=1.7089 val=0.2683 ema=0.1550 best=0.2683 lr=0.0196 t=0.5s clock=130s
+  s3 e 14 loss=1.6711 val=0.2017 ema=0.1550 best=0.2683 lr=0.0183 t=0.6s clock=130s
+  s3 e 15 loss=1.6709 val=0.2550 ema=0.1550 best=0.2683 lr=0.0169 t=0.6s clock=129s
+  s3 e 16 loss=1.6947 val=0.2617 ema=0.1767 best=0.2683 lr=0.0155 t=0.5s clock=129s
+  s3 e 17 loss=1.6667 val=0.2500 ema=0.1550 best=0.2683 lr=0.0140 t=0.5s clock=128s
+  s3 e 18 loss=1.6384 val=0.2117 ema=0.1550 best=0.2683 lr=0.0125 t=0.5s clock=127s
+  s3 e 19 loss=1.6305 val=0.2150 ema=0.1567 best=0.2683 lr=0.0110 t=0.5s clock=127s
+  s3 e 20 loss=1.6051 val=0.2917 ema=0.1550 best=0.2917 lr=0.0095 t=0.5s clock=126s
+  s3 e 21 loss=1.6159 val=0.2433 ema=0.1550 best=0.2917 lr=0.0081 t=0.5s clock=126s
+  s3 e 22 loss=1.5659 val=0.2817 ema=0.1767 best=0.2917 lr=0.0067 t=0.5s clock=125s
+  s3 e 23 loss=1.5928 val=0.2950 ema=0.1700 best=0.2950 lr=0.0054 t=0.6s clock=125s
+  s3 e 24 loss=1.6012 val=0.2467 ema=0.1683 best=0.2950 lr=0.0042 t=0.5s clock=124s
+  s3 e 25 loss=1.5505 val=0.2617 ema=0.1667 best=0.2950 lr=0.0031 t=0.5s clock=124s
+  s3 e 26 loss=1.5833 val=0.2950 ema=0.1767 best=0.2950 lr=0.0022 t=0.5s clock=123s
+  s3 e 27 loss=1.6059 val=0.2950 ema=0.1833 best=0.2950 lr=0.0014 t=0.5s clock=123s
+  s3 e 28 loss=1.6023 val=0.3017 ema=0.1833 best=0.3017 lr=0.0008 t=0.5s clock=122s
+  s3 e 29 loss=1.4900 val=0.3100 ema=0.1883 best=0.3100 lr=0.0004 t=0.6s clock=122s
+  s3 e 30 loss=1.5513 val=0.3067 ema=0.2050 best=0.3100 lr=0.0001 t=0.5s clock=121s
+  seed 3 done: best_val=0.3100 (0.3min)
+  v12.1 top-up: surplus affords seed 4 (2400-epoch schedule)
+  seed 4: schedule 7 epochs (epoch0 0.5s, slice 61s)
+  s4 e  0 loss=1.8027 val=0.1967 ema=0.1583 best=0.1967 lr=0.0050 t=0.5s clock=121s
+  seed 4 done: best_val=0.1967 (0.0min)
+  v12.1 top-up: surplus affords seed 5 (2400-epoch schedule)
+  seed 5: schedule 7 epochs (epoch0 0.5s, slice 60s)
+  s5 e  0 loss=1.8033 val=0.1650 ema=0.1550 best=0.1650 lr=0.0050 t=0.5s clock=120s
+  seed 5 done: best_val=0.1650 (0.0min)
+  v12.1 top-up: surplus affords seed 6 (2400-epoch schedule)
+  seed 6 done: best_val=-1.0000 (0.0min)
+  v12.1 top-up: surplus affords seed 7 (2400-epoch schedule)
+  seed 7 done: best_val=-1.0000 (0.0min)
+  v12 select: {'single0': 36.333, 'single1': 34.833, 'single2': 30.833, 'single3': 31.0, 'single4': 19.667, 'single5': 16.5, 'single6': 15.5, 'single7': 15.5, 'top2': 34.833, 'top3': 34.333, 'top4': 34.5, 'top5': 35.0, 'top6': 35.167, 'top7': 35.333, 'ensemble': 35.333, 'single0_tta': 32.0, 'single1_tta': 31.833, 'single2_tta': 28.833, 'single3_tta': 30.333, 'single4_tta': 18.833, 'single5_tta': 18.333, 'single6_tta': 15.5, 'single7_tta': 15.5, 'top2_tta': 33.0, 'top3_tta': 33.333, 'top4_tta': 32.833, 'top5_tta': 33.333, 'top6_tta': 33.333, 'top7_tta': 33.167, 'ensemble_tta': 33.167} -> single0
+
+=== Predicting ===
+  Allotted compute time remaining: ~1m,59s
+Run time for Ganges: 240.40976203605533
+Model Training and Prediction Complete
+finished dataset: Ganges
+========== Dataset   Congo    =============================================
+  Metadata:
+   - num_classes         : 10
+   - input_shape         : [5000, 3, 32, 32]
+   - codename            : Congo
+   - benchmark           : 57.5
+   - time_limit          : 0.1
+   - time_remaining      : 359.9782720915973
+
+=== Processing Data ===
+  Allotted compute time remaining: ~5m,59s
+  v10 fingerprint: corr1=+0.924 -> image-like
+  base aug policy: crop_pad=2, cutout=4 (final decision made by the NAS aug probe, family-matched)
+
+=== Performing NAS ===
+  Allotted compute time remaining: ~5m,59s
+  v10 fingerprint: {'corr1': 0.9244, 'encoded': False, 'collapse': True, 'stem': 'conv3'}
+  v10 backbone_skip: {'picked': 'tcn2d', 'reason': 'image-like'}
+  v10 aug_probe: {'skipped': True, 'reason': 'low budget'}
+  v10 depth_search: {'skipped': True, 'picked': 6}
+  v10 attn_probe: {'skipped': True}
+  v10 final: {'arch': 'tcn2d D=6 W=48'}
+
+=== Training ===
+  Allotted compute time remaining: ~5m,59s
+  v12 plan: ~2.2s/epoch -> 110 projected epochs -> K=1 seeds x 109-epoch schedule (TA=on)
+  seed 0: schedule 83 epochs (epoch0 2.8s, slice 296s)
+  s0 e  0 loss=2.0502 val=0.3180 ema=0.0980 best=0.3180 lr=0.0050 t=2.8s clock=356s
+  s0 e  1 loss=1.7605 val=0.4030 ema=0.0970 best=0.4030 lr=0.0100 t=2.5s clock=353s
+  s0 e  2 loss=1.6380 val=0.3420 ema=0.0970 best=0.4030 lr=0.0150 t=2.4s clock=351s
+  s0 e  3 loss=1.5819 val=0.3190 ema=0.0970 best=0.4030 lr=0.0200 t=2.4s clock=348s
+  s0 e  4 loss=1.5072 val=0.2890 ema=0.0970 best=0.4030 lr=0.0250 t=2.4s clock=346s
+  s0 e  5 loss=1.4209 val=0.4820 ema=0.0970 best=0.4820 lr=0.0250 t=2.4s clock=343s
+  s0 e  6 loss=1.3542 val=0.3840 ema=0.0970 best=0.4820 lr=0.0250 t=2.4s clock=341s
+  s0 e  7 loss=1.3054 val=0.4750 ema=0.0970 best=0.4820 lr=0.0250 t=2.4s clock=339s
+  s0 e  8 loss=1.2331 val=0.4140 ema=0.0990 best=0.4820 lr=0.0249 t=2.4s clock=336s
+  s0 e  9 loss=1.2029 val=0.5300 ema=0.0970 best=0.5300 lr=0.0248 t=2.4s clock=334s
+  s0 e 10 loss=1.1613 val=0.6010 ema=0.1010 best=0.6010 lr=0.0247 t=2.4s clock=331s
+  s0 e 11 loss=1.1203 val=0.5730 ema=0.1150 best=0.6010 lr=0.0246 t=2.4s clock=329s
+  s0 e 12 loss=1.0854 val=0.5930 ema=0.1120 best=0.6010 lr=0.0245 t=2.4s clock=326s
+  s0 e 13 loss=1.0673 val=0.5370 ema=0.1670 best=0.6010 lr=0.0244 t=2.4s clock=324s
+  s0 e 14 loss=1.0349 val=0.5770 ema=0.1440 best=0.6010 lr=0.0242 t=2.4s clock=321s
+  s0 e 15 loss=1.0143 val=0.5670 ema=0.1960 best=0.6010 lr=0.0240 t=2.4s clock=319s
+  s0 e 16 loss=0.9880 val=0.6240 ema=0.1880 best=0.6240 lr=0.0238 t=2.4s clock=317s
+  s0 e 17 loss=0.9576 val=0.6400 ema=0.1410 best=0.6400 lr=0.0236 t=2.4s clock=314s
+  s0 e 18 loss=0.9462 val=0.6530 ema=0.1760 best=0.6530 lr=0.0233 t=2.5s clock=312s
+  s0 e 19 loss=0.9056 val=0.6150 ema=0.2060 best=0.6530 lr=0.0231 t=2.5s clock=309s
+  s0 e 20 loss=0.8846 val=0.6700 ema=0.2200 best=0.6700 lr=0.0228 t=2.4s clock=307s
+  s0 e 21 loss=0.8907 val=0.6180 ema=0.2230 best=0.6700 lr=0.0225 t=2.4s clock=304s
+  s0 e 22 loss=0.8359 val=0.6440 ema=0.2060 best=0.6700 lr=0.0222 t=2.4s clock=302s
+  s0 e 23 loss=0.8291 val=0.6570 ema=0.2080 best=0.6700 lr=0.0219 t=2.4s clock=299s
+  s0 e 24 loss=0.7927 val=0.6420 ema=0.2320 best=0.6700 lr=0.0215 t=2.4s clock=297s
+  s0 e 25 loss=0.8057 val=0.6440 ema=0.2030 best=0.6700 lr=0.0212 t=2.4s clock=295s
+  s0 e 26 loss=0.8028 val=0.6650 ema=0.2250 best=0.6700 lr=0.0208 t=2.4s clock=292s
+  s0 e 27 loss=0.7571 val=0.6660 ema=0.2700 best=0.6700 lr=0.0204 t=2.4s clock=290s
+  s0 e 28 loss=0.7648 val=0.6720 ema=0.2880 best=0.6720 lr=0.0200 t=2.5s clock=287s
+  s0 e 29 loss=0.7754 val=0.7040 ema=0.3190 best=0.7040 lr=0.0196 t=2.5s clock=285s
+  s0 e 30 loss=0.7282 val=0.7230 ema=0.3840 best=0.7230 lr=0.0192 t=2.4s clock=282s
+  s0 e 31 loss=0.7242 val=0.7070 ema=0.4260 best=0.7230 lr=0.0188 t=2.4s clock=280s
+  s0 e 32 loss=0.6825 val=0.7140 ema=0.3850 best=0.7230 lr=0.0183 t=2.4s clock=277s
+  s0 e 33 loss=0.7229 val=0.6960 ema=0.4810 best=0.7230 lr=0.0179 t=2.4s clock=275s
+  s0 e 34 loss=0.7130 val=0.7250 ema=0.5080 best=0.7250 lr=0.0174 t=2.5s clock=273s
+  s0 e 35 loss=0.6988 val=0.6910 ema=0.4870 best=0.7250 lr=0.0169 t=2.4s clock=270s
+  s0 e 36 loss=0.6467 val=0.7060 ema=0.5250 best=0.7250 lr=0.0165 t=2.4s clock=268s
+  s0 e 37 loss=0.6435 val=0.7220 ema=0.5430 best=0.7250 lr=0.0160 t=2.5s clock=265s
+  s0 e 38 loss=0.6864 val=0.7220 ema=0.5310 best=0.7250 lr=0.0155 t=2.4s clock=263s
+  s0 e 39 loss=0.6467 val=0.7400 ema=0.5950 best=0.7400 lr=0.0150 t=2.5s clock=260s
+  s0 e 40 loss=0.6307 val=0.7390 ema=0.6280 best=0.7400 lr=0.0145 t=2.4s clock=258s
+  s0 e 41 loss=0.5979 val=0.7210 ema=0.6280 best=0.7400 lr=0.0140 t=2.4s clock=255s
+  s0 e 42 loss=0.6084 val=0.7350 ema=0.6450 best=0.7400 lr=0.0135 t=2.4s clock=253s
+  s0 e 43 loss=0.6222 val=0.6990 ema=0.6290 best=0.7400 lr=0.0130 t=2.4s clock=251s
+  s0 e 44 loss=0.6095 val=0.7340 ema=0.6720 best=0.7400 lr=0.0125 t=2.4s clock=248s
+  s0 e 45 loss=0.6161 val=0.7170 ema=0.6930 best=0.7400 lr=0.0120 t=2.4s clock=246s
+  s0 e 46 loss=0.6112 val=0.7420 ema=0.6770 best=0.7420 lr=0.0115 t=2.5s clock=243s
+  s0 e 47 loss=0.6217 val=0.7460 ema=0.6900 best=0.7460 lr=0.0110 t=2.4s clock=241s
+  s0 e 48 loss=0.6221 val=0.7390 ema=0.7040 best=0.7460 lr=0.0105 t=2.4s clock=238s
+  s0 e 49 loss=0.5983 val=0.7530 ema=0.6590 best=0.7530 lr=0.0100 t=2.4s clock=236s
+  s0 e 50 loss=0.6145 val=0.7350 ema=0.7030 best=0.7530 lr=0.0095 t=2.4s clock=233s
+  s0 e 51 loss=0.6071 val=0.7400 ema=0.7000 best=0.7530 lr=0.0090 t=2.5s clock=231s
+  s0 e 52 loss=0.6156 val=0.7570 ema=0.6960 best=0.7570 lr=0.0085 t=2.5s clock=228s
+  s0 e 53 loss=0.5911 val=0.7570 ema=0.7190 best=0.7570 lr=0.0081 t=2.4s clock=226s
+  s0 e 54 loss=0.5884 val=0.7570 ema=0.7080 best=0.7570 lr=0.0076 t=2.4s clock=224s
+  s0 e 55 loss=0.5719 val=0.7610 ema=0.7000 best=0.7610 lr=0.0071 t=2.4s clock=221s
+  s0 e 56 loss=0.5932 val=0.7610 ema=0.7180 best=0.7610 lr=0.0067 t=2.4s clock=219s
+  s0 e 57 loss=0.5853 val=0.7620 ema=0.7020 best=0.7620 lr=0.0063 t=2.4s clock=216s
+  s0 e 58 loss=0.5886 val=0.7680 ema=0.7100 best=0.7680 lr=0.0058 t=2.4s clock=214s
+  s0 e 59 loss=0.5848 val=0.7800 ema=0.7090 best=0.7800 lr=0.0054 t=2.4s clock=211s
+  s0 e 60 loss=0.6032 val=0.7720 ema=0.7150 best=0.7800 lr=0.0050 t=2.4s clock=209s
+  s0 e 61 loss=0.5722 val=0.7760 ema=0.7170 best=0.7800 lr=0.0046 t=2.4s clock=206s
+  s0 e 62 loss=0.5909 val=0.7670 ema=0.7220 best=0.7800 lr=0.0042 t=2.4s clock=204s
+  s0 e 63 loss=0.5789 val=0.7780 ema=0.7270 best=0.7800 lr=0.0038 t=2.5s clock=202s
+  s0 e 64 loss=0.5782 val=0.7810 ema=0.7220 best=0.7810 lr=0.0035 t=2.5s clock=199s
+  s0 e 65 loss=0.5692 val=0.7700 ema=0.7190 best=0.7810 lr=0.0031 t=2.4s clock=197s
+  s0 e 66 loss=0.5614 val=0.7750 ema=0.7220 best=0.7810 lr=0.0028 t=2.4s clock=194s
+  s0 e 67 loss=0.5842 val=0.7780 ema=0.7360 best=0.7810 lr=0.0025 t=2.5s clock=192s
+  s0 e 68 loss=0.5613 val=0.7780 ema=0.7350 best=0.7810 lr=0.0022 t=2.5s clock=189s
+  s0 e 69 loss=0.5689 val=0.7740 ema=0.7340 best=0.7810 lr=0.0019 t=2.4s clock=187s
+  s0 e 70 loss=0.5614 val=0.7650 ema=0.7420 best=0.7810 lr=0.0017 t=2.4s clock=184s
+  s0 e 71 loss=0.5711 val=0.7810 ema=0.7490 best=0.7810 lr=0.0014 t=2.4s clock=182s
+  s0 e 72 loss=0.5852 val=0.7810 ema=0.7460 best=0.7810 lr=0.0012 t=2.4s clock=179s
+  s0 e 73 loss=0.5691 val=0.7750 ema=0.7430 best=0.7810 lr=0.0010 t=2.4s clock=177s
+  s0 e 74 loss=0.5708 val=0.7770 ema=0.7460 best=0.7810 lr=0.0008 t=2.4s clock=175s
+  s0 e 75 loss=0.5731 val=0.7820 ema=0.7520 best=0.7820 lr=0.0006 t=2.5s clock=172s
+  s0 e 76 loss=0.5629 val=0.7820 ema=0.7560 best=0.7820 lr=0.0005 t=2.4s clock=170s
+  s0 e 77 loss=0.5573 val=0.7780 ema=0.7490 best=0.7820 lr=0.0004 t=2.4s clock=167s
+  s0 e 78 loss=0.5582 val=0.7780 ema=0.7550 best=0.7820 lr=0.0003 t=2.4s clock=165s
+  s0 e 79 loss=0.5706 val=0.7760 ema=0.7550 best=0.7820 lr=0.0002 t=2.4s clock=162s
+  s0 e 80 loss=0.5823 val=0.7790 ema=0.7630 best=0.7820 lr=0.0001 t=2.4s clock=160s
+  s0 e 81 loss=0.5727 val=0.7790 ema=0.7660 best=0.7820 lr=0.0000 t=2.4s clock=157s
+  s0 e 82 loss=0.5663 val=0.7740 ema=0.7660 best=0.7820 lr=0.0000 t=2.4s clock=155s
+  seed 0 done: best_val=0.7820 (3.4min)
+  v12 select: {'single0': 78.2, 'single0_tta': 78.3} -> single0_tta
+
+=== Predicting ===
+  Allotted compute time remaining: ~2m,34s
+Run time for Congo: 205.79165272787213
+Model Training and Prediction Complete
+finished dataset: Congo
+========== Dataset   Rhine    =============================================
+  Metadata:
+   - num_classes         : 43
+   - input_shape         : [5328, 3, 29, 29]
+   - codename            : Rhine
+   - benchmark           : 89.03
+   - time_limit          : 0.1
+   - time_remaining      : 359.9727656394243
+
+=== Processing Data ===
+  Allotted compute time remaining: ~5m,59s
+  v10 fingerprint: corr1=+0.943 -> image-like
+  base aug policy: crop_pad=2, cutout=4 (final decision made by the NAS aug probe, family-matched)
+
+=== Performing NAS ===
+  Allotted compute time remaining: ~5m,59s
+  v10 fingerprint: {'corr1': 0.9433, 'encoded': False, 'collapse': True, 'stem': 'conv3'}
+  v10 backbone_skip: {'picked': 'tcn2d', 'reason': 'image-like'}
+  v10 aug_probe: {'skipped': True, 'reason': 'low budget'}
+  v10 depth_search: {'skipped': True, 'picked': 6}
+  v10 attn_probe: {'skipped': True}
+  v10 final: {'arch': 'tcn2d D=6 W=48'}
+
+=== Training ===
+  Allotted compute time remaining: ~5m,59s
+  v12 plan: ~2.1s/epoch -> 112 projected epochs -> K=1 seeds x 111-epoch schedule (TA=on)
+  seed 0: schedule 69 epochs (epoch0 3.4s, slice 295s)
+  s0 e  0 loss=3.5332 val=0.1671 ema=0.0115 best=0.1671 lr=0.0050 t=3.4s clock=355s
+  s0 e  1 loss=3.0155 val=0.2173 ema=0.0115 best=0.2173 lr=0.0100 t=2.7s clock=353s
+  s0 e  2 loss=2.5718 val=0.2969 ema=0.0115 best=0.2969 lr=0.0150 t=2.7s clock=350s
+  s0 e  3 loss=2.2324 val=0.3935 ema=0.0115 best=0.3935 lr=0.0200 t=2.7s clock=347s
+  s0 e  4 loss=1.9546 val=0.4739 ema=0.0115 best=0.4739 lr=0.0250 t=2.7s clock=345s
+  s0 e  5 loss=1.6370 val=0.6239 ema=0.0115 best=0.6239 lr=0.0250 t=2.7s clock=342s
+  s0 e  6 loss=1.4111 val=0.6647 ema=0.0115 best=0.6647 lr=0.0250 t=2.7s clock=339s
+  s0 e  7 loss=1.3293 val=0.6469 ema=0.0115 best=0.6647 lr=0.0249 t=2.7s clock=337s
+  s0 e  8 loss=1.1888 val=0.7918 ema=0.0321 best=0.7918 lr=0.0249 t=2.7s clock=334s
+  s0 e  9 loss=1.0795 val=0.7894 ema=0.0728 best=0.7918 lr=0.0248 t=2.7s clock=331s
+  s0 e 10 loss=1.0000 val=0.8484 ema=0.0717 best=0.8484 lr=0.0246 t=2.7s clock=329s
+  s0 e 11 loss=0.9643 val=0.7672 ema=0.0724 best=0.8484 lr=0.0245 t=2.7s clock=326s
+  s0 e 12 loss=0.9402 val=0.8496 ema=0.0538 best=0.8496 lr=0.0243 t=2.7s clock=323s
+  s0 e 13 loss=0.9447 val=0.8369 ema=0.0926 best=0.8496 lr=0.0240 t=2.7s clock=321s
+  s0 e 14 loss=0.8869 val=0.8923 ema=0.0895 best=0.8923 lr=0.0238 t=2.7s clock=318s
+  s0 e 15 loss=0.8868 val=0.8001 ema=0.1136 best=0.8923 lr=0.0235 t=2.7s clock=315s
+  s0 e 16 loss=0.8645 val=0.8658 ema=0.1085 best=0.8923 lr=0.0232 t=2.7s clock=313s
+  s0 e 17 loss=0.8640 val=0.8614 ema=0.1192 best=0.8923 lr=0.0229 t=2.7s clock=310s
+  s0 e 18 loss=0.8579 val=0.9141 ema=0.1295 best=0.9141 lr=0.0225 t=2.7s clock=307s
+  s0 e 19 loss=0.8653 val=0.8971 ema=0.1310 best=0.9141 lr=0.0222 t=2.7s clock=305s
+  s0 e 20 loss=0.8290 val=0.8547 ema=0.1671 best=0.9141 lr=0.0218 t=2.7s clock=302s
+  s0 e 21 loss=0.7995 val=0.9390 ema=0.1694 best=0.9390 lr=0.0213 t=2.7s clock=299s
+  s0 e 22 loss=0.7993 val=0.9101 ema=0.2700 best=0.9390 lr=0.0209 t=2.7s clock=297s
+  s0 e 23 loss=0.7920 val=0.9232 ema=0.2993 best=0.9390 lr=0.0204 t=2.7s clock=294s
+  s0 e 24 loss=0.8058 val=0.9343 ema=0.3515 best=0.9390 lr=0.0199 t=2.7s clock=291s
+  s0 e 25 loss=0.8099 val=0.9410 ema=0.4109 best=0.9410 lr=0.0194 t=2.7s clock=289s
+  s0 e 26 loss=0.7715 val=0.9315 ema=0.4600 best=0.9410 lr=0.0189 t=2.7s clock=286s
+  s0 e 27 loss=0.8145 val=0.9236 ema=0.5059 best=0.9410 lr=0.0184 t=2.7s clock=283s
+  s0 e 28 loss=0.8119 val=0.8717 ema=0.5166 best=0.9410 lr=0.0178 t=2.7s clock=281s
+  s0 e 29 loss=0.7938 val=0.9169 ema=0.5186 best=0.9410 lr=0.0173 t=2.7s clock=278s
+  s0 e 30 loss=0.7613 val=0.9430 ema=0.5598 best=0.9430 lr=0.0167 t=2.7s clock=275s
+  s0 e 31 loss=0.7657 val=0.9414 ema=0.5717 best=0.9430 lr=0.0161 t=2.7s clock=273s
+  s0 e 32 loss=0.7653 val=0.9260 ema=0.6247 best=0.9430 lr=0.0155 t=2.7s clock=270s
+  s0 e 33 loss=0.7754 val=0.9208 ema=0.6548 best=0.9430 lr=0.0149 t=2.7s clock=267s
+  s0 e 34 loss=0.7688 val=0.9327 ema=0.6805 best=0.9430 lr=0.0143 t=2.7s clock=265s
+  s0 e 35 loss=0.7495 val=0.9600 ema=0.7253 best=0.9600 lr=0.0137 t=2.7s clock=262s
+  s0 e 36 loss=0.7524 val=0.9335 ema=0.7660 best=0.9600 lr=0.0131 t=2.7s clock=259s
+  s0 e 37 loss=0.7527 val=0.9565 ema=0.7549 best=0.9600 lr=0.0125 t=2.7s clock=257s
+  s0 e 38 loss=0.7450 val=0.9537 ema=0.7874 best=0.9600 lr=0.0119 t=2.7s clock=254s
+  s0 e 39 loss=0.7396 val=0.9505 ema=0.8175 best=0.9600 lr=0.0113 t=2.7s clock=251s
+  s0 e 40 loss=0.7424 val=0.9450 ema=0.8159 best=0.9600 lr=0.0107 t=2.7s clock=249s
+  s0 e 41 loss=0.7483 val=0.9481 ema=0.8306 best=0.9600 lr=0.0101 t=2.7s clock=246s
+  s0 e 42 loss=0.7320 val=0.9454 ema=0.8325 best=0.9600 lr=0.0095 t=2.7s clock=243s
+  s0 e 43 loss=0.7329 val=0.9537 ema=0.8511 best=0.9600 lr=0.0089 t=2.7s clock=241s
+  s0 e 44 loss=0.7362 val=0.9470 ema=0.8599 best=0.9600 lr=0.0083 t=2.7s clock=238s
+  s0 e 45 loss=0.7422 val=0.9402 ema=0.8575 best=0.9600 lr=0.0077 t=2.7s clock=235s
+  s0 e 46 loss=0.7299 val=0.9517 ema=0.8721 best=0.9600 lr=0.0072 t=2.7s clock=233s
+  s0 e 47 loss=0.7338 val=0.9477 ema=0.8765 best=0.9600 lr=0.0066 t=2.7s clock=230s
+  s0 e 48 loss=0.7379 val=0.9458 ema=0.8816 best=0.9600 lr=0.0061 t=2.7s clock=227s
+  s0 e 49 loss=0.7356 val=0.9473 ema=0.8915 best=0.9600 lr=0.0056 t=2.7s clock=225s
+  s0 e 50 loss=0.7316 val=0.9529 ema=0.8919 best=0.9600 lr=0.0051 t=2.7s clock=222s
+  s0 e 51 loss=0.7245 val=0.9509 ema=0.8979 best=0.9600 lr=0.0046 t=2.7s clock=219s
+  s0 e 52 loss=0.7212 val=0.9596 ema=0.8975 best=0.9600 lr=0.0041 t=2.7s clock=217s
+  s0 e 53 loss=0.7282 val=0.9517 ema=0.9070 best=0.9600 lr=0.0037 t=2.7s clock=214s
+  s0 e 54 loss=0.7278 val=0.9529 ema=0.8959 best=0.9600 lr=0.0032 t=2.7s clock=211s
+  s0 e 55 loss=0.7242 val=0.9565 ema=0.9161 best=0.9600 lr=0.0028 t=2.7s clock=209s
+  s0 e 56 loss=0.7299 val=0.9501 ema=0.9086 best=0.9600 lr=0.0025 t=2.7s clock=206s
+  s0 e 57 loss=0.7219 val=0.9568 ema=0.9169 best=0.9600 lr=0.0021 t=2.7s clock=203s
+  s0 e 58 loss=0.7330 val=0.9553 ema=0.9204 best=0.9600 lr=0.0018 t=2.7s clock=201s
+  s0 e 59 loss=0.7269 val=0.9505 ema=0.9268 best=0.9600 lr=0.0015 t=2.7s clock=198s
+  s0 e 60 loss=0.7331 val=0.9565 ema=0.9299 best=0.9600 lr=0.0012 t=2.7s clock=195s
+  s0 e 61 loss=0.7382 val=0.9529 ema=0.9287 best=0.9600 lr=0.0010 t=2.7s clock=193s
+  s0 e 62 loss=0.7303 val=0.9561 ema=0.9331 best=0.9600 lr=0.0007 t=2.7s clock=190s
+  s0 e 63 loss=0.7210 val=0.9549 ema=0.9331 best=0.9600 lr=0.0005 t=2.7s clock=187s
+  s0 e 64 loss=0.7198 val=0.9541 ema=0.9315 best=0.9600 lr=0.0004 t=2.7s clock=185s
+  s0 e 65 loss=0.7299 val=0.9537 ema=0.9335 best=0.9600 lr=0.0002 t=2.7s clock=182s
+  s0 e 66 loss=0.7238 val=0.9549 ema=0.9367 best=0.9600 lr=0.0001 t=2.7s clock=179s
+  s0 e 67 loss=0.7233 val=0.9553 ema=0.9363 best=0.9600 lr=0.0001 t=2.7s clock=177s
+  s0 e 68 loss=0.7361 val=0.9553 ema=0.9394 best=0.9600 lr=0.0000 t=2.7s clock=174s
+  seed 0 done: best_val=0.9600 (3.1min)
+  v12 select: {'single0': 96.002, 'single0_tta': 93.705} -> single0
+
+=== Predicting ===
+  Allotted compute time remaining: ~2m,53s
+Run time for Rhine: 187.26853333041072
+Model Training and Prediction Complete
+finished dataset: Rhine
+done
+rm -Rf scoring
+mkdir scoring
+mkdir scoring/labels
+mkdir scoring/predictions
+rsync -avr --exclude='**/*x.npy' --exclude='**/train*.npy' --exclude='**/valid*.npy'   --include='**/test_y.npy' datasets/* scoring/labels/
+sending incremental file list
+Congo/
+Congo/metadata
+Congo/test_y.npy
+Ganges/
+Ganges/metadata
+Ganges/test_y.npy
+Rhine/
+Rhine/metadata
+Rhine/test_y.npy
+
+sent 27,264 bytes  received 142 bytes  54,812.00 bytes/sec
+total size is 26,729  speedup is 0.98
+cp -R package/predictions scoring
+cp evaluation/score.py scoring/score.py
+cd scoring; python3 score.py
+===========================================================================
+=============    Your Unseen Data 2026 Submission is scoring     =============
+===========================================================================
+== Scoring Ganges ==
+Raw Score:    32.167
+Adj Score:    0.644
+Model Params: 441174
+Runtime:      240.4s
+== Scoring Congo ==
+Raw Score:    78.300
+Adj Score:    4.894
+Model Params: 251866
+Runtime:      205.8s
+== Scoring Rhine ==
+Raw Score:    95.685
+Adj Score:    6.066
+Model Params: 253483
+Runtime:      187.3s
+===========================
+Final Score: 11.604
