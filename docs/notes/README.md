@@ -16,6 +16,8 @@ Phase-2 grader and is our Phase-3 entry. To understand the outcome, read in this
    finals dress rehearsal (ahead of the 2025 winner), and the cleaned-code equivalence proof.
 3. **[[Pipeline v12 - Screening Report]]** — the ablation history: what was tried and rejected
    (BDH, independent-init, wider models, weight soups, difficulty routing) with evidence.
+4. **[[Version Results Ledger]]** — every pipeline version (v2 → v13) with its datasets, scores,
+   and verdict, newest-first. The single place to see the whole trajectory of numbers.
 
 The sections below index the full notebase (competition rules, datasets, the research history).
 
