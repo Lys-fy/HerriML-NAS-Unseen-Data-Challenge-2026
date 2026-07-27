@@ -1,9 +1,23 @@
 # Map of Content
 
-> **Status:** current | **Topic:** Central index for the HerriML NAS competition notebase.
-> **Related:** [[Competition Overview]] (start here)
+> **Status:** project complete | **Topic:** Central index for the HerriML NAS competition notebase.
+> **Related:** [[Competition Overview]] (context) · [[Pipeline v13 - Final Spec]] (the result)
 
 Open `docs/notes/` as the Obsidian vault root. Wikilinks resolve across subfolders.
+
+## Final state — start here
+
+The project is finished. The shipped pipeline is **v13** (`submissions/v2/`), which passed the
+Phase-2 grader and is our Phase-3 entry. To understand the outcome, read in this order:
+
+1. **[[Pipeline v13 - Final Spec]]** — the complete shipped pipeline, stage by stage, with the
+   pipeline diagram and every constant. *(The single best entry point to what we built.)*
+2. **[[v12.1 - Validation Results]]** — the evidence: v13 validation, the 16-dataset tier, the
+   finals dress rehearsal (ahead of the 2025 winner), and the cleaned-code equivalence proof.
+3. **[[Pipeline v12 - Screening Report]]** — the ablation history: what was tried and rejected
+   (BDH, independent-init, wider models, weight soups, difficulty routing) with evidence.
+
+The sections below index the full notebase (competition rules, datasets, the research history).
 
 ## Sections
 

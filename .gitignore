@@ -8,9 +8,18 @@
 *.pth
 *.pth.tar
 submission.zip
+nas_submission*.zip        # built from submissions/<ver>/ ; the source is tracked, the zip is not
 package/
 scoring/
 predictions/
+
+# --- LaTeX build artifacts (proposal) ---
+*.aux
+*.out
+*.toc
+*.synctex.gz
+*.fdb_latexmk
+*.fls
 
 # --- EGNAS-style timestamped run dirs ---
 Search-*/

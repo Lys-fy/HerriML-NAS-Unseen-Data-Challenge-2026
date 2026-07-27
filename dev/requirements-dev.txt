@@ -1,0 +1,6 @@
+# Local development / mock-grader tooling (NOT part of the submission).
+# The submission itself needs only torch + numpy (see submissions/v2/requirements.txt).
+# scikit-learn is used by dev/mock_harness.py --score for accuracy scoring.
+torch>=2.4
+numpy>=1.24
+scikit-learn>=1.3

@@ -1,70 +1,130 @@
-# HerriML — NAS Unseen Data Challenge 2026
+# HerriML — NAS Unseen-Data Challenge 2026
 
-Team submission for the [5th NAS Unseen-Data Competition](https://www.nascompetition.com/) at AutoML 2026.
+Team **HerriML**'s entry to the [5th NAS Unseen-Data Competition](https://www.nascompetition.com/)
+at AutoML 2026. The challenge: design one Neural Architecture Search pipeline that, given a
+completely **unseen** image-classification dataset and a fixed time budget, processes the data,
+searches an architecture, trains it, and returns predictions — with no per-dataset tuning.
 
-## Authors
+**Authors:** Luis Melzer · Sebastian Seifert · Leander von Gottberg
+**Supervisors:** Dr. Marcel Wever · Prof. Marius Lindauer
 
-- Luis Melzer
-- Sebastian Seifert
-- Leander von Gottberg
+## Status: complete
 
-The competition hands our pipeline three unseen 4D-image classification datasets at evaluation time. The pipeline must process the data, search for an architecture, train it, and produce predictions — all under a fixed time budget per dataset. Score per dataset is `(accuracy − benchmark) × scale`, capped at +10 / −10. Crashes, OOMs, and timeouts each score −10.
+The final pipeline is **v13**, shipped as [`submissions/v2/`](submissions/v2). It passed the
+Phase-2 grader (ran clean on all three hidden dummy datasets, no errors), so it is our
+locked-in Phase-3 entry. In our own finals dress rehearsal at the Phase-3 operating point
+(~8 h/dataset) it projected **ahead of the 2025 winning entry on all three finals datasets**.
+Full evidence is in the pipeline notes (see *Repository layout* below).
 
-## Quick start
+## The pipeline in one picture
 
-```bash
-git clone git@github.com:Lys-fy/HerriML-NAS-Unseen-Data-Challenge-2026.git
-cd HerriML-NAS-Unseen-Data-Challenge-2026
+Run once per unseen dataset. **Diamonds** are runtime decisions; **dashed** edges are the
+abstain-to-default and low-budget-collapse routes. Every gate is a short *real* training plus a
+noise estimate — measured, never predicted — and every ensemble choice is a validation comparison.
 
-# 1. Download the public datasets (~20 GB) — idempotent, can be re-run safely.
-./scripts/download_datasets.sh                       # all 11 datasets
-./scripts/download_datasets.sh Sudoku GameOfLife     # filter by name
+```mermaid
+flowchart TD
+    RAW([unseen dataset + clock budget]) --> DP[DataProcessor: normalise + fingerprint]
+    DP --> FP{encoded?<br/>corr1 below 0.2}
 
-# 2. Run the local mock grader against the code in submission/.
-python dev/mock_harness.py Sudoku --score
+    FP -->|image-like| BB2[backbone = tcn2d]
+    FP -->|encoded| TOK{token shape?<br/>1 channel, wide axis}
+    TOK -->|yes| TG{token probe<br/>beats incumbent?}
+    TOK -->|no| GATE{3-arm gate<br/>conv / tcn1d / tcn2d}
+    TG -->|win over noise| FT[family = token]
+    TG -.->|sub-noise| GATE
+    GATE -->|leader beats conv| FL[family = leader]
+    GATE -.->|abstain| CV[family = conv + alt-family hedge]
 
-# 3. When ready to submit, build the zip.
-cd submission && zip -r ../submission.zip *
+    BB2 --> AUG
+    FT --> AUG
+    FL --> AUG
+    CV --> AUG[aug probe] --> DEP[depth probe] --> ATT[attention probe]
+    ATT --> FIN[final architecture + capacity twin]
+
+    FIN --> PLAN[Trainer: calibrate then plan K seeds x schedule]
+    PLAN --> TRN[train seeds: EMA + TrivialAug<br/>saturation stop releases slice on plateau]
+    TRN --> TOP{surplus and<br/>roster under 8?}
+    TOP -->|yes| TRN
+    TOP -->|no| SEL[val-gated selection<br/>ensembles x flip-TTA]
+    SEL --> OUT([predictions])
+
+    DP -.->|budget under 35 min| COL[collapse: default backbone] -.-> PLAN
 ```
 
-`datasets/` is gitignored. By default it's a symlink to a local-only directory (e.g. `~/local/nas-comp-datasets/`). Override the destination with `DATASETS_DIR=...`.
+For the exact stage logic, all constants, and the reasoning behind each decision, read the
+**v13 Final Spec** note (path below).
 
-## Layout
+## What ships (the grader contract)
+
+The grader copies four files next to its own `evaluation/main.py` and calls them in sequence:
+
+```
+DataProcessor.process()          -> (train_loader, valid_loader, test_loader)
+NAS.search()                     -> torch.nn.Module
+Trainer.train()                  -> trained model
+Trainer.predict(test_loader)     -> list[int]
+```
+
+File names and class signatures are fixed. The shipped package is a **flat zip** of five files
+(no folder, no `main.py`/`score.py`):
+
+```
+submissions/v2/  ->  data_processor.py  nas.py  trainer.py  helpers.py  requirements.txt
+```
+
+`requirements.txt` pins only `torch` and `numpy` (everything else is Python stdlib), with loose
+ranges and no CUDA-suffixed wheels so it resolves on the grader's driver. A `clock` object is
+passed to every stage; the pipeline reads `clock.check()` / `metadata["time_remaining"]` and
+adapts — it hard-codes no wall-clock budget. Time / memory / shape failures score −10.
+
+## Quick start (local development)
+
+```bash
+# 1. Public datasets (gitignored; override the destination with DATASETS_DIR=...)
+./scripts/download_datasets.sh                 # all datasets
+./scripts/download_datasets.sh Sudoku          # or filter by name
+
+# 2. Run the local mock grader (mirrors evaluation/main.py + scoring)
+pip install -r dev/requirements-dev.txt
+python dev/mock_harness.py --submission-dir submissions/v2 --score Sudoku
+python dev/mock_harness.py --submission-dir submissions/v2 --time-limit 0.05 GameOfLife   # 3-min collapse test
+
+# 3. Build the submission zip (flat: the 4 files + requirements.txt)
+cd submissions/v2 && zip -j ../../nas_submission.zip data_processor.py nas.py trainer.py helpers.py requirements.txt
+```
+
+`dev/mock_harness.py` replicates the grader's failure modes (clock exits, test-loader
+assertions, blanket-exception → −10), so passing it is our best local signal for Phase 2.
+
+## Repository layout
 
 | Path | What lives here |
 |------|-----------------|
-| `submission/` | The four files that get zipped: `data_processor.py`, `nas.py`, `trainer.py`, `helpers.py`. Filenames and class signatures are fixed by the grader. |
-| `dev/` | Local-only tooling. `mock_harness.py` mirrors the grader's `evaluation/main.py`. |
-| `scripts/` | Build helpers. `download_datasets.sh` pulls the public datasets from figshare. |
-| `docs/` | Team notes (e.g. `environment.md` flags the dev/eval architecture split). |
-| `Usefull_docs/` | Reference material: papers, past-winner approaches, dataset notes. |
-| `datasets/` | Public datasets. **Gitignored**, symlinked to a local path outside the repo. |
+| **`submissions/v2/`** | **The shipped submission (v13).** The four contract files + `requirements.txt`. |
+| `submissions/v1/` | v12.1 fallback — identical code minus the two v13 changes. |
+| `baselines/` | The full research history: every pipeline iteration (`v2` … `v13`) and the reference methods / architecture probes it was measured against. `v13` is the dev source of the shipped code. |
+| `dev/` | Local-only tooling: `mock_harness.py` (grader stand-in), run scripts, analysis, dataset generators. |
+| `scripts/` | `download_datasets.sh` — pulls the public datasets. |
+| `docs/notes/` | The project notebook (Obsidian vault). Start at [`docs/notes/README.md`](docs/notes/README.md); the pipeline story is under `09 - Implementation/.../pipeline/` (see **Pipeline v13 - Final Spec** and **v12.1 - Validation Results**). |
+| `docs/proposal/` | The project proposal (LaTeX). |
+| `datasets/` | Public datasets. **Gitignored**, symlinked to a local path. |
 
-## The submission contract
+## Results at a glance
 
-The grader copies `submission/*` next to its own `evaluation/main.py` and runs each dataset through:
-
-```
-DataProcessor → process()         → (train_loader, valid_loader, test_loader)
-NAS           → search()          → PyTorch model
-Trainer       → train()           → trained model
-Trainer       → predict(test_loader) → list of int labels
-```
-
-A `clock` object is passed to every stage; `clock.check()` returns seconds remaining for the current dataset. Time and memory failures score −10. Phase 2 allows up to 7 submissions; the last working Phase 2 submission becomes the Phase 3 entry unchanged. Detailed contract notes (allowed deviations, fixed signatures, asserted constraints) are in `Usefull_docs/README.md`.
-
-## Dev workflow
-
-1. **Edit `submission/`.** Extra modules can live alongside the four required files; the grader copies the whole folder.
-2. **Test locally** with `python dev/mock_harness.py <Dataset> --score`. Same call sequence as the real grader, plus scoring against local `test_y.npy`.
-3. **Stress-test** with `--time-limit 0.05` (3 min) to verify graceful exits, and on different hardware to catch arch-specific bugs.
-4. **Cross-verify on x86** before any Phase 2 push (see below).
-
-`mock_harness.py` deliberately replicates the grader's failure modes (clock exits, test-loader assertions, blanket exception → −10). Passing here is the best signal we have that Phase 2 will pass.
+- **Phase-2 grader:** clean pass on all three hidden dummy datasets, no errors, well inside the
+  time limit (`dev/logs/phase2/herriml-1.log`).
+- **16-dataset tier (2 h):** no regression vs the prior pipeline on matched hardware; the token
+  family adds a decisive Cryptic win.
+- **Finals dress rehearsal (8 h):** GameOfLife 99.99 · Windspeed 19.30 · **Cryptic 78.24** —
+  ahead of the 2025 winner (76.15 on Cryptic) on all three, projecting to 1st on that trio.
+- **v13 = v12.1 + two dataset-agnostic changes:** gate tie-break off, and a saturation
+  early-stop that recovers a fast-GPU overfitting failure without hurting datasets that want long
+  training. Both validated; the shipped code is proven equivalent (static + runtime) to the
+  research baseline.
 
 ## References
 
-- `Usefull_docs/` — past-winner papers, 2025 leaderboard analysis, dataset notes.
-- [Starter kit](https://github.com/Towers-D/NAS-Comp-Starter-Kit) — clone separately if you want the official Makefile pipeline. Not vendored here.
-- [Public datasets repo](https://github.com/Towers-D/NAS-Unseen-Datasets) — organisers' canonical dataset descriptions.
+- [Starter kit](https://github.com/Towers-D/NAS-Comp-Starter-Kit) — the grader's `main.py` / `score.py` (not vendored).
+- [Public datasets](https://github.com/Towers-D/NAS-Unseen-Datasets) — organisers' dataset descriptions.
 - [Competition site](https://www.nascompetition.com/) — official rules and timeline.
